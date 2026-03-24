@@ -20,23 +20,23 @@ else
 fi
 
 print -P "%F{cyan}==> go vet%f"
-go vet ./cf
-go vet ./cfsource
+go vet ./core
+go vet ./named
 
 print -P "%F{cyan}==> staticcheck%f"
-staticcheck ./cf
-staticcheck ./cfsource
+staticcheck ./core
+staticcheck ./named
 
 
 print -P "%F{cyan}==> tests (no cache)%f"
-go test -count=9 ./cf
-go test -count=9 ./cfsource
+go test -count=9 ./core
+go test -count=9 ./named
 
 
 print -P "%F{cyan}==> coverage summary%f"
 mkdir -p ./tmp
-go test -count=9 -coverprofile=./tmp/cover_cf.out ./cf
-go test -count=9 -coverprofile=./tmp/cover_cfsource.out ./cfsource
+go test -count=9 -coverprofile=./tmp/cover_cf.out ./core
+go test -count=9 -coverprofile=./tmp/cover_cfsource.out ./named
 
 print -P "%F{green}OK%f"
 # tools/check.zsh v2
