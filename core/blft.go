@@ -1,4 +1,4 @@
-// core/blft.go v4
+// core/blft.go v5
 package core
 
 import "math/big"
@@ -15,7 +15,7 @@ func (s blftState) IngestX(term PQTerm) blftState {
 		F: mulAdd(s.F, term.P, s.H),
 		G: mul(s.E, term.Q),
 		H: mul(s.F, term.Q),
-	}
+	}.Normalize()
 }
 
 func (s blftState) IngestY(term PQTerm) blftState {
@@ -28,7 +28,7 @@ func (s blftState) IngestY(term PQTerm) blftState {
 		F: mul(s.E, term.Q),
 		G: mulAdd(s.G, term.P, s.H),
 		H: mul(s.G, term.Q),
-	}
+	}.Normalize()
 }
 
 func mul(x, y *big.Int) *big.Int {
@@ -46,4 +46,4 @@ func mulAdd(x, y, z *big.Int) *big.Int {
 	return out
 }
 
-// core/blft.go v4
+// core/blft.go v5
