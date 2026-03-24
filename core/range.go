@@ -1,3 +1,4 @@
+// core/range.go v2
 package core
 
 type RangeKind int
@@ -8,10 +9,8 @@ const (
 )
 
 type Range struct {
-	Lo     Rational
-	Hi     Rational
-	LoOpen bool
-	HiOpen bool
+	Lo     Endpoint
+	Hi     Endpoint
 	Inside bool
 }
 
@@ -27,3 +26,5 @@ func (r Range) Kind() RangeKind {
 func (r Range) Cmp(_ Range) int {
 	return 0
 }
+
+// core/range.go v2

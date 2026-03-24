@@ -1,3 +1,4 @@
+// core/rational.go v2
 package core
 
 import "math/big"
@@ -7,7 +8,7 @@ type Rational struct {
 	den *big.Int
 }
 
-func FromInt64(n int64) Rational {
+func RationalFromInt64(n int64) Rational {
 	return Rational{
 		num: big.NewInt(n),
 		den: big.NewInt(1),
@@ -70,3 +71,5 @@ func (r Rational) Cmp(other Rational) int {
 	right := new(big.Int).Mul(other.Num(), r.Den())
 	return left.Cmp(right)
 }
+
+// core/rational.go v2

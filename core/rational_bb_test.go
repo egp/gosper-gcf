@@ -1,3 +1,4 @@
+// core/rational_bb_test.go v2
 package core_test
 
 import (
@@ -8,13 +9,15 @@ import (
 )
 
 func TestBB_Rational_ExactIntegerConversion(t *testing.T) {
-	r := core.FromInt64(7)
+	r := core.RationalFromInt64(7)
 
 	if got := r.Num().Cmp(big.NewInt(7)); got != 0 {
-		t.Fatalf("FromInt64(7).Num() = %v, want 7", r.Num())
+		t.Fatalf("RationalFromInt64(7).Num() = %v, want 7", r.Num())
 	}
 
 	if got := r.Den().Cmp(big.NewInt(1)); got != 0 {
-		t.Fatalf("FromInt64(7).Den() = %v, want 1", r.Den())
+		t.Fatalf("RationalFromInt64(7).Den() = %v, want 1", r.Den())
 	}
 }
+
+// core/rational_bb_test.go v2

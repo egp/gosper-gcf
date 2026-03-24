@@ -1,3 +1,4 @@
+// core/range_wb_test.go v2
 package core
 
 import (
@@ -9,10 +10,14 @@ func TestWB_Range_InsideLoEqHiMeansExact(t *testing.T) {
 	half := NewRational(big.NewInt(1), big.NewInt(2))
 
 	r := Range{
-		Lo:     half,
-		Hi:     half,
-		LoOpen: false,
-		HiOpen: false,
+		Lo: Endpoint{
+			Value: half,
+			Open:  false,
+		},
+		Hi: Endpoint{
+			Value: half,
+			Open:  false,
+		},
 		Inside: true,
 	}
 
@@ -22,14 +27,16 @@ func TestWB_Range_InsideLoEqHiMeansExact(t *testing.T) {
 	if r.Kind() != InsideInterval {
 		t.Fatalf("Kind() = %v, want %v", r.Kind(), InsideInterval)
 	}
-	if r.Lo.Cmp(r.Hi) != 0 {
+	if r.Lo.Value.Cmp(r.Hi.Value) != 0 {
 		t.Fatalf("Lo and Hi differ: Lo=%v/%v Hi=%v/%v",
-			r.Lo.Num(), r.Lo.Den(), r.Hi.Num(), r.Hi.Den())
+			r.Lo.Value.Num(), r.Lo.Value.Den(), r.Hi.Value.Num(), r.Hi.Value.Den())
 	}
-	if r.LoOpen {
-		t.Fatal("LoOpen = true, want false")
+	if r.Lo.Open {
+		t.Fatal("Lo.Open = true, want false")
 	}
-	if r.HiOpen {
-		t.Fatal("HiOpen = true, want false")
+	if r.Hi.Open {
+		t.Fatal("Hi.Open = true, want false")
 	}
 }
+
+// core/range_wb_test.go v2

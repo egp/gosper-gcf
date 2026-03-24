@@ -1,3 +1,4 @@
+// named/sqrt2.go v2
 package named
 
 import (
@@ -27,10 +28,14 @@ func (s *sqrt2Head) NextPQ() (core.PQTerm, core.PQStream, core.Status) {
 
 func (s *sqrt2Head) Range() core.Range {
 	return core.Range{
-		Lo:     core.FromInt64(1),
-		Hi:     core.FromInt64(2),
-		LoOpen: false,
-		HiOpen: false,
+		Lo: core.Endpoint{
+			Value: core.RationalFromInt64(1),
+			Open:  false,
+		},
+		Hi: core.Endpoint{
+			Value: core.RationalFromInt64(2),
+			Open:  false,
+		},
 		Inside: true,
 	}
 }
@@ -44,10 +49,16 @@ func (s *sqrt2Tail) NextPQ() (core.PQTerm, core.PQStream, core.Status) {
 
 func (s *sqrt2Tail) Range() core.Range {
 	return core.Range{
-		Lo:     core.FromInt64(1),
-		Hi:     core.FromInt64(2),
-		LoOpen: false,
-		HiOpen: false,
+		Lo: core.Endpoint{
+			Value: core.RationalFromInt64(1),
+			Open:  false,
+		},
+		Hi: core.Endpoint{
+			Value: core.RationalFromInt64(2),
+			Open:  false,
+		},
 		Inside: true,
 	}
 }
+
+// named/sqrt2.go v2

@@ -1,3 +1,4 @@
+// core/rational_wb_test.go v2
 package core
 
 import (
@@ -28,7 +29,7 @@ func TestWB_Rational_ReducesByGCD(t *testing.T) {
 }
 
 func TestWB_Rational_FromIntIsExact(t *testing.T) {
-	r := FromInt64(-7)
+	r := RationalFromInt64(-7)
 
 	if r.num.Cmp(big.NewInt(-7)) != 0 {
 		t.Fatalf("numerator = %v, want -7", r.num)
@@ -37,3 +38,5 @@ func TestWB_Rational_FromIntIsExact(t *testing.T) {
 		t.Fatalf("denominator = %v, want 1", r.den)
 	}
 }
+
+// core/rational_wb_test.go v2
