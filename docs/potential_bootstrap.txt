@@ -30,3 +30,8 @@ Current project state:
 - next big unresolved areas include exact public API shapes, Range struct details, CanEmitRCFTerm logic, and limit-breach behavior
 
 When responding, treat the newest pasted files and errors as the source of truth.
+
+Remember to provide a copyable commit message when green is anticipated, and after I say 'green'.
+When I say 'committed', use the Repo as source of truth for all files until we start modifying them
+as part of the R/G cycle. Discard or ignore any previous cached copies of everything except WIP.
+Proposed commit message should include all work accomplished since the last time I said 'committed'
