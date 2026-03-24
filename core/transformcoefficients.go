@@ -1,4 +1,4 @@
-// core/transformcoefficients.go v1
+// core/transformcoefficients.go v3
 package core
 
 import "math/big"
@@ -14,4 +14,4 @@ type TransformCoefficients struct {
 	H *big.Int
 }
 
-// core/transformcoefficients.go v1
+// core/transformcoefficients.go v3
