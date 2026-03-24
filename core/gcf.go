@@ -1,5 +1,7 @@
-// core/gcf.go v2
+// core/gcf.go v3
 package core
+
+import "math/big"
 
 type exactTerminalState struct {
 	terms []RCFTerm
@@ -67,11 +69,23 @@ func newGCF0WithResolvedConfig(coeffs TransformCoefficients, cfg Config) *GCF {
 }
 
 func newGCF1WithResolvedConfig(coeffs TransformCoefficients, x PQStream, cfg Config) *GCF {
-	return &GCF{
+	g := &GCF{
 		coeffs: cloneTransformCoefficients(coeffs),
 		cfg:    cfg,
 		x:      x,
 	}
+
+	if x != nil {
+		value := exactRationalFromPQStream(x)
+		transformed := applyUnaryXTransform(g.coeffs, value)
+		return newExactTerminalGCFWithResolvedConfig(
+			rcfTermsFromRational(transformed),
+			exactRangeFromRational(transformed),
+			cfg,
+		)
+	}
+
+	return g
 }
 
 func newGCF2WithResolvedConfig(coeffs TransformCoefficients, x, y PQStream, cfg Config) *GCF {
@@ -92,7 +106,6 @@ func (g *GCF) NextRCF() (RCFTerm, Status) {
 		if g.terminal.next >= len(g.terminal.terms) {
 			return NewRCFTerm(nil), StatusEOF
 		}
-
 		term := g.terminal.terms[g.terminal.next]
 		g.terminal.next++
 		return NewRCFTerm(term.A()), StatusOK
@@ -130,6 +143,95 @@ func (g *GCF) Config() Config {
 	return g.cfg
 }
 
+func exactRationalFromPQStream(stream PQStream) Rational {
+	terms := make([]PQTerm, 0, 8)
+	current := stream
+
+	for {
+		term, tail, status := current.NextPQ()
+
+		switch status {
+		case StatusOK:
+			terms = append(terms, clonePQTerm(term))
+			current = tail
+		case StatusEOF:
+			if len(terms) == 0 {
+				panic("exactRationalFromPQStream: empty stream")
+			}
+			return exactRationalFromTerms(terms)
+		default:
+			panic("exactRationalFromPQStream: invalid input status")
+		}
+	}
+}
+
+func exactRationalFromTerms(terms []PQTerm) Rational {
+	last := terms[len(terms)-1]
+	value := RationalFromBigInt(last.P)
+
+	for i := len(terms) - 2; i >= 0; i-- {
+		value = generalizedStepToRational(terms[i], value)
+	}
+
+	return value
+}
+
+func generalizedStepToRational(term PQTerm, tail Rational) Rational {
+	pn := cloneBigInt(term.P)
+	qn := cloneBigInt(term.Q)
+	tn := tail.Num()
+	td := tail.Den()
+
+	numLeft := new(big.Int).Mul(pn, tn)
+	numRight := new(big.Int).Mul(qn, td)
+	num := new(big.Int).Add(numLeft, numRight)
+
+	return NewRational(num, tn)
+}
+
+func applyUnaryXTransform(coeffs TransformCoefficients, x Rational) Rational {
+	xn := x.Num()
+	xd := x.Den()
+
+	numLeft := new(big.Int).Mul(cloneBigIntOrZero(coeffs.B), xn)
+	numRight := new(big.Int).Mul(cloneBigIntOrZero(coeffs.D), xd)
+	num := new(big.Int).Add(numLeft, numRight)
+
+	denLeft := new(big.Int).Mul(cloneBigIntOrZero(coeffs.F), xn)
+	denRight := new(big.Int).Mul(cloneBigIntOrZero(coeffs.H), xd)
+	den := new(big.Int).Add(denLeft, denRight)
+
+	return NewRational(num, den)
+}
+
+func exactRangeFromRational(r Rational) Range {
+	return Range{
+		Lo: Endpoint{
+			Value: r,
+			Open:  false,
+		},
+		Hi: Endpoint{
+			Value: r,
+			Open:  false,
+		},
+		Inside: true,
+	}
+}
+
+func RationalFromBigInt(n *big.Int) Rational {
+	if n == nil {
+		return RationalFromInt64(0)
+	}
+	return NewRational(n, big.NewInt(1))
+}
+
+func cloneBigIntOrZero(x *big.Int) *big.Int {
+	if x == nil {
+		return big.NewInt(0)
+	}
+	return cloneBigInt(x)
+}
+
 func cloneTransformCoefficients(tc TransformCoefficients) TransformCoefficients {
 	return TransformCoefficients{
 		A: cloneBigInt(tc.A),
@@ -155,4 +257,4 @@ func cloneRCFTerms(terms []RCFTerm) []RCFTerm {
 	return out
 }
 
-// core/gcf.go v2
+// core/gcf.go v3
