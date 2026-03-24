@@ -1,4 +1,4 @@
-// core/blft_emit.go v2
+// core/blft_emit.go v3
 package core
 
 import "math/big"
@@ -39,4 +39,11 @@ func subMul(x, n, y *big.Int) *big.Int {
 	return left.Sub(left, right)
 }
 
-// core/blft_emit.go v2
+func cloneBigIntOrZero(x *big.Int) *big.Int {
+	if x == nil {
+		return big.NewInt(0)
+	}
+	return cloneBigInt(x)
+}
+
+// core/blft_emit.go v3
