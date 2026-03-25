@@ -139,8 +139,8 @@ func TestWB_GCF_UnaryLiveRangeComesFromCurrentEvaluatorState(t *testing.T) {
 	}
 }
 
-func identityUnaryXCoeffs() TransformCoefficients {
-	return TransformCoefficients{
+func identityUnaryXCoeffs() BLFTCoefficients {
+	return BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(1),
 		C: big.NewInt(0),

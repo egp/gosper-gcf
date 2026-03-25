@@ -1,10 +1,10 @@
-// core/blft_collapse.go v2
+// core/blft_collapse.go v4
 package core
 
 import "math/big"
 
-func (s blftState) CollapseX() TransformCoefficients {
-	return TransformCoefficients{
+func (s blftState) CollapseX() BLFTCoefficients {
+	return BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(0),
 		C: cloneBigInt(s.C),
@@ -16,8 +16,8 @@ func (s blftState) CollapseX() TransformCoefficients {
 	}
 }
 
-func (s blftState) CollapseY() TransformCoefficients {
-	return TransformCoefficients{
+func (s blftState) CollapseY() BLFTCoefficients {
+	return BLFTCoefficients{
 		A: big.NewInt(0),
 		B: cloneBigInt(s.B),
 		C: big.NewInt(0),
@@ -33,4 +33,4 @@ func (s blftState) CollapseToRational() Rational {
 	return NewRational(s.D, s.H)
 }
 
-// core/blft_collapse.go v2
+// core/blft_collapse.go v4

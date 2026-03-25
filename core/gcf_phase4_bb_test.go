@@ -91,8 +91,8 @@ func phase4AssertRCFSequence(t *testing.T, g *core.GCF, want []int64) {
 	}
 }
 
-func phase4IdentityUnaryX() core.TransformCoefficients {
-	return core.TransformCoefficients{
+func phase4IdentityUnaryX() core.BLFTCoefficients {
+	return core.BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(1),
 		C: big.NewInt(0),

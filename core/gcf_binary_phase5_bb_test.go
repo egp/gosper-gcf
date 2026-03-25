@@ -205,8 +205,8 @@ func binaryPhase5AssertRCFSequence(t *testing.T, g *core.GCF, want []int64) {
 	}
 }
 
-func binaryPhase5ProjectXCoeffs() core.TransformCoefficients {
-	return core.TransformCoefficients{
+func binaryPhase5ProjectXCoeffs() core.BLFTCoefficients {
+	return core.BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(1),
 		C: big.NewInt(0),
@@ -218,8 +218,8 @@ func binaryPhase5ProjectXCoeffs() core.TransformCoefficients {
 	}
 }
 
-func binaryPhase5ProjectYCoeffs() core.TransformCoefficients {
-	return core.TransformCoefficients{
+func binaryPhase5ProjectYCoeffs() core.BLFTCoefficients {
+	return core.BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(0),
 		C: big.NewInt(1),
@@ -231,8 +231,8 @@ func binaryPhase5ProjectYCoeffs() core.TransformCoefficients {
 	}
 }
 
-func binaryPhase5AddCoeffs() core.TransformCoefficients {
-	return core.TransformCoefficients{
+func binaryPhase5AddCoeffs() core.BLFTCoefficients {
+	return core.BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(1),
 		C: big.NewInt(1),

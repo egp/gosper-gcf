@@ -192,8 +192,8 @@ func exactRange(num, den int64) core.Range {
 	}
 }
 
-func identityCoefficients() core.TransformCoefficients {
-	return core.TransformCoefficients{
+func identityCoefficients() core.BLFTCoefficients {
+	return core.BLFTCoefficients{
 		A: big.NewInt(1),
 		B: big.NewInt(0),
 		C: big.NewInt(0),

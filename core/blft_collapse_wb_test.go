@@ -20,7 +20,7 @@ func TestWB_BLFT_CollapseOnXEOF(t *testing.T) {
 
 	got := s.CollapseX()
 
-	want := TransformCoefficients{
+	want := BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(0),
 		C: big.NewInt(3),
@@ -31,7 +31,7 @@ func TestWB_BLFT_CollapseOnXEOF(t *testing.T) {
 		H: big.NewInt(8),
 	}
 
-	assertTransformCoefficientsEqual(t, got, want)
+	assertBLFTCoefficientsEqual(t, got, want)
 }
 
 func TestWB_BLFT_CollapseOnYEOF(t *testing.T) {
@@ -48,7 +48,7 @@ func TestWB_BLFT_CollapseOnYEOF(t *testing.T) {
 
 	got := s.CollapseY()
 
-	want := TransformCoefficients{
+	want := BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(2),
 		C: big.NewInt(0),
@@ -59,7 +59,7 @@ func TestWB_BLFT_CollapseOnYEOF(t *testing.T) {
 		H: big.NewInt(8),
 	}
 
-	assertTransformCoefficientsEqual(t, got, want)
+	assertBLFTCoefficientsEqual(t, got, want)
 }
 
 func TestWB_BLFT_CollapseOnBothEOFProducesExactState(t *testing.T) {
@@ -83,7 +83,7 @@ func TestWB_BLFT_CollapseOnBothEOFProducesExactState(t *testing.T) {
 	}
 }
 
-func assertTransformCoefficientsEqual(t *testing.T, got, want TransformCoefficients) {
+func assertBLFTCoefficientsEqual(t *testing.T, got, want BLFTCoefficients) {
 	t.Helper()
 
 	assertBigIntEqual(t, "A", got.A, want.A)

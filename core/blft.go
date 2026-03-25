@@ -1,9 +1,9 @@
-// core/blft.go v5
+// core/blft.go v6
 package core
 
 import "math/big"
 
-type blftState TransformCoefficients
+type blftState BLFTCoefficients
 
 func (s blftState) IngestX(term PQTerm) blftState {
 	return blftState{
@@ -46,4 +46,4 @@ func mulAdd(x, y, z *big.Int) *big.Int {
 	return out
 }
 
-// core/blft.go v5
+// core/blft.go v6
