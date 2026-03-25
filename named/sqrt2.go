@@ -1,4 +1,4 @@
-// named/sqrt2.go v2
+// named/sqrt2.go v3
 package named
 
 import (
@@ -7,26 +7,34 @@ import (
 	"github.com/egp/gosper-gcf/core"
 )
 
-type sqrt2Head struct{}
-type sqrt2Tail struct{}
-
-var (
-	sqrt2HeadSingleton = &sqrt2Head{}
-	sqrt2TailSingleton = &sqrt2Tail{}
-)
-
 func Sqrt2() core.PQStream {
-	return sqrt2HeadSingleton
+	first := core.FinitePQStep{
+		Term: core.PQTerm{
+			P: big.NewInt(1),
+			Q: big.NewInt(1),
+		},
+		Range: sqrt2HeadRange(),
+	}
+
+	stream, status := core.NewProceduralPQStream(first, sqrt2TailNext)
+	if status != core.StatusOK {
+		panic("named.Sqrt2: failed to construct procedural PQ stream")
+	}
+
+	return stream
 }
 
-func (s *sqrt2Head) NextPQ() (core.PQTerm, core.PQStream, core.Status) {
-	return core.PQTerm{
-		P: big.NewInt(1),
-		Q: big.NewInt(1),
-	}, sqrt2TailSingleton, core.StatusOK
+func sqrt2TailNext() (core.FinitePQStep, core.ProceduralPQNext, core.Status) {
+	return core.FinitePQStep{
+		Term: core.PQTerm{
+			P: big.NewInt(2),
+			Q: big.NewInt(1),
+		},
+		Range: sqrt2TailRange(),
+	}, sqrt2TailNext, core.StatusOK
 }
 
-func (s *sqrt2Head) Range() core.Range {
+func sqrt2HeadRange() core.Range {
 	return core.Range{
 		Lo: core.Endpoint{
 			Value: core.RationalFromInt64(1),
@@ -40,25 +48,18 @@ func (s *sqrt2Head) Range() core.Range {
 	}
 }
 
-func (s *sqrt2Tail) NextPQ() (core.PQTerm, core.PQStream, core.Status) {
-	return core.PQTerm{
-		P: big.NewInt(2),
-		Q: big.NewInt(1),
-	}, sqrt2TailSingleton, core.StatusOK
-}
-
-func (s *sqrt2Tail) Range() core.Range {
+func sqrt2TailRange() core.Range {
 	return core.Range{
 		Lo: core.Endpoint{
-			Value: core.RationalFromInt64(1),
+			Value: core.RationalFromInt64(2),
 			Open:  false,
 		},
 		Hi: core.Endpoint{
-			Value: core.RationalFromInt64(2),
+			Value: core.RationalFromInt64(3),
 			Open:  false,
 		},
 		Inside: true,
 	}
 }
 
-// named/sqrt2.go v2
+// named/sqrt2.go v3
