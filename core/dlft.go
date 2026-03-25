@@ -1,4 +1,4 @@
-// core/dlft.go v2
+// core/dlft.go v3
 package core
 
 import "math/big"
@@ -14,25 +14,18 @@ func (s dlftState) IngestX(term PQTerm) dlftState {
 	q := term.Q
 
 	pp := mul(p, p)
-	ap := mul(s.A, p)
-	dp := mul(s.D, p)
+	qq := mul(q, q)
 
-	twoAP := mul(big.NewInt(2), ap)
-	twoDP := mul(big.NewInt(2), dp)
-
-	bInner := cloneBigIntOrZero(s.B)
-	bInner.Add(bInner, twoAP)
-
-	eInner := cloneBigIntOrZero(s.E)
-	eInner.Add(eInner, twoDP)
+	twoAP := mul(big.NewInt(2), mul(s.A, p))
+	twoDP := mul(big.NewInt(2), mul(s.D, p))
 
 	return dlftState{
 		A: add3(mul(s.A, pp), mul(s.B, p), cloneBigIntOrZero(s.C)),
-		B: mul(bInner, q),
-		C: mul(s.A, mul(q, q)),
+		B: mul(add2(twoAP, cloneBigIntOrZero(s.B)), q),
+		C: mul(s.A, qq),
 		D: add3(mul(s.D, pp), mul(s.E, p), cloneBigIntOrZero(s.F)),
-		E: mul(eInner, q),
-		F: mul(s.D, mul(q, q)),
+		E: mul(add2(twoDP, cloneBigIntOrZero(s.E)), q),
+		F: mul(s.D, qq),
 	}
 }
 
@@ -141,6 +134,12 @@ func (s dlftState) CollapseUnaryEOF() Rational {
 	return s.CollapseToRational()
 }
 
+func add2(x, y *big.Int) *big.Int {
+	out := cloneBigIntOrZero(x)
+	out.Add(out, cloneBigIntOrZero(y))
+	return out
+}
+
 func add3(x, y, z *big.Int) *big.Int {
 	out := cloneBigIntOrZero(x)
 	out.Add(out, cloneBigIntOrZero(y))
@@ -153,17 +152,17 @@ func evalDLFTNumDenAtPoint(s dlftState, x Rational) (*big.Int, *big.Int) {
 	xd := x.Den()
 
 	xn2 := mul(xn, xn)
-	commonDen := mul(xd, xd)
+	xd2 := mul(xd, xd)
 
 	num := big.NewInt(0)
 	num.Add(num, scaledDLFTQuadratic(s.A, xn2))
 	num.Add(num, scaledDLFTLinear(s.B, xn, xd))
-	num.Add(num, scaledDLFTConstant(s.C, commonDen))
+	num.Add(num, scaledDLFTConstant(s.C, xd2))
 
 	den := big.NewInt(0)
 	den.Add(den, scaledDLFTQuadratic(s.D, xn2))
 	den.Add(den, scaledDLFTLinear(s.E, xn, xd))
-	den.Add(den, scaledDLFTConstant(s.F, commonDen))
+	den.Add(den, scaledDLFTConstant(s.F, xd2))
 
 	return num, den
 }
@@ -182,11 +181,11 @@ func scaledDLFTLinear(coeff, xn, xd *big.Int) *big.Int {
 	return new(big.Int).Mul(coeff, new(big.Int).Mul(xn, xd))
 }
 
-func scaledDLFTConstant(coeff, commonDen *big.Int) *big.Int {
+func scaledDLFTConstant(coeff, xden2 *big.Int) *big.Int {
 	if coeff == nil {
 		return big.NewInt(0)
 	}
-	return new(big.Int).Mul(coeff, commonDen)
+	return new(big.Int).Mul(coeff, xden2)
 }
 
-// core/dlft.go v2
+// core/dlft.go v3

@@ -1,4 +1,4 @@
-// core/gcf_dlft.go v2
+// core/gcf_dlft.go v3
 package core
 
 func NewDLFT1(coeffs DLFTCoefficients, x PQStream) *GCF {
@@ -15,17 +15,14 @@ func newDLFT1WithResolvedConfig(coeffs DLFTCoefficients, x PQStream, cfg Config)
 		x:   x,
 	}
 
-	if x == nil {
-		return g
+	if x != nil {
+		g.unary = &unaryEvaluatorState{
+			engine: newDLFTState(coeffs),
+			x:      x,
+		}
 	}
 
-	final := exactRationalFromUnaryEngine(newDLFTState(coeffs), x)
-
-	return NewExactTerminalGCFWithConfig(
-		rcfTermsFromRational(final),
-		exactRangeFromRational(final),
-		cfg,
-	)
+	return g
 }
 
-// core/gcf_dlft.go v2
+// core/gcf_dlft.go v3
