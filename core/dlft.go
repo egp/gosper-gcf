@@ -1,4 +1,4 @@
-// core/dlft.go v3
+// core/dlft.go v4
 package core
 
 import "math/big"
@@ -47,14 +47,49 @@ func (s dlftState) CandidateRange(xRange Range) Range {
 		panic("CandidateRange currently supports only inside ranges")
 	}
 
-	points := []Rational{xRange.Lo.Value, xRange.Hi.Value}
+	points := []Rational{
+		xRange.Lo.Value,
+		xRange.Hi.Value,
+	}
 
-	values := make([]Rational, 0, 2)
+	// Add rational denominator roots, if any.
+	points = append(points, rationalRootsQuadratic(
+		cloneBigIntOrZero(s.D),
+		cloneBigIntOrZero(s.E),
+		cloneBigIntOrZero(s.F),
+		xRange,
+	)...)
+
+	// Add rational critical points, if any.
+	critA := new(big.Int).Sub(
+		mul(s.A, s.E),
+		mul(s.B, s.D),
+	)
+	critB := mul(
+		big.NewInt(2),
+		new(big.Int).Sub(
+			mul(s.A, s.F),
+			mul(s.C, s.D),
+		),
+	)
+	critC := new(big.Int).Sub(
+		mul(s.B, s.F),
+		mul(s.C, s.E),
+	)
+
+	points = append(points, rationalRootsQuadratic(
+		critA,
+		critB,
+		critC,
+		xRange,
+	)...)
+
+	values := make([]Rational, 0, len(points))
 	sawZeroDen := false
 	sawPosDen := false
 	sawNegDen := false
 
-	for _, x := range points {
+	for _, x := range dedupeRationals(points) {
 		num, den := evalDLFTNumDenAtPoint(s, x)
 
 		switch den.Sign() {
@@ -188,4 +223,109 @@ func scaledDLFTConstant(coeff, xden2 *big.Int) *big.Int {
 	return new(big.Int).Mul(coeff, xden2)
 }
 
-// core/dlft.go v3
+func rationalRootsQuadratic(a, b, c *big.Int, xRange Range) []Rational {
+	if a.Sign() == 0 {
+		return rationalRootsLinear(b, c, xRange)
+	}
+
+	// discriminant = b^2 - 4ac
+	disc := new(big.Int).Sub(
+		mul(b, b),
+		mul(big.NewInt(4), mul(a, c)),
+	)
+	if disc.Sign() < 0 {
+		return nil
+	}
+
+	sqrtDisc, ok := perfectSquareRoot(disc)
+	if !ok {
+		return nil
+	}
+
+	twoA := mul(big.NewInt(2), a)
+	negB := new(big.Int).Neg(cloneBigIntOrZero(b))
+
+	r1 := NewRational(new(big.Int).Sub(cloneBigIntOrZero(negB), sqrtDisc), twoA)
+	r2 := NewRational(new(big.Int).Add(cloneBigIntOrZero(negB), sqrtDisc), twoA)
+
+	out := make([]Rational, 0, 2)
+	if rationalInClosedInsideRange(r1, xRange) {
+		out = append(out, r1)
+	}
+	if r2.Cmp(r1) != 0 && rationalInClosedInsideRange(r2, xRange) {
+		out = append(out, r2)
+	}
+	return out
+}
+
+func rationalRootsLinear(a, b *big.Int, xRange Range) []Rational {
+	if a.Sign() == 0 {
+		return nil
+	}
+
+	root := NewRational(new(big.Int).Neg(cloneBigIntOrZero(b)), a)
+	if rationalInClosedInsideRange(root, xRange) {
+		return []Rational{root}
+	}
+	return nil
+}
+
+func rationalInClosedInsideRange(x Rational, r Range) bool {
+	if !r.Inside {
+		return false
+	}
+	return x.Cmp(r.Lo.Value) >= 0 && x.Cmp(r.Hi.Value) <= 0
+}
+
+func dedupeRationals(xs []Rational) []Rational {
+	out := make([]Rational, 0, len(xs))
+	for _, x := range xs {
+		found := false
+		for _, y := range out {
+			if x.Cmp(y) == 0 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			out = append(out, x)
+		}
+	}
+	return out
+}
+
+func perfectSquareRoot(n *big.Int) (*big.Int, bool) {
+	if n.Sign() < 0 {
+		return nil, false
+	}
+	if n.Sign() == 0 {
+		return big.NewInt(0), true
+	}
+
+	one := big.NewInt(1)
+	two := big.NewInt(2)
+
+	lo := big.NewInt(0)
+	hi := cloneBigIntOrZero(n)
+
+	for lo.Cmp(hi) <= 0 {
+		mid := new(big.Int).Add(lo, hi)
+		mid.Quo(mid, two)
+
+		sq := new(big.Int).Mul(mid, mid)
+		cmp := sq.Cmp(n)
+
+		if cmp == 0 {
+			return mid, true
+		}
+		if cmp < 0 {
+			lo = new(big.Int).Add(mid, one)
+		} else {
+			hi = new(big.Int).Sub(mid, one)
+		}
+	}
+
+	return nil, false
+}
+
+// core/dlft.go v4
