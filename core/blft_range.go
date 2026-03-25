@@ -1,4 +1,4 @@
-// core/blft_range.go v3
+// core/blft_range.go v5
 package core
 
 import "math/big"
@@ -8,22 +8,51 @@ func (s blftState) CornerRange(xr, yr Range) Range {
 		panic("CornerRange currently supports only inside/inside ranges")
 	}
 
-	corners := []Rational{
-		evalBLFTAt(s, xr.Lo.Value, yr.Lo.Value),
-		evalBLFTAt(s, xr.Lo.Value, yr.Hi.Value),
-		evalBLFTAt(s, xr.Hi.Value, yr.Lo.Value),
-		evalBLFTAt(s, xr.Hi.Value, yr.Hi.Value),
+	corners := [][2]Rational{
+		{xr.Lo.Value, yr.Lo.Value},
+		{xr.Lo.Value, yr.Hi.Value},
+		{xr.Hi.Value, yr.Lo.Value},
+		{xr.Hi.Value, yr.Hi.Value},
 	}
 
-	lo := corners[0]
-	hi := corners[0]
+	values := make([]Rational, 0, 4)
+	sawZeroDen := false
+	sawPosDen := false
+	sawNegDen := false
 
-	for _, c := range corners[1:] {
-		if c.Cmp(lo) < 0 {
-			lo = c
+	for _, corner := range corners {
+		num, den := evalBLFTNumDenAt(s, corner[0], corner[1])
+
+		switch den.Sign() {
+		case 0:
+			sawZeroDen = true
+			continue
+		case 1:
+			sawPosDen = true
+		case -1:
+			sawNegDen = true
 		}
-		if c.Cmp(hi) > 0 {
-			hi = c
+
+		values = append(values, NewRational(num, den))
+	}
+
+	if sawZeroDen || (sawPosDen && sawNegDen) {
+		return outsideRangeFromValues(values)
+	}
+
+	if len(values) == 0 {
+		return outsideRangeFromValues(nil)
+	}
+
+	lo := values[0]
+	hi := values[0]
+
+	for _, v := range values[1:] {
+		if v.Cmp(lo) < 0 {
+			lo = v
+		}
+		if v.Cmp(hi) > 0 {
+			hi = v
 		}
 	}
 
@@ -51,7 +80,7 @@ func preferXOnTie(xRange, yRange Range) bool {
 	return xWidth.Cmp(yWidth) <= 0
 }
 
-func evalBLFTAt(s blftState, x, y Rational) Rational {
+func evalBLFTNumDenAt(s blftState, x, y Rational) (*big.Int, *big.Int) {
 	xn := x.Num()
 	xd := x.Den()
 	yn := y.Num()
@@ -71,7 +100,48 @@ func evalBLFTAt(s blftState, x, y Rational) Rational {
 	den.Add(den, scaledTermY(s.G, yn, xd))
 	den.Add(den, scaledConstant(s.H, commonDen))
 
-	return NewRational(num, den)
+	return num, den
+}
+
+func outsideRangeFromValues(values []Rational) Range {
+	if len(values) == 0 {
+		zero := RationalFromInt64(0)
+		return Range{
+			Lo: Endpoint{
+				Value: zero,
+				Open:  false,
+			},
+			Hi: Endpoint{
+				Value: zero,
+				Open:  false,
+			},
+			Inside: false,
+		}
+	}
+
+	lo := values[0]
+	hi := values[0]
+
+	for _, v := range values[1:] {
+		if v.Cmp(lo) < 0 {
+			lo = v
+		}
+		if v.Cmp(hi) > 0 {
+			hi = v
+		}
+	}
+
+	return Range{
+		Lo: Endpoint{
+			Value: lo,
+			Open:  false,
+		},
+		Hi: Endpoint{
+			Value: hi,
+			Open:  false,
+		},
+		Inside: false,
+	}
 }
 
 func scaledTermXY(coeff, xn, yn *big.Int) *big.Int {
@@ -116,4 +186,4 @@ func rangeWidth(r Range) Rational {
 	return NewRational(widthNum, widthDen)
 }
 
-// core/blft_range.go v3
+// core/blft_range.go v5
