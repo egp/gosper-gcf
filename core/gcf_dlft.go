@@ -1,4 +1,4 @@
-// core/gcf_dlft.go v1
+// core/gcf_dlft.go v2
 package core
 
 func NewDLFT1(coeffs DLFTCoefficients, x PQStream) *GCF {
@@ -9,17 +9,23 @@ func NewDLFT1WithConfig(coeffs DLFTCoefficients, x PQStream, cfg Config) *GCF {
 	return newDLFT1WithResolvedConfig(coeffs, x, cfg)
 }
 
-// Shape-only stub.
-// Later this will create a live unary DLFT-backed GCF evaluator.
 func newDLFT1WithResolvedConfig(coeffs DLFTCoefficients, x PQStream, cfg Config) *GCF {
-	_ = coeffs
-	_ = x
+	g := &GCF{
+		cfg: cfg,
+		x:   x,
+	}
+
+	if x == nil {
+		return g
+	}
+
+	final := exactRationalFromUnaryEngine(newDLFTState(coeffs), x)
 
 	return NewExactTerminalGCFWithConfig(
-		nil,
-		exactRangeFromRational(RationalFromInt64(0)),
+		rcfTermsFromRational(final),
+		exactRangeFromRational(final),
 		cfg,
 	)
 }
 
-// core/gcf_dlft.go v1
+// core/gcf_dlft.go v2

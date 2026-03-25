@@ -1,21 +1,10 @@
-// core/blft_emit.go v3
+// core/blft_emit.go v4
 package core
 
 import "math/big"
 
 func (s blftState) CanEmitRCFTerm(r Range) (RCFTerm, bool) {
-	if !r.Inside {
-		return NewRCFTerm(nil), false
-	}
-
-	loFloor, _ := floorQuoRem(r.Lo.Value.Num(), r.Lo.Value.Den())
-	hiFloor, _ := floorQuoRem(r.Hi.Value.Num(), r.Hi.Value.Den())
-
-	if loFloor.Cmp(hiFloor) != 0 {
-		return NewRCFTerm(nil), false
-	}
-
-	return NewRCFTerm(loFloor), true
+	return canEmitRCFTermFromRange(r)
 }
 
 func (s blftState) Emit(term RCFTerm) blftState {
@@ -46,4 +35,4 @@ func cloneBigIntOrZero(x *big.Int) *big.Int {
 	return cloneBigInt(x)
 }
 
-// core/blft_emit.go v3
+// core/blft_emit.go v4
