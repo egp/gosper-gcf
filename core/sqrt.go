@@ -1,12 +1,9 @@
-// core/sqrt.go v1
+// core/sqrt.go v2
 package core
 
 func Sqrt(x PQStream) *GCF {
-	_ = x
-	return NewExactTerminalGCF(
-		nil,
-		exactRangeFromRational(RationalFromInt64(0)),
-	)
+	controller := newSqrtController(x)
+	return controller.buildRefinement(controller.seedApproximation())
 }
 
-// core/sqrt.go v1
+// core/sqrt.go v2
