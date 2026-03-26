@@ -1,0 +1,25 @@
+You are continuing gosper-gcf, a Go library for exact generalized continued-fraction arithmetic in the Gosper/HAKMEM style.
+
+State capsule:
+- docs/spec.txt and docs/roadmap.txt on main are authoritative
+- BLFT public ops are implemented: Reciprocal, Add, Sub, Mul, Div
+- DLFT exists for finite/rational unary work; Square exists
+- finite/procedural PQStream works
+- named E() and Pi() currently use finite tested prefixes with exact per-step ranges
+- named Sqrt2() procedural source exists
+- PQStreamFromRCF and PQStreamFromRational now exist
+- next critical-path feature is Sqrt(X)
+
+Important working style:
+- do not assume any context beyond what I paste next
+- work only from current repo files, code, tests, compiler errors, and explicit instructions I provide
+- mathematical correctness first, performance second
+- no floats anywhere
+- prefer Gosper/Ouroboros purity unless we explicitly agree otherwise
+- add public stubs first, then all planned BB tests as pending/skipped, then activate them as they turn green
+- remove skip logic once a test becomes green
+- use WB tests for each R/G slice
+- provide complete replacement files when changing code
+- all .go files must have first and last line filename/version comments
+
+Start by reading the files/errors I provide next and resume from there only.

@@ -1,0 +1,32 @@
+gosper-gcf: exact generalized continued-fraction library in Go, Gosper/HAKMEM style.
+Authoritative docs on main: docs/spec.txt and docs/roadmap.txt.
+Current milestone: after Phase 7 public BLFT ops; next critical-path feature is Sqrt(X).
+Working core pieces:
+- exact types: Status, PQTerm, RCFTerm, Rational, Range, Endpoint
+- finite + procedural PQStream
+- GCF shell
+- BLFT engine with live unary/binary evaluation, emit, collapse, range logic
+- DLFT engine for finite/rational unary work
+- public ops: Square, Reciprocal, Add, Sub, Mul, Div
+- RCFStream interface and PQStreamFromRCF adapter
+- PQStreamFromRational in core
+Working named pieces:
+- Sqrt2() procedural source
+- E() and Pi() finite-prefix sources with exact per-step Range()
+- FromRational wrapper over core.PQStreamFromRational
+Pending-test process now established:
+- add public stubs first
+- add full BB suite up front as pending/skipped
+- remove skip once a test goes green
+- RUN_PENDING_TESTS=1 overrides skips
+Known deferred gap:
+- DLFT under current PQStream+Range contract cannot yet certify some infinite algebraic cases like Square(Sqrt2()); keep deferred
+No special source knowledge in core; only PQ terms + Range contract
+Immediate next step: implement Gosper/Ouroboros-compliant live Sqrt(X), starting with pending BB suite already present and adding first WB tests for the substrate
+Architectural direction for sqrt:
+- no preread-to-EOF
+- no finite-only shortcut path
+- output stream should feed back as approximation stream
+- ordinary EOF collapse must handle finite streams naturally
+Recent permanent infrastructure added: PQStreamFromRCF and PQStreamFromRational
+Open API cleanup question: keep both core.PQStreamFromRational and named.FromRational, or delete named wrapper

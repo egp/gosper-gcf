@@ -1,0 +1,5 @@
+- Should named.FromRational remain as a convenience wrapper, or be removed in favor of core.PQStreamFromRational only?
+- What is the cleanest Gosper-pure representation for live Sqrt(X): feedback stream object, adapter, or another shared stream primitive?
+- What is the minimal permanent substrate needed for sqrt after PQStreamFromRCF and PQStreamFromRational?
+- Under the current PQStream+Range contract, what exact infinite-source cases remain impossible for DLFT without stronger range semantics?
+- When Sqrt(X) is implemented, which pending sqrt BB tests should turn green in the first slice, and which should remain pending?

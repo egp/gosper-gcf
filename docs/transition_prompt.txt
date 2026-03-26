@@ -3,7 +3,7 @@ We are at a context-switch point. I am going to start a new chat to reduce laten
 
 Please generate a transition bundle for the next chat, based only on the current conversation state.
 
-Produce these artifacts for the next chat to use:
+Produce these artifacts for the next chat to use, each in a text block I can copy/paste:
 
 1. checkpoint.txt
    Requirements:
