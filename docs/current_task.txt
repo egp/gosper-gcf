@@ -1,0 +1,16 @@
+Implement the next permanent substrate for Gosper-compliant live Sqrt(X).
+Do not add preread-to-EOF or finite-only special paths.
+Use only the current source contract: PQ terms, Range(), and ordinary EOF collapse.
+
+First task to tackle:
+- remove redundant named/from_rational.go
+- confirm whether we keep both core.PQStreamFromRational and named.FromRational, or delete the named wrapper
+- then start the sqrt substrate R/G cycle
+
+Acceptance criteria for the first code slice:
+- add the first WB tests for the sqrt substrate
+- add the first permanent prod piece toward stream-feedback sqrt
+- no pending BB test should be unskipped unless it actually turns green
+
+Single highest-priority design question:
+- exact architecture of Gosper/Ouroboros Sqrt(X): how to represent the feedback approximation stream cleanly in current code

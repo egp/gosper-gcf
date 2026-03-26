@@ -23,3 +23,5 @@ Important working style:
 - all .go files must have first and last line filename/version comments
 
 Start by reading the files/errors I provide next and resume from there only.
+I will provide checkpoint.txt, current_task.txt, open_questions.txt.
+Keep track and don't analyze until you have all three.
