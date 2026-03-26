@@ -1,32 +1,17 @@
-gosper-gcf: exact generalized continued-fraction library in Go, Gosper/HAKMEM style.
-Authoritative docs on main: docs/spec.txt and docs/roadmap.txt.
-Current milestone: after Phase 7 public BLFT ops; next critical-path feature is Sqrt(X).
-Working core pieces:
-- exact types: Status, PQTerm, RCFTerm, Rational, Range, Endpoint
-- finite + procedural PQStream
-- GCF shell
-- BLFT engine with live unary/binary evaluation, emit, collapse, range logic
-- DLFT engine for finite/rational unary work
-- public ops: Square, Reciprocal, Add, Sub, Mul, Div
-- RCFStream interface and PQStreamFromRCF adapter
-- PQStreamFromRational in core
-Working named pieces:
-- Sqrt2() procedural source
-- E() and Pi() finite-prefix sources with exact per-step Range()
-- FromRational wrapper over core.PQStreamFromRational
-Pending-test process now established:
-- add public stubs first
-- add full BB suite up front as pending/skipped
-- remove skip once a test goes green
-- RUN_PENDING_TESTS=1 overrides skips
-Known deferred gap:
-- DLFT under current PQStream+Range contract cannot yet certify some infinite algebraic cases like Square(Sqrt2()); keep deferred
-No special source knowledge in core; only PQ terms + Range contract
-Immediate next step: implement Gosper/Ouroboros-compliant live Sqrt(X), starting with pending BB suite already present and adding first WB tests for the substrate
-Architectural direction for sqrt:
-- no preread-to-EOF
-- no finite-only shortcut path
-- output stream should feed back as approximation stream
-- ordinary EOF collapse must handle finite streams naturally
-Recent permanent infrastructure added: PQStreamFromRCF and PQStreamFromRational
-Open API cleanup question: keep both core.PQStreamFromRational and named.FromRational, or delete named wrapper
+gosper-gcf: Go library for exact generalized continued-fraction arithmetic in Gosper/HAKMEM style.
+Authoritative committed source: GitHub main; during an R/G cycle, only WIP files provided in-chat are cached until user says “committed”.
+Current milestone: post-BLFT/DLFT unary/binary core; Sqrt(X) mostly implemented and parked with one pending red; E() complete; Take(n)/Rational(n) complete.
+Working core pieces: exact Status/PQTerm/RCFTerm/Rational/Range/Endpoint; finite + procedural PQStream; GCF shell; BLFT ops Reciprocal/Add/Sub/Mul/Div; DLFT for finite/rational unary work; Square; PQStreamFromRCF; PQStreamFromRational; GCF.Take(n); GCF.Rational(n).
+Working named pieces: Sqrt2() procedural source; E() infinite procedural regular-CF source with 50-term prefix/range validation; Pi() still finite-prefix source; FromRational wrapper discussion deferred.
+Sqrt architecture in place: feedbackRCFStream substrate; sqrt controller; Ourorobos feedback loop; observed live refinement path; easy sqrt BBs green.
+Target formula approximations were added to spec.txt.
+Known failure: only pending red is TestBB_GCF_SqrtOfTwoMatchesKnownPrefix (currently EOF too early around term 5).
+All non-pending tests are green.
+Next immediate task: begin Pi() as the next active feature after parked sqrt(2), likely via a procedural infinite GCF source (possibly generate 4/Pi and expose Pi via unary transform (0,4,1,0)).
+Planned utility already done: Take(n) is take-up-to-n and returns a shorter finite stream on EOF; Rational(n) derives a rational approximation from that finite prefix.
+Constraints: mathematical correctness first, no floats, prefer Gosper/Ouroboros purity, keep files compiling at all times.
+Process: feature start = full pending BB suite + compile-safe wrong stubs; then strict WB red/green cycles; remove skips only when genuinely green; RUN_PENDING_TESTS=1 at start of each cycle.
+Testing rule for procedural named sources: validate to 50 terms and strong Range() behavior.
+Named source contract: procedural named sources should provide the best possible current Range() from one-term lookahead when feasible.
+File convention: every .go file must have first and last line filename/version comments.
+Patch style: provide complete replacement files, keep code streamlined, avoid useless wrapper functions.
