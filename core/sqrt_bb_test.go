@@ -1,0 +1,123 @@
+// core/sqrt_bb_test.go v2
+package core_test
+
+import (
+	"math/big"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/egp/gosper-gcf/core"
+)
+
+const pendingTestSqrt = true
+
+func TestBB_GCF_SqrtOfFourIsExactlyTwo(t *testing.T) {
+	if shouldSkipPendingSqrt() {
+		t.Skip("pending public sqrt unary operation; set RUN_PENDING_TESTS=1 to run anyway")
+	}
+
+	stream, status := core.NewFinitePQStream([]core.FinitePQStep{
+		{
+			Term:  core.PQTerm{P: big.NewInt(4), Q: big.NewInt(1)},
+			Range: sqrtExactRange(4, 1),
+		},
+	})
+	if status != core.StatusOK {
+		t.Fatalf("NewFinitePQStream status = %v, want %v", status, core.StatusOK)
+	}
+
+	g := core.Sqrt(stream)
+
+	term, termStatus := nextRCFWithTimeoutSqrt(t, g, time.Second)
+	if termStatus != core.StatusOK {
+		t.Fatalf("first status = %v, want %v", termStatus, core.StatusOK)
+	}
+	if term.A().Cmp(big.NewInt(2)) != 0 {
+		t.Fatalf("first term = %v, want 2", term.A())
+	}
+
+	_, eofStatus := nextRCFWithTimeoutSqrt(t, g, time.Second)
+	if eofStatus != core.StatusEOF {
+		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
+	}
+}
+
+func TestBB_GCF_SqrtOfTwoMatchesKnownPrefix(t *testing.T) {
+	if shouldSkipPendingSqrt() {
+		t.Skip("pending public sqrt unary operation; set RUN_PENDING_TESTS=1 to run anyway")
+	}
+
+	stream, status := core.NewFinitePQStream([]core.FinitePQStep{
+		{
+			Term:  core.PQTerm{P: big.NewInt(2), Q: big.NewInt(1)},
+			Range: sqrtExactRange(2, 1),
+		},
+	})
+	if status != core.StatusOK {
+		t.Fatalf("NewFinitePQStream status = %v, want %v", status, core.StatusOK)
+	}
+
+	g := core.Sqrt(stream)
+
+	assertRCFPrefixSqrt(t, g, []int64{1, 2, 2, 2, 2})
+}
+
+func shouldSkipPendingSqrt() bool {
+	return pendingTestSqrt && os.Getenv("RUN_PENDING_TESTS") == ""
+}
+
+func assertRCFPrefixSqrt(t *testing.T, g *core.GCF, want []int64) {
+	t.Helper()
+
+	for i, w := range want {
+		term, status := nextRCFWithTimeoutSqrt(t, g, time.Second)
+		if status != core.StatusOK {
+			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
+		}
+		if term.A().Cmp(big.NewInt(w)) != 0 {
+			t.Fatalf("term %d = %v, want %d", i+1, term.A(), w)
+		}
+	}
+}
+
+func nextRCFWithTimeoutSqrt(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status) {
+	t.Helper()
+
+	type result struct {
+		term   core.RCFTerm
+		status core.Status
+	}
+
+	ch := make(chan result, 1)
+
+	go func() {
+		term, status := g.NextRCF()
+		ch <- result{term: term, status: status}
+	}()
+
+	select {
+	case res := <-ch:
+		return res.term, res.status
+	case <-time.After(timeout):
+		t.Fatalf("NextRCF() did not complete within %v", timeout)
+		return core.NewRCFTerm(nil), core.StatusInvalidInput
+	}
+}
+
+func sqrtExactRange(num, den int64) core.Range {
+	value := core.NewRational(big.NewInt(num), big.NewInt(den))
+	return core.Range{
+		Lo: core.Endpoint{
+			Value: value,
+			Open:  false,
+		},
+		Hi: core.Endpoint{
+			Value: value,
+			Open:  false,
+		},
+		Inside: true,
+	}
+}
+
+// core/sqrt_bb_test.go v2
