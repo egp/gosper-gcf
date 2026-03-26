@@ -1,4 +1,4 @@
-// core/sqrt_bb_test.go v2
+// core/sqrt_bb_test.go v3
 package core_test
 
 import (
@@ -63,6 +63,96 @@ func TestBB_GCF_SqrtOfTwoMatchesKnownPrefix(t *testing.T) {
 	assertRCFPrefixSqrt(t, g, []int64{1, 2, 2, 2, 2})
 }
 
+func TestBB_GCF_SqrtOfOneIsExactlyOne(t *testing.T) {
+	if shouldSkipPendingSqrt() {
+		t.Skip("pending public sqrt unary operation; set RUN_PENDING_TESTS=1 to run anyway")
+	}
+
+	stream, status := core.NewFinitePQStream([]core.FinitePQStep{
+		{
+			Term:  core.PQTerm{P: big.NewInt(1), Q: big.NewInt(1)},
+			Range: sqrtExactRange(1, 1),
+		},
+	})
+	if status != core.StatusOK {
+		t.Fatalf("NewFinitePQStream status = %v, want %v", status, core.StatusOK)
+	}
+
+	g := core.Sqrt(stream)
+
+	term, termStatus := nextRCFWithTimeoutSqrt(t, g, time.Second)
+	if termStatus != core.StatusOK {
+		t.Fatalf("first status = %v, want %v", termStatus, core.StatusOK)
+	}
+	if term.A().Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("first term = %v, want 1", term.A())
+	}
+
+	_, eofStatus := nextRCFWithTimeoutSqrt(t, g, time.Second)
+	if eofStatus != core.StatusEOF {
+		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
+	}
+}
+
+func TestBB_GCF_SqrtOfOneQuarterIsOneHalf(t *testing.T) {
+	if shouldSkipPendingSqrt() {
+		t.Skip("pending public sqrt unary operation; set RUN_PENDING_TESTS=1 to run anyway")
+	}
+
+	stream, status := core.NewFinitePQStream([]core.FinitePQStep{
+		{
+			Term:  core.PQTerm{P: big.NewInt(0), Q: big.NewInt(1)},
+			Range: sqrtExactRange(1, 4),
+		},
+	})
+	if status != core.StatusOK {
+		t.Fatalf("NewFinitePQStream status = %v, want %v", status, core.StatusOK)
+	}
+
+	g := core.Sqrt(stream)
+
+	term1, status1 := nextRCFWithTimeoutSqrt(t, g, time.Second)
+	if status1 != core.StatusOK {
+		t.Fatalf("first status = %v, want %v", status1, core.StatusOK)
+	}
+	if term1.A().Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("first term = %v, want 0", term1.A())
+	}
+
+	term2, status2 := nextRCFWithTimeoutSqrt(t, g, time.Second)
+	if status2 != core.StatusOK {
+		t.Fatalf("second status = %v, want %v", status2, core.StatusOK)
+	}
+	if term2.A().Cmp(big.NewInt(2)) != 0 {
+		t.Fatalf("second term = %v, want 2", term2.A())
+	}
+
+	_, eofStatus := nextRCFWithTimeoutSqrt(t, g, time.Second)
+	if eofStatus != core.StatusEOF {
+		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
+	}
+}
+
+func TestBB_GCF_SqrtRejectsNegativeFiniteInput(t *testing.T) {
+	if shouldSkipPendingSqrt() {
+		t.Skip("pending public sqrt unary operation; set RUN_PENDING_TESTS=1 to run anyway")
+	}
+
+	stream, status := core.NewFinitePQStream([]core.FinitePQStep{
+		{
+			Term:  core.PQTerm{P: big.NewInt(-4), Q: big.NewInt(1)},
+			Range: sqrtExactRange(-4, 1),
+		},
+	})
+	if status != core.StatusOK {
+		t.Fatalf("NewFinitePQStream status = %v, want %v", status, core.StatusOK)
+	}
+
+	expectPanicSqrt(t, func() {
+		_ = core.Sqrt(stream)
+	})
+}
+
 func shouldSkipPendingSqrt() bool {
 	return pendingTestSqrt && os.Getenv("RUN_PENDING_TESTS") == ""
 }
@@ -105,6 +195,18 @@ func nextRCFWithTimeoutSqrt(t *testing.T, g *core.GCF, timeout time.Duration) (c
 	}
 }
 
+func expectPanicSqrt(t *testing.T, fn func()) {
+	t.Helper()
+
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic, got none")
+		}
+	}()
+
+	fn()
+}
+
 func sqrtExactRange(num, den int64) core.Range {
 	value := core.NewRational(big.NewInt(num), big.NewInt(den))
 	return core.Range{
@@ -120,4 +222,4 @@ func sqrtExactRange(num, den int64) core.Range {
 	}
 }
 
-// core/sqrt_bb_test.go v2
+// core/sqrt_bb_test.go v3
