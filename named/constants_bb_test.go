@@ -1,4 +1,4 @@
-// named/constants_bb_test.go v2
+// named/constants_bb_test.go v4
 package named_test
 
 import (
@@ -11,19 +11,20 @@ import (
 	"github.com/egp/gosper-gcf/named"
 )
 
-const pendingTestNamedConstants = true
+const pendingTestNamedE = true
+const pendingTestNamedPi = true
 
-func TestBB_Named_E_MatchesKnownPrefix(t *testing.T) {
-	if shouldSkipPendingNamedConstants() {
-		t.Skip("pending named E() source; set RUN_PENDING_TESTS=1 to run anyway")
+func TestBB_Named_E_MatchesKnownPrefix50(t *testing.T) {
+	if shouldSkipPendingNamedE() {
+		t.Skip("pending robust named E() source; set RUN_PENDING_TESTS=1 to run anyway")
 	}
 
 	g := core.NewGCF1(identityUnaryCoeffsNamedConstants(), named.E())
-	assertRCFPrefixNamedConstants(t, g, []int64{2, 1, 2, 1, 1, 4, 1})
+	assertRCFPrefixNamedConstants(t, g, eTermsNamedConstants(50))
 }
 
 func TestBB_Named_Pi_MatchesKnownPrefix(t *testing.T) {
-	if shouldSkipPendingNamedConstants() {
+	if shouldSkipPendingNamedPi() {
 		t.Skip("pending named Pi() source; set RUN_PENDING_TESTS=1 to run anyway")
 	}
 
@@ -31,8 +32,12 @@ func TestBB_Named_Pi_MatchesKnownPrefix(t *testing.T) {
 	assertRCFPrefixNamedConstants(t, g, []int64{3, 7, 15, 1, 292, 1, 1, 1})
 }
 
-func shouldSkipPendingNamedConstants() bool {
-	return pendingTestNamedConstants && os.Getenv("RUN_PENDING_TESTS") == ""
+func shouldSkipPendingNamedE() bool {
+	return pendingTestNamedE && os.Getenv("RUN_PENDING_TESTS") == ""
+}
+
+func shouldSkipPendingNamedPi() bool {
+	return pendingTestNamedPi && os.Getenv("RUN_PENDING_TESTS") == ""
 }
 
 func identityUnaryCoeffsNamedConstants() core.BLFTCoefficients {
@@ -48,14 +53,41 @@ func identityUnaryCoeffsNamedConstants() core.BLFTCoefficients {
 	}
 }
 
+func eTermsNamedConstants(n int) []int64 {
+	if n <= 0 {
+		return nil
+	}
+
+	out := make([]int64, 0, n)
+	out = append(out, 2)
+
+	k := int64(1)
+	for len(out) < n {
+		out = append(out, 1)
+		if len(out) >= n {
+			break
+		}
+		out = append(out, 2*k)
+		if len(out) >= n {
+			break
+		}
+		out = append(out, 1)
+		k++
+	}
+
+	return out
+}
+
 func assertRCFPrefixNamedConstants(t *testing.T, g *core.GCF, want []int64) {
 	t.Helper()
 
 	for i, w := range want {
 		term, status := nextRCFWithTimeoutNamedConstants(t, g, time.Second)
+
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
+
 		if term.A().Cmp(big.NewInt(w)) != 0 {
 			t.Fatalf("term %d = %v, want %d", i+1, term.A(), w)
 		}
@@ -71,19 +103,18 @@ func nextRCFWithTimeoutNamedConstants(t *testing.T, g *core.GCF, timeout time.Du
 	}
 
 	ch := make(chan result, 1)
-
 	go func() {
 		term, status := g.NextRCF()
 		ch <- result{term: term, status: status}
 	}()
 
 	select {
-	case res := <-ch:
-		return res.term, res.status
+	case got := <-ch:
+		return got.term, got.status
 	case <-time.After(timeout):
-		t.Fatalf("NextRCF() did not complete within %v", timeout)
+		t.Fatalf("NextRCF timed out after %v", timeout)
 		return core.NewRCFTerm(nil), core.StatusInvalidInput
 	}
 }
 
-// named/constants_bb_test.go v2
+// named/constants_bb_test.go v4
