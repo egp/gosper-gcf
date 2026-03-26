@@ -1,4 +1,4 @@
-// core/gcf.go v9
+// core/gcf.go v10
 package core
 
 import "math/big"
@@ -26,6 +26,7 @@ type GCF struct {
 	x      PQStream
 	y      PQStream
 
+	stream   RCFStream
 	terminal *exactTerminalState
 	unary    *unaryEvaluatorState
 	binary   *binaryEvaluatorState
@@ -63,6 +64,21 @@ func NewGCF2WithConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Config) *GCF 
 	return newGCF2WithResolvedConfig(coeffs, x, y, cfg)
 }
 
+func newObservedRCFGCF(src RCFStream) *GCF {
+	return newObservedRCFGCFWithResolvedConfig(src, DefaultConfig())
+}
+
+func newObservedRCFGCFWithResolvedConfig(src RCFStream, cfg Config) *GCF {
+	if src == nil {
+		panic("newObservedRCFGCFWithResolvedConfig: nil source")
+	}
+
+	return &GCF{
+		cfg:    cfg,
+		stream: src,
+	}
+}
+
 func newExactTerminalGCFWithResolvedConfig(terms []RCFTerm, rng Range, cfg Config) *GCF {
 	return &GCF{
 		cfg: cfg,
@@ -87,14 +103,12 @@ func newGCF1WithResolvedConfig(coeffs BLFTCoefficients, x PQStream, cfg Config) 
 		cfg:    cfg,
 		x:      x,
 	}
-
 	if x != nil {
 		g.unary = &unaryEvaluatorState{
 			engine: newBLFTState(coeffs),
 			x:      x,
 		}
 	}
-
 	return g
 }
 
@@ -105,13 +119,11 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 		x:      x,
 		y:      y,
 	}
-
 	if x == nil || y == nil {
 		return g
 	}
 
 	state := newBLFTState(coeffs)
-
 	switch {
 	case state.IndependentOfY():
 		final := exactRationalFromUnaryEngine(state, x)
@@ -144,6 +156,10 @@ func (g *GCF) NextRCF() (RCFTerm, Status) {
 		panic("GCF receiver is nil")
 	}
 
+	if g.stream != nil {
+		return g.stream.NextRCF()
+	}
+
 	if g.terminal != nil {
 		if g.terminal.next >= len(g.terminal.terms) {
 			return NewRCFTerm(nil), StatusEOF
@@ -167,6 +183,10 @@ func (g *GCF) NextRCF() (RCFTerm, Status) {
 func (g *GCF) Range() Range {
 	if g == nil {
 		panic("GCF receiver is nil")
+	}
+
+	if g.stream != nil {
+		return g.stream.Range()
 	}
 
 	if g.terminal != nil {
@@ -208,7 +228,6 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status) {
 		}
 
 		currentRange := g.unary.engine.UnaryRange(g.unary.x.Range())
-
 		if term, ok := g.unary.engine.CanEmitRCFTerm(currentRange); ok {
 			if isExactIntegerRangeWithTerm(currentRange, term) {
 				g.terminal = &exactTerminalState{
@@ -225,15 +244,12 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status) {
 		}
 
 		term, tail, status := g.unary.x.NextPQ()
-
 		switch status {
 		case StatusOK:
 			g.unary.engine = g.unary.engine.IngestUnaryX(term)
 			g.unary.x = tail
-
 		case StatusEOF:
 			g.unary.x = tail
-
 		default:
 			panic("nextUnaryRCF: invalid input status")
 		}
@@ -276,7 +292,6 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status) {
 		}
 
 		currentRange := g.binary.engine.BinaryRange(g.binary.x.Range(), g.binary.y.Range())
-
 		if term, ok := g.binary.engine.CanEmitRCFTerm(currentRange); ok {
 			if isExactIntegerRangeWithTerm(currentRange, term) {
 				g.terminal = &exactTerminalState{
@@ -344,13 +359,14 @@ func exactRationalFromUnaryEngine(engine unaryEngine, stream PQStream) Rational 
 
 	for {
 		term, tail, status := input.NextPQ()
-
 		switch status {
 		case StatusOK:
 			current = current.IngestUnaryX(term)
 			input = tail
+
 		case StatusEOF:
 			return current.CollapseUnaryEOF()
+
 		default:
 			panic("exactRationalFromUnaryEngine: invalid input status")
 		}
@@ -443,4 +459,4 @@ func cloneRCFTerms(terms []RCFTerm) []RCFTerm {
 	return out
 }
 
-// core/gcf.go v9
+// core/gcf.go v10

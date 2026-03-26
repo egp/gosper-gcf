@@ -1,9 +1,9 @@
-// core/sqrt.go v2
+// core/sqrt.go v3
 package core
 
 func Sqrt(x PQStream) *GCF {
 	controller := newSqrtController(x)
-	return controller.buildRefinement(controller.seedApproximation())
+	return newObservedRCFGCF(newSqrtObservedRefinementStream(controller))
 }
 
-// core/sqrt.go v2
+// core/sqrt.go v3

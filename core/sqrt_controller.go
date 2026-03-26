@@ -1,14 +1,15 @@
-// core/sqrt_controller.go v6
+// core/sqrt_controller.go v7
 package core
 
 import "math/big"
 
 type sqrtController struct {
-	x               PQStream
-	ourorobos       *feedbackRCFStream
-	ourorobosApprox PQStream
-	half            PQStream
-	seed            PQStream
+	x                    PQStream
+	ourorobos            *feedbackRCFStream
+	ourorobosApprox      PQStream
+	hasOurorobosFeedback bool
+	half                 PQStream
+	seed                 PQStream
 }
 
 func newSqrtController(x PQStream) *sqrtController {
@@ -21,11 +22,12 @@ func newSqrtController(x PQStream) *sqrtController {
 	ourorobos := newFeedbackRCFStream()
 
 	return &sqrtController{
-		x:               x,
-		ourorobos:       ourorobos,
-		ourorobosApprox: PQStreamFromRCF(ourorobos),
-		half:            exactHalfPQStream(),
-		seed:            selectSqrtSeedApproximation(x.Range()),
+		x:                    x,
+		ourorobos:            ourorobos,
+		ourorobosApprox:      PQStreamFromRCF(ourorobos),
+		hasOurorobosFeedback: false,
+		half:                 exactHalfPQStream(),
+		seed:                 selectSqrtSeedApproximation(x.Range()),
 	}
 }
 
@@ -69,6 +71,7 @@ func (c *sqrtController) feedCertifiedTerm(term RCFTerm, rng Range) {
 	}
 
 	c.ourorobos.Append(term, rng)
+	c.hasOurorobosFeedback = true
 }
 
 func exactHalfPQStream() PQStream {
@@ -151,4 +154,4 @@ func exactIntegerSquareRoot(n *big.Int) (*big.Int, bool) {
 	return root, true
 }
 
-// core/sqrt_controller.go v6
+// core/sqrt_controller.go v7
