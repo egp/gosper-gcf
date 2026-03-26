@@ -1,630 +1,292 @@
-Spec.md
+gosper-gcf / core specification
 
-gosper-gcf / core Specification
+status
 
-Status
-
-This document is the current design contract for the core package and the companion package named.
+This file is the current design contract for gosper-gcf.
 
 When a design choice conflicts with Gosper / HAKMEM 101B, Gosper wins.
+Aim for 100 percent Gosper/Ouroboros compliance unless a deviation is explicitly justified and agreed.
 
 ----------------------------------------------------------------------
-1. Mission
+1. mission
 ----------------------------------------------------------------------
 
-Build a mathematically correct, testable Go library for arithmetic on generalized continued fractions in the style of Gosper / HAKMEM 101B.
+Build a mathematically correct, testable Go library for exact arithmetic on generalized continued fractions in the style of Gosper / HAKMEM 101B.
 
 Primary goals:
-
 - mathematical correctness
-- simplicity
 - exact arithmetic only
+- Gosper/Ouroboros compliance
+- simplicity
 - DRY implementation
 - design for test
 
-Performance matters only after correctness and clarity.
+No floats anywhere in production code, tests, or correctness helpers.
 
-Target formula
+Target formula:
 
     sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69 deg))
 
-This is the future celebratory target.
-
 ----------------------------------------------------------------------
-2. Package layout
+2. package layout
 ----------------------------------------------------------------------
 
-2.1 core
-
-The core package contains:
-
-- generalized source-stream abstractions
-- the client-facing regular-output GCF
-- BLFT and DLFT transform engines
+core contains:
+- exact domain types
+- PQStream and RCFStream abstractions
+- adapters between stream forms
+- BLFT engine
+- DLFT engine
+- sqrt feedback controller design and future implementation
 - shared evaluator control flow
-- range logic
-- normalization and invariant enforcement
 - config and status codes
 
-2.2 named
-
-The companion package is named.
-
 named contains:
-
-- named streams such as Pi(), E(), Sqrt2(), etc.
-- constructors from Rational
-- constructors from finite or procedural source descriptions
-- wrappers that help clients build source streams for testing and use
-
-named does not weaken the core rule that engine ingestion is always in generalized (p,q) terms.
+- named source constructors
+- convenience wrappers for source creation
+- finite or procedural source definitions
 
 ----------------------------------------------------------------------
-3. Core design principles
+3. exact source and output model
 ----------------------------------------------------------------------
 
-3.1 Exact arithmetic only
-
-No floats anywhere in production code, tests, or correctness helpers.
-
-3.2 Simplicity
-
-Prefer one clear algebraic path over multiple convenience paths.
-
-3.3 DRY
-
-BLFT, DLFT, and any future engine families must share helpers wherever algebraically sound.
-
-3.4 Shared evaluator control flow, engine-specific algebra
-
-Internally, share evaluator control flow and common helpers where practical, but allow different engine shapes when the algebra truly differs.
-
-In particular:
-
-- BLFT is the binary-and-unary engine for bilinear fractional transforms
-- DLFT is a distinct unary engine for diagonal / quadratic-over-quadratic transforms
-- range evaluation, ingestion, emission, and collapse formulas may differ by engine family
-
-3.5 Certified output only
-
-The engine emits a regular continued-fraction term only when Gosper's emission criterion says it is forced by the current range.
-
-3.6 EOF is valid
-
-EOF is not an error.
-
-EOF triggers algebraic collapse and computation continues if possible.
-
-3.7 Malformed client-visible input is reported
-
-Malformed source terms supplied by client-visible streams return a failure status as soon as noticed, whether at construction time or pull time.
-
-3.8 Internal invariant failure is fatal
-
-Internal impossible states panic.
-
-3.9 Invalid use should be unrepresentable where possible
-
-APIs should prefer states and signatures that make misuse hard or impossible.
-
-----------------------------------------------------------------------
-4. Mathematical conventions
-----------------------------------------------------------------------
-
-4.1 Generalized source-term convention
-
-Every generalized source term uses:
+Generalized source term convention:
 
     X = p + q / X'
 
-This is the exact convention everywhere in core.
+A PQ source provides:
+- NextPQ() -> (PQTerm, tail, Status)
+- Range() -> Range
 
-4.2 Emission convention
+A regular output stream provides:
+- NextRCF() -> (RCFTerm, Status)
+- Range() -> Range
 
-Emission uses Gosper's regular tail rewrite:
+Adapters currently supported:
+- PQStreamFromRCF(rcf RCFStream) PQStream
+- PQStreamFromRational(r Rational) PQStream
 
-    Z = t + u / Z'   <=>   Z' = u / (Z - t)
+Convenience wrappers in named may re-export core constructors, but core owns the canonical implementation.
 
-For regular emitted output, u = 1.
-
-4.3 Regular emitted output convention
-
-Emitted output is a regular continued-fraction term sequence.
-
-- the first emitted regular term may be negative
-- every later emitted regular term is a standard regular CF term
-
-4.4 Input sign policy for generalized source terms
-
-For v1 source validation:
-
-- q must be nonzero on every term
-- the first term may be negative in either component
-- after the first term, both p and q must be positive
-- any later negative p or q is malformed input
-
-This is a practical v1 source-validity rule.
-
-4.5 No internal q == 1 shortcut path
-
-Regular CFs are the special case q = 1, but core logic does not fork into a separate arithmetic path for regular CFs.
-
-4.6 Exact value vs integer value
-
-If a range has lo == hi, then the value is known exactly.
-
-That does not imply the value is an integer. It may be any exact rational.
+EOF is valid and triggers algebraic collapse.
+Malformed client-visible source input returns status failure as soon as detected.
+Impossible internal states panic.
 
 ----------------------------------------------------------------------
-5. Numeric types
+4. exact numeric model
 ----------------------------------------------------------------------
 
-5.1 Big integers
+Use exact big integers and exact rationals only.
 
 Use *big.Int internally for:
-
 - PQTerm.p
 - PQTerm.q
-- RCFTerm
+- RCFTerm value
 - BLFT coefficients
 - DLFT coefficients
 - Rational numerator
 - Rational denominator
 
-5.2 Rational
-
-Rational is exact and BigInt-based.
-
-Expected operations include:
-
-- normalization
-- comparison
-- arithmetic for endpoint evaluation
-- exact conversion from integer
-
-5.3 Exact conversion from integer
-
-Exact conversion from integer means:
-
-- integer n converts to rational n / 1
-- no rounding
-- no approximation
-- no float intermediary
+Rational is exact and normalized.
+Exact integer conversion means n -> n/1 with no approximation.
 
 ----------------------------------------------------------------------
-6. Status codes
+5. range model
 ----------------------------------------------------------------------
 
-The project prefers status codes over plain error returns for operational APIs.
+A Range is either:
+- inside interval
+- outside interval
 
-Representative statuses include:
+Endpoints are exact rationals with independent open/closed flags.
 
-- StatusOK
-- StatusEOF
-- StatusInvalidInput
+Inside interval invariant:
+- lo <= hi
 
-Meaning:
+If lo == hi, the value is known exactly, but need not be an integer.
 
-- StatusOK: a term was produced successfully
-- StatusEOF: normal end of stream
-- StatusInvalidInput: malformed client-visible source term or invalid constructor input
+Outside interval denotes:
+- (-infinity, lo] union [hi, +infinity)
 
-Configured timeout and excessive bit-length are not ordinary statuses in v1.
+Range() is defined only on live objects.
+Invalid internal use panics.
 
-They panic.
+For inside intervals, an emitted regular term is certified only when every value in the interval has the same floor.
+
+For v1, outside intervals do not directly certify an emitted regular term.
 
 ----------------------------------------------------------------------
-7. Public model
+6. engine families
 ----------------------------------------------------------------------
 
-7.1 Input source stream
+BLFT state:
 
-A generalized source stream provides:
+    Z(X,Y) = (aXY + bX + cY + d) / (eXY + fX + gY + h)
 
-- the next generalized term (p,q)
-- the tail source X'
-- the current range enclosure
+DLFT state:
 
-Conceptual direction:
+    Z(X) = (aX^2 + bX + c) / (dX^2 + eX + f)
 
-- NextPQ() -> (PQTerm, tail, Status)
-- Range() -> Range
+BLFT supports:
+- Add
+- Sub
+- Mul
+- Div
+- Reciprocal
+- unary and binary live evaluation
 
-7.2 Client-facing GCF
+DLFT supports:
+- Square
+- finite/rational unary work
+- candidate-range analysis for endpoint, rational root, and rational critical-point cases
 
-In v1, GCF is the client-facing regular-output stream object, backed by:
+DLFT under the current PQStream + Range contract is not yet sufficient to certify some infinite algebraic-source cases, such as Square(Sqrt2()).
 
-- zero, one, or two input source streams
-- one transform engine instance
-- optional config, otherwise defaults
+Sqrt is not BLFT or DLFT.
+Sqrt is to be implemented as a separate Gosper/Ouroboros feedback controller.
 
-Then calls:
+----------------------------------------------------------------------
+7. emission, ingestion, and collapse
+----------------------------------------------------------------------
 
-- NextRCF() to obtain the next emitted regular term
-- Range() to inspect the current enclosure
-- Cmp() to compare values
+General emission rule:
 
-7.3 Constructors
+    Z = t + u / Z'
+    Z' = u / (Z - t)
 
-Public constructors are engine-specific.
+For regular output, u = 1.
 
-Current direction:
+BLFT ingest formulas:
 
+If X = p + q / X', then
+
+    (a,b,c,d;e,f,g,h) -> (pa+c, pb+d, qa, qb; pe+g, pf+h, qe, qf)
+
+If Y = r + s / Y', then
+
+    (a,b,c,d;e,f,g,h) -> (ra+b, sa, rc+d, sc; re+f, se, rg+h, sg)
+
+BLFT emission:
+
+    (a,b,c,d;e,f,g,h) -> (e,f,g,h; a-te, b-tf, c-tg, d-th)
+
+DLFT ingest formulas for X = p + q / X':
+
+    A = ap^2 + bp + c
+    B = 2apq + bq
+    C = aq^2
+    D = dp^2 + ep + f
+    E = 2dpq + eq
+    F = dq^2
+
+DLFT emission:
+
+    (a,b,c;d,e,f) -> (d,e,f; a-td, b-te, c-tf)
+
+DLFT collapse on EOF uses highest surviving degree:
+- if d != 0, collapse to a/d
+- else if e != 0, collapse to b/e
+- else collapse to c/f
+
+----------------------------------------------------------------------
+8. public constructors and operations
+----------------------------------------------------------------------
+
+Current public constructor direction:
 - NewGCF0(coeffs BLFTCoefficients)
 - NewGCF1(coeffs BLFTCoefficients, x PQStream)
 - NewGCF2(coeffs BLFTCoefficients, x, y PQStream)
 - NewDLFT1(coeffs DLFTCoefficients, x PQStream)
 
-with matching WithConfig variants.
+Public operations currently implemented:
+- Square
+- Reciprocal
+- Add
+- Sub
+- Mul
+- Div
 
-7.4 No public Emit() method
+Pending public operations on the critical path:
+- Sqrt
+- later Sin
+- later Tanh
 
-There is no public Emit() method.
-
-Emission is an internal event.
-
-To the client, emission simply appears as a successful NextRCF() result.
-
-----------------------------------------------------------------------
-8. Client-facing operations
-----------------------------------------------------------------------
-
-The client accesses arithmetic by selecting predefined transform initializations.
-
-Representative direction:
-
-- Add(X, Y) via BLFT
-- Sub(X, Y) via BLFT
-- Mul(X, Y) via BLFT
-- Div(X, Y) via BLFT
-- Reciprocal(X) via BLFT
-- Square(X) via DLFT
-- later Sqrt(X) via Newton feedback using DLFT-based pieces
-- later Sin(X), Tanh(X)
-
-There is no special core arithmetic path for these operations beyond selecting the proper engine family and coefficients, then running the shared evaluator loop.
+There is no public Emit method.
 
 ----------------------------------------------------------------------
-9. Range model
+9. named sources
 ----------------------------------------------------------------------
 
-9.1 Range kinds
+Current named sources and wrappers include:
+- Sqrt2()
+- E()
+- Pi()
+- FromRational(...)
 
-A Range is one of:
+All procedural named sources should look ahead one term and provide an exact current Range whenever feasible.
+All BB tests of named sources should check both emitted terms and Range() at each step.
 
-- InsideInterval
-- OutsideInterval
-
-9.2 Endpoint type
-
-Endpoints are exact Rationals.
-
-Each endpoint has its own openness/closedness flag.
-
-9.3 Inside interval meaning
-
-An inside interval encloses values within bounded endpoints.
-
-Invariant:
-
-- lo <= hi
-
-Interpretation:
-
-- the value lies within the interval
-- if lo == hi, the exact value is known
-
-9.4 Outside interval meaning
-
-An outside interval denotes the enclosure:
-
-    (-infinity, lo] union [hi, +infinity)
-
-with independently open/closed finite endpoints.
-
-Canonical ordering details for outside intervals remain open.
-
-9.5 Range comparison ordering
-
-Use Gosper's uncertainty ordering:
-
-- inside narrow
-- inside wide
-- outside wide
-- outside narrow
-
-9.6 Range validity
-
-Range() is defined only on live objects.
-
-It does not return a status.
-
-Invalid internal use panics.
+Named sources must not require source-specific knowledge in core.
+Core must work only from PQ terms, Range(), and normal collapse behavior.
 
 ----------------------------------------------------------------------
-10. Exact openness rules at integer boundaries
+10. sqrt design decision
 ----------------------------------------------------------------------
 
-10.1 Inside intervals
+Sqrt must follow a Gosper/Ouroboros design.
 
-For an inside interval, the next regular term is forced only if every value in the interval has the same floor.
+Required properties:
+- no preread to EOF
+- no finite-only shortcut path
+- no source-specific knowledge
+- do not request terms until needed
+- emitted output terms must feed back as the approximation stream
+- finite streams are handled only by ordinary EOF collapse
 
-Define:
+Current permanent substrate already in place for sqrt:
+- RCFStream interface
+- PQStreamFromRCF adapter
+- PQStreamFromRational constructor
 
-- lowerTerm = floor(lo)
-- upperTerm = floor(hi), except:
-- if hi is open and hi is exactly an integer n, then upperTerm = n - 1
+Planned sqrt refinement map:
 
-Then an inside interval certifies a unique next regular term iff:
+    Y_next = (Y + X / Y) / 2
 
-- lowerTerm == upperTerm
-
-Examples:
-
-- [1.2, 1.9] emits 1
-- [1.2, 2) emits 1
-- [1, 2) emits 1
-- [1, 2] does not emit
-- (2, 2.5] emits 2
-
-10.2 Outside intervals
-
-For v1, OutsideInterval does not directly certify a unique regular output term.
+where Y is the emerging output stream itself, fed back as the current approximation stream.
 
 ----------------------------------------------------------------------
-11. Engine families
+11. testing rules
 ----------------------------------------------------------------------
 
-11.1 BLFT primary state
-
-BLFT uses:
-
-    Z(X,Y) = (aXY + bX + cY + d) / (eXY + fX + gY + h)
-
-with BigInt coefficients.
-
-BLFT supports:
-
-- true binary transforms
-- unary projection / collapse cases
-- standard arithmetic operations such as add, subtract, multiply, divide, reciprocal
-
-11.2 DLFT primary state
-
-DLFT uses:
-
-    Z(X) = (aX^2 + bX + c) / (dX^2 + eX + f)
-
-with BigInt coefficients.
-
-DLFT supports unary transforms that genuinely require an X^2 term, including:
-
-- Square(X)
-- Newton-style sqrt refinement transforms
-
-11.3 Shared engine actions
-
-At each step an engine does exactly one of:
-
-1. ingest one (p,q) term from one input
-2. emit one regular CF term
-3. collapse on EOF from an input
-
-----------------------------------------------------------------------
-12. BLFT ingest formulas
-----------------------------------------------------------------------
-
-If X produces (p,q) with
-
-    X = p + q / X'
-
-then ingesting X updates BLFT coefficients to:
-
-    (a,b,c,d;e,f,g,h) -> (pa+c, pb+d, qa, qb; pe+g, pf+h, qe, qf)
-
-If Y produces (r,s) with
-
-    Y = r + s / Y'
-
-then ingesting Y updates BLFT coefficients to:
-
-    (a,b,c,d;e,f,g,h) -> (ra+b, sa, rc+d, sc; re+f, se, rg+h, sg)
-
-----------------------------------------------------------------------
-13. DLFT ingest formula
-----------------------------------------------------------------------
-
-For
-
-    Z(X) = (aX^2 + bX + c) / (dX^2 + eX + f)
-
-and
-
-    X = p + q / X'
-
-the ingested DLFT in X' is:
-
-    Z(X') = (AX'^2 + BX' + C) / (DX'^2 + EX' + F)
-
-with:
-
-    A = ap^2 + bp + c
-    B = 2apq + bq = q(2ap+b)
-    C = aq^2
-    D = dp^2 + ep + f
-    E = 2dpq + eq = q(2dp+e)
-    F = dq^2
-
-----------------------------------------------------------------------
-14. Emission formulas
-----------------------------------------------------------------------
-
-14.1 General rule
-
-To emit (t,u) so that
-
-    Z = t + u / Z'
-
-the transform updates by:
-
-    Z' = u / (Z - t)
-
-For regular emitted output, u = 1.
-
-14.2 BLFT emission
-
-BLFT coefficients update to:
-
-    (a,b,c,d;e,f,g,h) -> (ue, uf, ug, uh; a-te, b-tf, c-tg, d-th)
-
-For regular emitted output, u = 1.
-
-14.3 DLFT emission
-
-DLFT coefficients update to:
-
-    (a,b,c;d,e,f) -> (ud, ue, uf; a-td, b-te, c-tf)
-
-For regular emitted output, u = 1.
-
-----------------------------------------------------------------------
-15. Collapse rules
-----------------------------------------------------------------------
-
-15.1 EOF is not an error
-
-EOF is represented by StatusEOF and causes algebraic collapse.
-
-15.2 BLFT collapse when X hits EOF
-
-BLFT collapses to the induced unary transform in Y.
-
-15.3 BLFT collapse when Y hits EOF
-
-BLFT collapses to the induced unary transform in X.
-
-15.4 BLFT collapse when both hit EOF
-
-The state becomes a terminal exact state and emits the rest directly.
-
-15.5 DLFT collapse on EOF
-
-DLFT collapses by highest surviving degree:
-
-- if quadratic denominator coefficient survives, collapse to a / d
-- else if linear denominator coefficient survives, collapse to b / e
-- else collapse to c / f
-
-15.6 Terminal exact state
-
-A terminal exact state is a live regular-output state whose value is exactly known as a rational and which emits the remainder directly without further source ingestion.
-
-----------------------------------------------------------------------
-16. Emit-vs-ingest decision
-----------------------------------------------------------------------
-
-The core emission rule is:
-
-- compute the current certified range
-- if the range forces a unique next regular term, emit
-- otherwise ingest another generalized source term from one input
-- if an input is EOF, collapse algebraically instead
-
-For BLFT, binary input choice may depend on widest candidate range and tie-break rules.
-
-For DLFT, only unary ingestion applies.
-
-----------------------------------------------------------------------
-17. Candidate range evaluation
-----------------------------------------------------------------------
-
-17.1 BLFT
-
-BLFT candidate range is derived from corner evaluation plus denominator-crossing handling.
-
-17.2 DLFT
-
-DLFT candidate range is derived from unary interval analysis.
-
-At minimum this may require:
-
-- endpoint evaluation
-- denominator root detection
-- critical-point analysis when needed
-
-Constant and exact cases should collapse cleanly.
-
-----------------------------------------------------------------------
-18. Normalization and canonicalization
-----------------------------------------------------------------------
-
-Transforms may normalize after mutation.
-
-Representative normalization rules include:
-
-- divide coefficients by common nonzero GCD where valid
-- canonicalize sign by a deterministic rule
-- preserve the exact represented transform
-
-Normalization must not change the mathematical function represented.
-
-----------------------------------------------------------------------
-19. Config
-----------------------------------------------------------------------
-
-Representative config fields include:
-
-- timeout
-- bit-length limit
-- bit-length warning threshold
-
-In v1:
-
-- config is optional
-- default config is valid
-- timeout and excessive bit-length breach panic rather than return a normal status
-
-----------------------------------------------------------------------
-20. Testing rules
-----------------------------------------------------------------------
-
-20.1 White-box tests
+For each new feature:
+1. add the public stub first
+2. add the planned BB signoff suite up front
+3. mark pending BB tests as skipped by default
+4. enable pending tests with RUN_PENDING_TESTS=1
+5. as tests turn green, remove the skip logic
+6. add WB tests for each R/G slice
+
+Pending BB tests are the signoff list for a feature.
 
 White-box tests verify:
-
 - exact algebra formulas
-- invariant enforcement
+- invariants
 - normalization
 - collapse rules
-- panic behavior for invalid internal states
+- panic paths
 - engine-specific math
 
-20.2 Black-box tests
-
 Black-box tests verify:
-
-- public constructor behavior
-- public stream behavior
-- exact emitted prefixes
+- public API behavior
+- emitted prefixes
+- Range() correctness
 - EOF behavior
-- named-source behavior
-- config behavior
+- named source behavior
 
-20.3 Panic-path tests
-
-Intentional panic sites should have explicit tests that pass only when the expected panic occurs.
-
-20.4 Property tests
-
-Property tests should be added where they materially improve confidence, especially for:
-
-- source validation
-- BLFT / DLFT invariant preservation
-- exact vs emitted-prefix agreement
-- collapse correctness
+Intentional panic sites should have explicit tests.
 
 ----------------------------------------------------------------------
-21. Non-goals for v1
+12. non-goals for v1
 ----------------------------------------------------------------------
 
 - decimal rendering API
@@ -634,15 +296,15 @@ Property tests should be added where they materially improve confidence, especia
 - weakening of panic policy for impossible internal states
 
 ----------------------------------------------------------------------
-22. Summary of current direction
+13. summary of current direction
 ----------------------------------------------------------------------
 
 The current architecture is:
-
 - one public GCF
-- one generalized PQStream source model
-- shared evaluator control flow
-- BLFT as the current binary/unary transform engine
-- DLFT as a parallel unary transform engine for square and Newton-style sqrt work
+- one generalized PQStream model
+- one RCFStream model
+- BLFT for current binary and unary transform work
+- DLFT for square and finite/rational unary work
+- a planned Gosper/Ouroboros feedback controller for sqrt
 - exact arithmetic everywhere
-- Gosper-certified regular output only
+- certified regular output only

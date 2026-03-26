@@ -1,0 +1,200 @@
+sqrt implementation plan
+
+goal
+
+Implement Sqrt(X) on the critical path to the target formula using the 100 percent Gosper/Ouroboros design.
+
+critical path
+
+Current target blockers:
+1. Sqrt
+2. stronger named E as needed
+3. stronger named Pi as needed
+4. Sin
+5. Tanh
+6. target expression integration
+
+Sqrt is the next highest-priority missing feature.
+
+----------------------------------------------------------------------
+1. current state
+----------------------------------------------------------------------
+
+Available now:
+- public sqrt stub exists
+- full pending BB signoff suite for sqrt exists
+- RCFStream exists
+- PQStreamFromRCF exists
+- PQStreamFromRational exists
+- Add, Div, Mul, Reciprocal, Square exist
+- finite/procedural sources exist
+- live BLFT and DLFT evaluators exist
+
+Pending BB signoff suite:
+- SqrtOfFourIsExactlyTwo
+- SqrtOfTwoMatchesKnownPrefix
+- SqrtOfOneIsExactlyOne
+- SqrtOfOneQuarterIsOneHalf
+- SqrtRejectsNegativeFiniteInput
+
+These tests are currently skipped by default and enabled with RUN_PENDING_TESTS=1.
+
+----------------------------------------------------------------------
+2. implementation philosophy
+----------------------------------------------------------------------
+
+No temporary finite-only code.
+No preread-to-EOF path.
+No source-specific knowledge.
+No deviation from Gosper/Ouroboros until explicitly agreed.
+
+As tests turn green:
+- remove skip logic immediately
+
+----------------------------------------------------------------------
+3. expected R/G cycles
+----------------------------------------------------------------------
+
+Best current estimate:
+- 5 to 7 R/G cycles to complete sqrt
+
+Reasonable breakdown:
+Cycle 1: feedback stream substrate
+Cycle 2: seed approximation and controller shell
+Cycle 3: negative rejection and easy exact-value greens
+Cycle 4: first real feedback refinement and emission progress
+Cycle 5: sqrt(2) prefix green
+Cycle 6: cleanup, additional WB tests, panic-path tests
+Cycle 7: reserve for surprises or progress issues
+
+If the feedback substrate is cleaner than expected, it may finish in 4 to 5 cycles.
+If progress behavior is tricky, expect 6 to 7.
+
+----------------------------------------------------------------------
+4. cycle-by-cycle plan
+----------------------------------------------------------------------
+
+Cycle 1
+Objective:
+- add the first permanent feedback-stream substrate
+
+WB tests to add:
+- feedback RCF source accepts emitted terms in order
+- PQStreamFromRCF over feedback source maps q=1 correctly
+- feedback source Range() remains consistent with remaining suffix
+
+Prod piece:
+- feedbackRCFStream primitive
+- any minimal supporting queue or tail object
+
+Acceptance:
+- new WB tests green
+- no sqrt BB tests activated yet
+
+Cycle 2
+Objective:
+- add sqrt controller shell and initial seed approximation path
+
+WB tests to add:
+- sqrt controller builds Newton refinement graph from X and Y
+- exact rational 1/2 source works in refinement wiring
+- first demand for approximation term does not preread X
+
+Prod piece:
+- sqrtController scaffold
+- seed approximation source selection from current Range()
+
+Acceptance:
+- controller compiles and is wired
+- still no fake finite-only shortcut logic
+
+Cycle 3
+Objective:
+- turn the easy pending sqrt BB tests green
+
+Activate:
+- SqrtOfFourIsExactlyTwo
+- SqrtOfOneIsExactlyOne
+- SqrtOfOneQuarterIsOneHalf
+- SqrtRejectsNegativeFiniteInput
+
+WB tests to add:
+- negative radicand range panic
+- emitted term fed back into approximation stream
+- finite source handled only through ordinary EOF collapse
+
+Prod piece:
+- real negative-range rejection
+- enough controller logic for exact/easy cases through ordinary refinement and collapse
+
+Acceptance:
+- the four BB tests above are green
+- remove their skip logic
+
+Cycle 4
+Objective:
+- make real feedback refinement progress for nontrivial positive inputs
+
+Activate:
+- keep SqrtOfTwoMatchesKnownPrefix pending until this cycle is ready
+
+WB tests to add:
+- Newton/Ouroboros step consumes no extra source terms when not needed
+- repeated refinement tightens the certified output prefix
+- no bad approximation terms are requested just to be discarded later
+
+Prod piece:
+- real self-feedback refinement loop
+- progress / scheduling logic
+
+Acceptance:
+- controller shows real live refinement behavior
+
+Cycle 5
+Objective:
+- turn sqrt(2) prefix green
+
+Activate:
+- SqrtOfTwoMatchesKnownPrefix
+
+WB tests to add:
+- sqrt(2) first emitted term is certified before unnecessary upstream ingestion
+- emitted prefix becomes next approximation prefix
+
+Prod piece:
+- whatever refinement/progress fix is needed to certify sqrt(2) prefix under the Gosper design
+
+Acceptance:
+- sqrt(2) BB test green
+- remove its skip logic
+
+Cycle 6
+Objective:
+- harden and clean up
+
+WB tests to add:
+- panic-path tests
+- progress tests
+- EOF/collapse tests
+- any missing invariants found during development
+
+Acceptance:
+- no remaining pending sqrt BB tests
+- sqrt feature signoff list complete
+
+Cycle 7
+Reserve:
+- only if needed for correctness/progress cleanup
+
+----------------------------------------------------------------------
+5. immediate next task
+----------------------------------------------------------------------
+
+Start Cycle 1.
+
+Add WB tests for the feedback-stream substrate and implement the first permanent prod piece:
+- feedbackRCFStream
+- minimal queue/tail behavior
+- compatibility with PQStreamFromRCF
+
+This is the next highest-priority coding step.

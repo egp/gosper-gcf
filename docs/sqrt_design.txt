@@ -1,0 +1,220 @@
+sqrt design - Gosper/Ouroboros compliant
+
+purpose
+
+Define a 100 percent Gosper-compliant design for Sqrt(X) under the current source contract:
+- PQ terms
+- Range()
+- ordinary EOF collapse
+- no source-specific knowledge
+
+----------------------------------------------------------------------
+1. core idea
+----------------------------------------------------------------------
+
+Sqrt is not a BLFT and not a DLFT.
+
+Sqrt is a feedback stream controller.
+
+The approximation is the emerging output stream itself.
+We do not maintain a separate interval approximation object as the primary state.
+
+Let:
+- X be the radicand source stream
+- S be the output stream for sqrt(X)
+- Y be the current approximation stream
+
+In the Gosper/Ouroboros design:
+- Y is S itself, fed back
+- each emitted term of S immediately becomes part of Y
+- no upstream term is requested unless needed to certify more output
+
+----------------------------------------------------------------------
+2. refinement map
+----------------------------------------------------------------------
+
+Use Newton refinement in stream form:
+
+    Y_next = (Y + X / Y) / 2
+
+Interpretation:
+- Y is the current approximation stream
+- X / Y is formed with the existing Div operation
+- Y + X / Y is formed with the existing Add operation
+- division by 2 uses an exact rational/source wrapper
+
+The controller repeatedly improves the approximation by replacing Y with Y_next.
+
+The output stream S is the stream that results when this refinement becomes self-consistent under feedback.
+
+----------------------------------------------------------------------
+3. Gosper compliance properties
+----------------------------------------------------------------------
+
+The implementation must satisfy all of these:
+
+1. no preread to EOF
+2. no finite-only shortcut path
+3. no source-specific knowledge
+4. do not ingest PQ terms until needed
+5. emitted output terms are fed back as the approximation stream
+6. finite streams are handled only through ordinary EOF collapse
+7. any deviation from these rules requires explicit agreement
+
+----------------------------------------------------------------------
+4. required substrate
+----------------------------------------------------------------------
+
+Already available:
+- RCFStream interface
+- PQStreamFromRCF adapter
+- PQStreamFromRational
+- Add, Div, Mul, Reciprocal, Square
+- finite and procedural PQ sources
+- live GCF evaluation framework
+
+Still needed:
+- a feedback-capable RCF source primitive
+- a way for emitted terms of a GCF stream to be observed as an RCFStream
+- a controller that can wire the output stream back into its own refinement input
+
+----------------------------------------------------------------------
+5. proposed internal objects
+----------------------------------------------------------------------
+
+A. feedbackRCFStream
+A stream-like object that:
+- exposes NextRCF() and Range()
+- can receive emitted RCF terms from the sqrt controller
+- can present the current emitted prefix as the live approximation source
+
+B. sqrtController
+Owns:
+- radicand source X
+- current refinement stream builder
+- feedback approximation stream Y
+- output certification loop
+
+C. halfSource
+Exact source for 1/2 using PQStreamFromRational.
+
+----------------------------------------------------------------------
+6. operational loop
+----------------------------------------------------------------------
+
+At a high level:
+
+1. start with an initial approximation stream Y0
+2. form the Newton refinement stream:
+       Y1 = (Y0 + X / Y0) / 2
+3. attempt to certify the next output term from Y1
+4. when a term is emitted, feed it back into the approximation stream
+5. continue refinement and emission
+6. only ask X for more PQ terms when the current refinement cannot progress
+7. if X reaches EOF, ordinary collapse handles the now-finite radicand
+
+The key point is that bad approximation terms are never consumed merely because they were available.
+Only certified emitted terms survive into the feedback loop.
+
+----------------------------------------------------------------------
+7. initial approximation
+----------------------------------------------------------------------
+
+A seed approximation stream is still needed.
+
+Requirements for the seed:
+- exact arithmetic only
+- no source-specific knowledge
+- may depend only on current Range()
+
+Allowed direction:
+- use current Range() to choose a safe rational seed or safe coarse exact source
+- this seed is only the initial approximation stream, not a finite-only special case
+
+The seed choice must not require reading future terms.
+
+----------------------------------------------------------------------
+8. range usage
+----------------------------------------------------------------------
+
+Range() remains essential, but not as the primary approximation representation.
+
+Range() is used to:
+- decide whether the radicand is currently known to be invalid
+- help select the initial seed
+- assist certification/progress decisions
+- support existing evaluator logic
+
+Range() is not the main approximation object for sqrt.
+The main approximation object is the feedback stream itself.
+
+----------------------------------------------------------------------
+9. finite source behavior
+----------------------------------------------------------------------
+
+Finite sources are not detected by prereading.
+Finite sources are handled naturally:
+
+- while live, they are treated exactly like infinite streams
+- if EOF appears, normal collapse makes the radicand exact
+- refinement continues with the now-exact radicand
+- output ends by ordinary output EOF
+
+This is the only acceptable finite-source story.
+
+----------------------------------------------------------------------
+10. rejection behavior
+----------------------------------------------------------------------
+
+Negative radicand handling should remain live-contract based.
+
+Permanent rule:
+- if the current source Range() proves the radicand is wholly negative, panic
+
+This is not a finite-only shortcut.
+It is ordinary contract use.
+
+Other exact-range conveniences must not be added unless explicitly agreed.
+
+----------------------------------------------------------------------
+11. first green targets
+----------------------------------------------------------------------
+
+The first sqrt tests to turn green should be:
+
+- sqrt(4) = 2
+- sqrt(1) = 1
+- sqrt(1/4) = 1/2
+- negative input rejection
+
+After that:
+- sqrt(2) known prefix
+
+These are signoff milestones, not justification for temporary code.
+
+----------------------------------------------------------------------
+12. non-goals for the first sqrt implementation
+----------------------------------------------------------------------
+
+Do not do any of the following in the first sqrt implementation:
+
+- preread the entire source to detect finiteness
+- add finite-only exact collapse logic just for tests
+- add source-specific special knowledge
+- use floating-point seeds or approximations
+- replace stream feedback with interval-only approximation as the primary design
+
+----------------------------------------------------------------------
+13. summary
+----------------------------------------------------------------------
+
+Sqrt must be implemented as a self-referential stream refinement controller.
+
+The correct approximation is the output stream itself.
+The Newton step is:
+
+    Y_next = (Y + X / Y) / 2
+
+The implementation should reuse existing exact stream infrastructure, request input only when needed, and let ordinary EOF collapse handle finite inputs.
+
+That is the intended 100 percent Gosper/Ouroboros design.
