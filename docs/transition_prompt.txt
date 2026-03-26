@@ -1,0 +1,42 @@
+We are at a context-switch point. I am going to start a new chat to reduce latency and keep accuracy high.
+
+
+Please generate a transition bundle for the next chat, based only on the current conversation state.
+
+Produce these artifacts for the next chat to use:
+
+1. checkpoint.txt
+   Requirements:
+   - <= 25 lines
+   - only the current truth needed to resume work
+   - omit obsolete branches, dead ends, and superseded ideas
+   - include current milestone, what works, what is broken, and immediate next step
+
+2. bootstrap_prompt.txt
+   Requirements:
+   - concise prompt for a brand-new chat
+   - include a small state capsule
+   - tell the new chat not to assume any context beyond what is pasted
+   - instruct it to work only from files/errors I provide next
+   - optimized for low latency and mathematical / technical rigor
+
+3. current_task.txt
+   Requirements:
+   - 5 to 15 lines
+   - state the exact task the next chat should tackle first
+   - include acceptance criteria
+   - identify the single highest-priority compiler error, test failure, or design question
+
+4. open_questions.txt
+   Requirements:
+   - only unresolved questions that materially affect design or correctness
+   - short bullet list
+   - omit speculative or low-priority ideas
+
+General rules:
+- minimize size
+- preserve current truth
+- remove obsolete context
+- distinguish durable project knowledge from temporary chat-handoff content
+- do not include long logs
+- do not restate full file contents unless absolutely necessary
