@@ -8,20 +8,29 @@ func (s blftState) CornerRange(xr, yr Range) Range {
 		panic("CornerRange currently supports only inside/inside ranges")
 	}
 
-	corners := [][2]Rational{
-		{xr.Lo.Value, yr.Lo.Value},
-		{xr.Lo.Value, yr.Hi.Value},
-		{xr.Hi.Value, yr.Lo.Value},
-		{xr.Hi.Value, yr.Hi.Value},
+	type cornerValue struct {
+		value Rational
+		open  bool
 	}
 
-	values := make([]Rational, 0, 4)
+	corners := []struct {
+		x    Rational
+		y    Rational
+		open bool
+	}{
+		{xr.Lo.Value, yr.Lo.Value, xr.Lo.Open || yr.Lo.Open},
+		{xr.Lo.Value, yr.Hi.Value, xr.Lo.Open || yr.Hi.Open},
+		{xr.Hi.Value, yr.Lo.Value, xr.Hi.Open || yr.Lo.Open},
+		{xr.Hi.Value, yr.Hi.Value, xr.Hi.Open || yr.Hi.Open},
+	}
+
+	values := make([]cornerValue, 0, 4)
 	sawZeroDen := false
 	sawPosDen := false
 	sawNegDen := false
 
 	for _, corner := range corners {
-		num, den := evalBLFTNumDenAt(s, corner[0], corner[1])
+		num, den := evalBLFTNumDenAt(s, corner.x, corner.y)
 
 		switch den.Sign() {
 		case 0:
@@ -33,37 +42,55 @@ func (s blftState) CornerRange(xr, yr Range) Range {
 			sawNegDen = true
 		}
 
-		values = append(values, NewRational(num, den))
+		values = append(values, cornerValue{
+			value: NewRational(num, den),
+			open:  corner.open,
+		})
 	}
 
 	if sawZeroDen || (sawPosDen && sawNegDen) {
-		return outsideRangeFromValues(values)
+		raw := make([]Rational, 0, len(values))
+		for _, v := range values {
+			raw = append(raw, v.value)
+		}
+		return outsideRangeFromValues(raw)
 	}
 
 	if len(values) == 0 {
 		return outsideRangeFromValues(nil)
 	}
 
-	lo := values[0]
-	hi := values[0]
+	lo := values[0].value
+	hi := values[0].value
+	loOpen := values[0].open
+	hiOpen := values[0].open
 
 	for _, v := range values[1:] {
-		if v.Cmp(lo) < 0 {
-			lo = v
+		switch cmp := v.value.Cmp(lo); {
+		case cmp < 0:
+			lo = v.value
+			loOpen = v.open
+		case cmp == 0:
+			loOpen = loOpen && v.open
 		}
-		if v.Cmp(hi) > 0 {
-			hi = v
+
+		switch cmp := v.value.Cmp(hi); {
+		case cmp > 0:
+			hi = v.value
+			hiOpen = v.open
+		case cmp == 0:
+			hiOpen = hiOpen && v.open
 		}
 	}
 
 	return Range{
 		Lo: Endpoint{
 			Value: lo,
-			Open:  false,
+			Open:  loOpen,
 		},
 		Hi: Endpoint{
 			Value: hi,
-			Open:  false,
+			Open:  hiOpen,
 		},
 		Inside: true,
 	}

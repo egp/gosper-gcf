@@ -1,4 +1,4 @@
-// named/constants_range_bb_test.go v3
+// named/constants_range_bb_test.go v4
 package named_test
 
 import (
@@ -18,20 +18,25 @@ func TestBB_Named_E_RangeTracksBestLookaheadInterval50(t *testing.T) {
 	}
 
 	terms := eTermsNamedRange(51)
-	g := core.NewGCF1(identityUnaryCoeffsNamedRange(), named.E())
+	var src core.PQStream = named.E()
 
 	for i := 0; i < 50; i++ {
 		wantRange := namedLookaheadRange(terms[i], terms[i+1])
-		assertIntervalRangeEqualsNamed(t, g.Range(), wantRange, i+1)
+		assertIntervalRangeEqualsNamed(t, src.Range(), wantRange, i+1)
 
-		got, status := g.NextRCF()
+		got, tail, status := src.NextPQ()
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
 
-		if got.A().Cmp(big.NewInt(terms[i])) != 0 {
-			t.Fatalf("term %d = %v, want %d", i+1, got.A(), terms[i])
+		if got.P.Cmp(big.NewInt(terms[i])) != 0 {
+			t.Fatalf("term %d P = %v, want %d", i+1, got.P, terms[i])
 		}
+		if got.Q.Cmp(big.NewInt(1)) != 0 {
+			t.Fatalf("term %d Q = %v, want 1", i+1, got.Q)
+		}
+
+		src = tail
 	}
 }
 
@@ -111,7 +116,7 @@ func namedLookaheadRange(a, next int64) core.Range {
 	return core.Range{
 		Lo: core.Endpoint{
 			Value: core.NewRational(loNum, loDen),
-			Open:  false,
+			Open:  true,
 		},
 		Hi: core.Endpoint{
 			Value: core.NewRational(hiNum, hiDen),
@@ -195,4 +200,4 @@ func assertIntervalRangeEqualsNamed(t *testing.T, got core.Range, want core.Rang
 	}
 }
 
-// named/constants_range_bb_test.go v3
+// named/constants_range_bb_test.go v4

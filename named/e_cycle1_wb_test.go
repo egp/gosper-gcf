@@ -1,4 +1,4 @@
-// named/e_cycle1_wb_test.go v1
+// named/e_cycle1_wb_test.go v2
 package named
 
 import (
@@ -19,13 +19,13 @@ func TestWB_ETermAt_MatchesKnownPeriodicPattern(t *testing.T) {
 	}
 }
 
-func TestWB_ELookaheadRange_UsesClosedOpenWindow_ForHead(t *testing.T) {
+func TestWB_ELookaheadRange_UsesOpenOpenWindow_ForHead(t *testing.T) {
 	got := eLookaheadRange(2, 1)
 
 	want := core.Range{
 		Lo: core.Endpoint{
 			Value: core.NewRational(big.NewInt(5), big.NewInt(2)),
-			Open:  false,
+			Open:  true,
 		},
 		Hi: core.Endpoint{
 			Value: core.NewRational(big.NewInt(3), big.NewInt(1)),
@@ -37,13 +37,13 @@ func TestWB_ELookaheadRange_UsesClosedOpenWindow_ForHead(t *testing.T) {
 	assertEExactInterval(t, got, want)
 }
 
-func TestWB_ELookaheadRange_UsesClosedOpenWindow_ForLargerNext(t *testing.T) {
+func TestWB_ELookaheadRange_UsesOpenOpenWindow_ForLargerNext(t *testing.T) {
 	got := eLookaheadRange(1, 8)
 
 	want := core.Range{
 		Lo: core.Endpoint{
 			Value: core.NewRational(big.NewInt(10), big.NewInt(9)),
-			Open:  false,
+			Open:  true,
 		},
 		Hi: core.Endpoint{
 			Value: core.NewRational(big.NewInt(9), big.NewInt(8)),
@@ -83,4 +83,4 @@ func assertEExactInterval(t *testing.T, got core.Range, want core.Range) {
 	}
 }
 
-// named/e_cycle1_wb_test.go v1
+// named/e_cycle1_wb_test.go v2
