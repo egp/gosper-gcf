@@ -1,4 +1,4 @@
-// trig/lambert.go v11
+// trig/lambert.go v12
 package trig
 
 import (
@@ -41,7 +41,7 @@ func (k *lambertKernel) Root() *core.GCF {
 	if k == nil {
 		panic("(*lambertKernel).Root: nil receiver")
 	}
-	return exactZeroTrig()
+	return k.previewRoot()
 }
 
 func (k *lambertKernel) previewDepth() int {
@@ -187,4 +187,4 @@ func (p *pqFromRCFReplay) Range() core.Range {
 	return p.fork.Range()
 }
 
-// trig/lambert.go v11
+// trig/lambert.go v12
