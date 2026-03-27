@@ -1,4 +1,4 @@
-// trig/lambert.go v9
+// trig/lambert.go v11
 package trig
 
 import (
@@ -42,6 +42,28 @@ func (k *lambertKernel) Root() *core.GCF {
 		panic("(*lambertKernel).Root: nil receiver")
 	}
 	return exactZeroTrig()
+}
+
+func (k *lambertKernel) previewDepth() int {
+	if k == nil {
+		panic("(*lambertKernel).previewDepth: nil receiver")
+	}
+
+	switch k.mode {
+	case lambertModeCircular:
+		return 5
+	case lambertModeHyperbolic:
+		return 7
+	default:
+		panic("(*lambertKernel).previewDepth: invalid mode")
+	}
+}
+
+func (k *lambertKernel) previewRoot() *core.GCF {
+	if k == nil {
+		panic("(*lambertKernel).previewRoot: nil receiver")
+	}
+	return k.truncatedAt(0, k.previewDepth())
 }
 
 func (k *lambertKernel) stageAt(stage int, tail core.PQStream) *core.GCF {
@@ -165,4 +187,4 @@ func (p *pqFromRCFReplay) Range() core.Range {
 	return p.fork.Range()
 }
 
-// trig/lambert.go v9
+// trig/lambert.go v11

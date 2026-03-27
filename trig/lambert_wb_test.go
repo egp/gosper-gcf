@@ -1,4 +1,4 @@
-// trig/lambert_wb_test.go v5
+// trig/lambert_wb_test.go v6
 package trig
 
 import (
@@ -127,6 +127,58 @@ func TestWB_LambertKernel_TruncatedAt_DepthTwo_HyperbolicOneHalfIsSixThirteenths
 	assertExactRCFSequenceLambert(t, g, []int64{0, 2, 6})
 }
 
+func TestWB_LambertKernel_PreviewDepth_CircularIsFive(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeCircular,
+		core.PQStreamFromRational(core.NewRational(big.NewInt(1), big.NewInt(2))),
+	)
+
+	if got := k.previewDepth(); got != 5 {
+		t.Fatalf("previewDepth() = %d, want 5", got)
+	}
+}
+
+func TestWB_LambertKernel_PreviewDepth_HyperbolicIsSeven(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeHyperbolic,
+		core.PQStreamFromRational(core.NewRational(big.NewInt(1), big.NewInt(2))),
+	)
+
+	if got := k.previewDepth(); got != 7 {
+		t.Fatalf("previewDepth() = %d, want 7", got)
+	}
+}
+
+func TestWB_LambertKernel_PreviewRoot_CircularOneHalfMatchesKnownPrefix(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeCircular,
+		core.PQStreamFromRational(core.NewRational(big.NewInt(1), big.NewInt(2))),
+	)
+
+	g := k.previewRoot()
+	assertRCFPrefixLambert(t, g, []int64{0, 1, 1, 4, 1, 8, 1, 12})
+}
+
+func TestWB_LambertKernel_PreviewRoot_HyperbolicOneHalfMatchesKnownPrefix(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeHyperbolic,
+		core.PQStreamFromRational(core.NewRational(big.NewInt(1), big.NewInt(2))),
+	)
+
+	g := k.previewRoot()
+	assertRCFPrefixLambert(t, g, []int64{0, 2, 6, 10, 14, 18, 22, 26})
+}
+
+func TestWB_LambertKernel_PreviewRoot_HyperbolicOneMatchesKnownPrefix(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeHyperbolic,
+		core.PQStreamFromRational(core.RationalFromInt64(1)),
+	)
+
+	g := k.previewRoot()
+	assertRCFPrefixLambert(t, g, []int64{0, 1, 3, 5, 7, 9, 11, 13})
+}
+
 func TestWB_Lambert_CircularHalfAngleKernel_OneHalfMatchesKnownPrefix(t *testing.T) {
 	if shouldSkipPendingLambertKernel() {
 		t.Skip("pending Lambert kernel implementation; set RUN_PENDING_TESTS=1 to run anyway")
@@ -251,4 +303,4 @@ func nextRCFWithTimeoutLambert(t *testing.T, g *core.GCF, timeout time.Duration)
 	}
 }
 
-// trig/lambert_wb_test.go v5
+// trig/lambert_wb_test.go v6
