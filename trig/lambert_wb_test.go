@@ -1,4 +1,4 @@
-// trig/lambert_wb_test.go v3
+// trig/lambert_wb_test.go v4
 package trig
 
 import (
@@ -74,6 +74,26 @@ func TestWB_LambertStageGCF_HyperbolicWithZeroTailIsXOverOdd(t *testing.T) {
 		core.PQStreamFromRational(core.RationalFromInt64(0)),
 	)
 
+	assertExactRCFSequenceLambert(t, g, []int64{0, 10})
+}
+
+func TestWB_LambertKernel_StageAt_CircularStageZeroWithZeroTailIsX(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeCircular,
+		core.PQStreamFromRational(core.NewRational(big.NewInt(1), big.NewInt(2))),
+	)
+
+	g := k.stageAt(0, core.PQStreamFromRational(core.RationalFromInt64(0)))
+	assertExactRCFSequenceLambert(t, g, []int64{0, 2})
+}
+
+func TestWB_LambertKernel_StageAt_HyperbolicStageTwoWithZeroTailIsXOverFive(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeHyperbolic,
+		core.PQStreamFromRational(core.NewRational(big.NewInt(1), big.NewInt(2))),
+	)
+
+	g := k.stageAt(2, core.PQStreamFromRational(core.RationalFromInt64(0)))
 	assertExactRCFSequenceLambert(t, g, []int64{0, 10})
 }
 
@@ -201,4 +221,4 @@ func nextRCFWithTimeoutLambert(t *testing.T, g *core.GCF, timeout time.Duration)
 	}
 }
 
-// trig/lambert_wb_test.go v3
+// trig/lambert_wb_test.go v4

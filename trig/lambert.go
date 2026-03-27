@@ -1,4 +1,4 @@
-// trig/lambert.go v4
+// trig/lambert.go v6
 package trig
 
 import (
@@ -42,6 +42,19 @@ func (k *lambertKernel) Root() *core.GCF {
 		panic("(*lambertKernel).Root: nil receiver")
 	}
 	return exactZeroTrig()
+}
+
+func (k *lambertKernel) stageAt(stage int, tail core.PQStream) *core.GCF {
+	if k == nil {
+		panic("(*lambertKernel).stageAt: nil receiver")
+	}
+	if stage < 0 {
+		panic("(*lambertKernel).stageAt: negative stage")
+	}
+	if tail == nil {
+		panic("(*lambertKernel).stageAt: nil tail")
+	}
+	return lambertStageGCF(k.mode, k.mode.stageOdd(stage), k.half, tail)
 }
 
 func (m lambertMode) stageOdd(stage int) *big.Int {
@@ -93,4 +106,4 @@ func lambertStageGCF(mode lambertMode, odd *big.Int, x, y core.PQStream) *core.G
 	return core.NewGCF2(mode.stageCoefficients(odd), x, y)
 }
 
-// trig/lambert.go v4
+// trig/lambert.go v6
