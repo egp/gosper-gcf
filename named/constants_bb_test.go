@@ -3,7 +3,6 @@ package named_test
 
 import (
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -11,16 +10,10 @@ import (
 	"github.com/egp/gosper-gcf/named"
 )
 
-const pendingTestNamedE = true
-
 func TestBB_Named_E_MatchesKnownPrefix50(t *testing.T) {
 
 	g := core.NewGCF1(identityUnaryCoeffsNamedConstants(), named.E())
 	assertRCFPrefixNamedConstants(t, g, eTermsNamedConstants(50))
-}
-
-func shouldSkipPendingNamedE() bool {
-	return pendingTestNamedE && os.Getenv("RUN_PENDING_TESTS") == ""
 }
 
 func identityUnaryCoeffsNamedConstants() core.BLFTCoefficients {

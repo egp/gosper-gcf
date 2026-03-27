@@ -1,20 +1,15 @@
-// core/gcf_take_bb_test.go v2
+// core/gcf_take_bb_test.go v3
 package core_test
 
 import (
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/egp/gosper-gcf/core"
 	"github.com/egp/gosper-gcf/named"
 )
 
-const pendingTestGCFTake = true
-const pendingTestGCFRational = true
-
 func TestBB_GCF_Take_PrefixOfInfiniteSourceIsFiniteExactPQStream(t *testing.T) {
-
 	g := core.NewGCF1(identityUnaryCoeffsTake(), named.E())
 	taken := g.Take(3)
 
@@ -49,7 +44,6 @@ func TestBB_GCF_Take_PrefixOfInfiniteSourceIsFiniteExactPQStream(t *testing.T) {
 }
 
 func TestBB_GCF_Rational_ReturnsConvergentOfTakenPrefix(t *testing.T) {
-
 	g := core.NewGCF1(identityUnaryCoeffsTake(), named.E())
 	got := g.Rational(3)
 	want := core.NewRational(big.NewInt(8), big.NewInt(3))
@@ -64,7 +58,6 @@ func TestBB_GCF_Rational_ReturnsConvergentOfTakenPrefix(t *testing.T) {
 }
 
 func TestBB_GCF_Take_StopsAtEOF_WhenSourceHasFewerTerms(t *testing.T) {
-
 	g := core.NewGCF1(
 		identityUnaryCoeffsTake(),
 		core.PQStreamFromRational(core.NewRational(big.NewInt(8), big.NewInt(3))),
@@ -100,14 +93,6 @@ func TestBB_GCF_Take_StopsAtEOF_WhenSourceHasFewerTerms(t *testing.T) {
 	)
 
 	assertFinitePQEOF(t, tail4, 4)
-}
-
-func shouldSkipPendingGCFTake() bool {
-	return pendingTestGCFTake && os.Getenv("RUN_PENDING_TESTS") == ""
-}
-
-func shouldSkipPendingGCFRational() bool {
-	return pendingTestGCFRational && os.Getenv("RUN_PENDING_TESTS") == ""
 }
 
 func identityUnaryCoeffsTake() core.BLFTCoefficients {
@@ -190,4 +175,4 @@ func assertExactTakeRange(t *testing.T, got core.Range, want core.Rational, step
 	}
 }
 
-// core/gcf_take_bb_test.go v2
+// core/gcf_take_bb_test.go v3

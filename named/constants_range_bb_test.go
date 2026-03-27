@@ -3,14 +3,11 @@ package named_test
 
 import (
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/egp/gosper-gcf/core"
 	"github.com/egp/gosper-gcf/named"
 )
-
-const pendingTestNamedERange = true
 
 func TestBB_Named_E_RangeTracksBestLookaheadInterval50(t *testing.T) {
 
@@ -34,10 +31,6 @@ func TestBB_Named_E_RangeTracksBestLookaheadInterval50(t *testing.T) {
 
 		src = tail
 	}
-}
-
-func shouldSkipPendingNamedERange() bool {
-	return pendingTestNamedERange && os.Getenv("RUN_PENDING_TESTS") == ""
 }
 
 func eTermsNamedRange(n int) []int64 {
