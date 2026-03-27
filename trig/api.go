@@ -1,4 +1,4 @@
-// trig/api.go v1
+// trig/api.go v2
 package trig
 
 import (
@@ -8,8 +8,7 @@ import (
 )
 
 func Sin(x core.PQStream) *core.GCF {
-	_ = x
-	return exactZeroTrig()
+	return sinRadians(x)
 }
 
 func Tanh(x core.PQStream) *core.GCF {
@@ -35,4 +34,4 @@ func exactRangeTrig(num, den int64) core.Range {
 	}
 }
 
-// trig/api.go v1
+// trig/api.go v2
