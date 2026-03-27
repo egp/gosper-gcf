@@ -1,4 +1,4 @@
-// trig/lambert_wb_test.go v4
+// trig/lambert_wb_test.go v5
 package trig
 
 import (
@@ -95,6 +95,36 @@ func TestWB_LambertKernel_StageAt_HyperbolicStageTwoWithZeroTailIsXOverFive(t *t
 
 	g := k.stageAt(2, core.PQStreamFromRational(core.RationalFromInt64(0)))
 	assertExactRCFSequenceLambert(t, g, []int64{0, 10})
+}
+
+func TestWB_LambertKernel_TruncatedAt_DepthOneMatchesStageAt_Circular(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeCircular,
+		core.PQStreamFromRational(core.NewRational(big.NewInt(1), big.NewInt(2))),
+	)
+
+	g := k.truncatedAt(0, 1)
+	assertExactRCFSequenceLambert(t, g, []int64{0, 2})
+}
+
+func TestWB_LambertKernel_TruncatedAt_DepthTwo_CircularOneHalfIsSixElevenths(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeCircular,
+		core.PQStreamFromRational(core.NewRational(big.NewInt(1), big.NewInt(2))),
+	)
+
+	g := k.truncatedAt(0, 2)
+	assertExactRCFSequenceLambert(t, g, []int64{0, 1, 1, 5})
+}
+
+func TestWB_LambertKernel_TruncatedAt_DepthTwo_HyperbolicOneHalfIsSixThirteenths(t *testing.T) {
+	k := newLambertKernel(
+		lambertModeHyperbolic,
+		core.PQStreamFromRational(core.NewRational(big.NewInt(1), big.NewInt(2))),
+	)
+
+	g := k.truncatedAt(0, 2)
+	assertExactRCFSequenceLambert(t, g, []int64{0, 2, 6})
 }
 
 func TestWB_Lambert_CircularHalfAngleKernel_OneHalfMatchesKnownPrefix(t *testing.T) {
@@ -221,4 +251,4 @@ func nextRCFWithTimeoutLambert(t *testing.T, g *core.GCF, timeout time.Duration)
 	}
 }
 
-// trig/lambert_wb_test.go v4
+// trig/lambert_wb_test.go v5

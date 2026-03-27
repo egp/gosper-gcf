@@ -1,4 +1,4 @@
-// trig/lambert.go v6
+// trig/lambert.go v9
 package trig
 
 import (
@@ -57,6 +57,25 @@ func (k *lambertKernel) stageAt(stage int, tail core.PQStream) *core.GCF {
 	return lambertStageGCF(k.mode, k.mode.stageOdd(stage), k.half, tail)
 }
 
+func (k *lambertKernel) truncatedAt(stage, depth int) *core.GCF {
+	if k == nil {
+		panic("(*lambertKernel).truncatedAt: nil receiver")
+	}
+	if stage < 0 {
+		panic("(*lambertKernel).truncatedAt: negative stage")
+	}
+	if depth <= 0 {
+		panic("(*lambertKernel).truncatedAt: nonpositive depth")
+	}
+
+	if depth == 1 {
+		return k.stageAt(stage, core.PQStreamFromRational(core.RationalFromInt64(0)))
+	}
+
+	deeper := k.truncatedAt(stage+1, depth-1)
+	return k.stageAt(stage, newPQFromRCFReplay(deeper))
+}
+
 func (m lambertMode) stageOdd(stage int) *big.Int {
 	_ = m
 	if stage < 0 {
@@ -106,4 +125,44 @@ func lambertStageGCF(mode lambertMode, odd *big.Int, x, y core.PQStream) *core.G
 	return core.NewGCF2(mode.stageCoefficients(odd), x, y)
 }
 
-// trig/lambert.go v6
+type pqFromRCFReplay struct {
+	fork *replayRCFFork
+}
+
+func newPQFromRCFReplay(src core.RCFStream) core.PQStream {
+	if src == nil {
+		panic("newPQFromRCFReplay: nil source")
+	}
+	root := newReplayRCF(src)
+	return &pqFromRCFReplay{
+		fork: root.Fork(),
+	}
+}
+
+func (p *pqFromRCFReplay) NextPQ() (core.PQTerm, core.PQStream, core.Status) {
+	if p == nil {
+		panic("(*pqFromRCFReplay).NextPQ: nil receiver")
+	}
+
+	term, status := p.fork.NextRCF()
+	switch status {
+	case core.StatusOK:
+		return core.PQTerm{
+			P: new(big.Int).Set(term.A()),
+			Q: big.NewInt(1),
+		}, p, core.StatusOK
+	case core.StatusEOF:
+		return core.PQTerm{}, p, core.StatusEOF
+	default:
+		panic("(*pqFromRCFReplay).NextPQ: invalid input status")
+	}
+}
+
+func (p *pqFromRCFReplay) Range() core.Range {
+	if p == nil {
+		panic("(*pqFromRCFReplay).Range: nil receiver")
+	}
+	return p.fork.Range()
+}
+
+// trig/lambert.go v9
