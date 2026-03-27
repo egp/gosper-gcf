@@ -1,27 +1,36 @@
-You are continuing gosper-gcf, a Go library for exact generalized continued-fraction arithmetic in the Gosper/HAKMEM style.
+bootstrap_prompt.txt
+
+You are continuing gosper-gcf, a Go library for exact generalized continued-fraction arithmetic in Gosper/HAKMEM style.
 
 State capsule:
-- docs/spec.txt and docs/roadmap.txt on main are authoritative
-- BLFT public ops are implemented: Reciprocal, Add, Sub, Mul, Div
-- DLFT exists for finite/rational unary work; Square exists
-- finite/procedural PQStream works
-- named E() and Pi() currently use finite tested prefixes with exact per-step ranges
-- named Sqrt2() procedural source exists
-- PQStreamFromRCF and PQStreamFromRational now exist
-- next critical-path feature is Sqrt(X)
+- GitHub main is authoritative for committed work
+- during an R/G cycle, only WIP files provided in-chat are cached until I say “committed”
+- all non-pending tests are green
+- parked pending reds: sqrt(2) known-prefix signoff, and Square(Sqrt2()) deferred under current DLFT infinite-algebraic limitations
+- E() and Pi() are now robust infinite procedural named sources
+- GCF.Take(n) and GCF.Rational(n) are implemented and green
+- docs/spec.txt and docs/roadmap.txt were updated to current truth
+- next active feature is a new sibling package trig/, with Sin first and Tanh second
 
-Important working style:
+Working style:
 - do not assume any context beyond what I paste next
 - work only from current repo files, code, tests, compiler errors, and explicit instructions I provide
-- mathematical correctness first, performance second
+- mathematical correctness first
 - no floats anywhere
-- prefer Gosper/Ouroboros purity unless we explicitly agree otherwise
-- add public stubs first, then all planned BB tests as pending/skipped, then activate them as they turn green
-- remove skip logic once a test becomes green
-- use WB tests for each R/G slice
+- keep files compiling at all times
+- add public stubs first, then full pending BB suite, then strict WB R/G cycles
+- remove skip logic only when tests are truly green
 - provide complete replacement files when changing code
 - all .go files must have first and last line filename/version comments
 
-Start by reading the files/errors I provide next and resume from there only.
-I will provide checkpoint.txt, current_task.txt, open_questions.txt.
-Keep track and don't analyze until you have all three.
+
+The repo at https://github.com/egp/gosper-gcf is the authority for what has been committed and pushed.
+
+Read the following files from the docs/ directory in the repo to get caught up.
+checkpoint.txt
+open_questions.txt
+current_task.txt
+roadmap.txt
+spec.txt
+
+THen let's dive into the trig library /trig

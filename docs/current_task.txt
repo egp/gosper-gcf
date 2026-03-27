@@ -1,16 +1,19 @@
-Implement the next permanent substrate for Gosper-compliant live Sqrt(X).
-Do not add preread-to-EOF or finite-only special paths.
-Use only the current source contract: PQ terms, Range(), and ordinary EOF collapse.
+current_task.txt
 
-First task to tackle:
-- remove redundant named/from_rational.go
-- confirm whether we keep both core.PQStreamFromRational and named.FromRational, or delete the named wrapper
-- then start the sqrt substrate R/G cycle
-
-Acceptance criteria for the first code slice:
-- add the first WB tests for the sqrt substrate
-- add the first permanent prod piece toward stream-feedback sqrt
-- no pending BB test should be unskipped unless it actually turns green
-
+Start the trig framework in a new sibling package trig/.
+Do the feature-start step first: add the full pending BB signoff suite for Sin and Tanh, with compile-safe wrong stubs so everything builds.
+Use the approved shared design:
+- replay/fork substrate for lazily emitted kernel prefixes
+- shared odd-denominator Lambert-family kernel
+- circular half-angle kernel tan(x/2)
+- hyperbolic half-angle kernel tanh(x/2)
+- trig.Sin(x) in radians
+- named.SinDegrees(x) as Pi()/180 wrapper
+- trig.Tanh(x) after Sin
+Acceptance criteria for the first slice:
+- code compiles
+- full pending BB suite for Sin and Tanh exists
+- first WB slice is ready to begin
+- parked sqrt(2) pending red remains untouched
 Single highest-priority design question:
-- exact architecture of Gosper/Ouroboros Sqrt(X): how to represent the feedback approximation stream cleanly in current code
+- exact internal framework and package/file structure for trig replay + Lambert half-angle kernels shared by both Sin and Tanh

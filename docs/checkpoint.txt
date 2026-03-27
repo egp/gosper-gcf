@@ -1,17 +1,19 @@
+checkpoint.txt
+
 gosper-gcf: Go library for exact generalized continued-fraction arithmetic in Gosper/HAKMEM style.
 Authoritative committed source: GitHub main; during an R/G cycle, only WIP files provided in-chat are cached until user says “committed”.
-Current milestone: post-BLFT/DLFT unary/binary core; Sqrt(X) mostly implemented and parked with one pending red; E() complete; Take(n)/Rational(n) complete.
+Current milestone: post-BLFT/DLFT unary/binary core; Sqrt parked with one pending red; E, Pi, Take(n), and Rational(n) are complete; next active feature is trig framework with Sin first, then Tanh.
 Working core pieces: exact Status/PQTerm/RCFTerm/Rational/Range/Endpoint; finite + procedural PQStream; GCF shell; BLFT ops Reciprocal/Add/Sub/Mul/Div; DLFT for finite/rational unary work; Square; PQStreamFromRCF; PQStreamFromRational; GCF.Take(n); GCF.Rational(n).
-Working named pieces: Sqrt2() procedural source; E() infinite procedural regular-CF source with 50-term prefix/range validation; Pi() still finite-prefix source; FromRational wrapper discussion deferred.
+Working named pieces: Sqrt2() procedural source; E() infinite procedural regular-CF source with strong Range() and 50-step validation; Pi() infinite procedural Gauss source with strong Range(), OEIS-backed RCF validation, and Take/Rational checks.
 Sqrt architecture in place: feedbackRCFStream substrate; sqrt controller; Ourorobos feedback loop; observed live refinement path; easy sqrt BBs green.
-Target formula approximations were added to spec.txt.
-Known failure: only pending red is TestBB_GCF_SqrtOfTwoMatchesKnownPrefix (currently EOF too early around term 5).
+Known failures: only parked pending red is TestBB_GCF_SqrtOfTwoMatchesKnownPrefix; Square(Sqrt2()) remains intentionally pending under the current DLFT infinite-algebraic gap.
 All non-pending tests are green.
-Next immediate task: begin Pi() as the next active feature after parked sqrt(2), likely via a procedural infinite GCF source (possibly generate 4/Pi and expose Pi via unary transform (0,4,1,0)).
-Planned utility already done: Take(n) is take-up-to-n and returns a shorter finite stream on EOF; Rational(n) derives a rational approximation from that finite prefix.
+docs/spec.txt and docs/roadmap.txt were updated to reflect current committed truth, including E/Pi procedural sources, Take/Rational, parked sqrt(2), and planned trig package.
+Next immediate task: start trig framework as new sibling package trig/, with full pending BB suite for Sin and Tanh, then implement Sin first and Tanh second.
+Approved design direction: trig/ owns transcendental kernels/builders; core remains algebraic; named holds constants and degree wrappers.
+Shared trig design: one replay/fork substrate for lazily emitted kernel prefixes; one shared odd-denominator Lambert-family engine; circular half-angle kernel tan(x/2); hyperbolic half-angle kernel tanh(x/2).
+Public target order: trig.Sin(x) in radians, named.SinDegrees(x) via Pi()/180 wrapper, then trig.Tanh(x), later the rest of trig/hyperbolic family.
 Constraints: mathematical correctness first, no floats, prefer Gosper/Ouroboros purity, keep files compiling at all times.
-Process: feature start = full pending BB suite + compile-safe wrong stubs; then strict WB red/green cycles; remove skips only when genuinely green; RUN_PENDING_TESTS=1 at start of each cycle.
-Testing rule for procedural named sources: validate to 50 terms and strong Range() behavior.
-Named source contract: procedural named sources should provide the best possible current Range() from one-term lookahead when feasible.
+Process: feature start = full pending BB suite + compile-safe wrong stubs; then strict WB red/green cycles; remove skips only when genuinely green; run RUN_PENDING_TESTS=1 at start of each cycle.
 File convention: every .go file must have first and last line filename/version comments.
 Patch style: provide complete replacement files, keep code streamlined, avoid useless wrapper functions.

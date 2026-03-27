@@ -1,9 +1,6 @@
-gosper-gcf / core specification
-
-status
+gosper-gcf / core specification status
 
 This file is the current design contract for gosper-gcf.
-
 When a design choice conflicts with Gosper / HAKMEM 101B, Gosper wins.
 Aim for 100 percent Gosper/Ouroboros compliance unless a deviation is explicitly justified and agreed.
 
@@ -24,14 +21,13 @@ Primary goals:
 No floats anywhere in production code, tests, or correctness helpers.
 
 Target formula:
+sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69 deg))
 
-    sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69 deg))
+Approximate decimal value:
+39.662078093772932975335360621196
 
-    Approximate decimal value:
-    39.662078093772932975335360621196
-
-    Useful rational approximations:
-    299647/7555          ~= 39.6620780939774983454665784249
+Useful rational approximations:
+299647/7555 ~= 39.6620780939774983454665784249
 
 ----------------------------------------------------------------------
 2. package layout
@@ -43,14 +39,20 @@ core contains:
 - adapters between stream forms
 - BLFT engine
 - DLFT engine
-- sqrt feedback controller design and future implementation
+- sqrt feedback controller implementation
 - shared evaluator control flow
+- take-up-to-n finite-prefix extraction
+- rational approximation from finite output prefixes
 - config and status codes
 
 named contains:
 - named source constructors
 - convenience wrappers for source creation
 - finite or procedural source definitions
+- degree-based convenience wrappers as needed
+
+Planned next package direction:
+- trig as a sibling package for transcendental kernels and trig / hyperbolic-trig public builders
 
 ----------------------------------------------------------------------
 3. exact source and output model
@@ -58,7 +60,7 @@ named contains:
 
 Generalized source term convention:
 
-    X = p + q / X'
+X = p + q / X'
 
 A PQ source provides:
 - NextPQ() -> (PQTerm, tail, Status)
@@ -118,7 +120,6 @@ Range() is defined only on live objects.
 Invalid internal use panics.
 
 For inside intervals, an emitted regular term is certified only when every value in the interval has the same floor.
-
 For v1, outside intervals do not directly certify an emitted regular term.
 
 ----------------------------------------------------------------------
@@ -127,11 +128,11 @@ For v1, outside intervals do not directly certify an emitted regular term.
 
 BLFT state:
 
-    Z(X,Y) = (aXY + bX + cY + d) / (eXY + fX + gY + h)
+Z(X,Y) = (aXY + bX + cY + d) / (eXY + fX + gY + h)
 
 DLFT state:
 
-    Z(X) = (aX^2 + bX + c) / (dX^2 + eX + f)
+Z(X) = (aX^2 + bX + c) / (dX^2 + eX + f)
 
 BLFT supports:
 - Add
@@ -149,7 +150,7 @@ DLFT supports:
 DLFT under the current PQStream + Range contract is not yet sufficient to certify some infinite algebraic-source cases, such as Square(Sqrt2()).
 
 Sqrt is not BLFT or DLFT.
-Sqrt is to be implemented as a separate Gosper/Ouroboros feedback controller.
+Sqrt is implemented as a separate Gosper/Ouroboros feedback controller, but one pending signoff case remains for sqrt(2) prefix behavior.
 
 ----------------------------------------------------------------------
 7. emission, ingestion, and collapse
@@ -157,37 +158,38 @@ Sqrt is to be implemented as a separate Gosper/Ouroboros feedback controller.
 
 General emission rule:
 
-    Z = t + u / Z'
-    Z' = u / (Z - t)
+Z = t + u / Z'
+Z' = u / (Z - t)
 
 For regular output, u = 1.
 
 BLFT ingest formulas:
-
 If X = p + q / X', then
 
-    (a,b,c,d;e,f,g,h) -> (pa+c, pb+d, qa, qb; pe+g, pf+h, qe, qf)
+(a,b,c,d;e,f,g,h) ->
+(pa+c, pb+d, qa, qb; pe+g, pf+h, qe, qf)
 
 If Y = r + s / Y', then
 
-    (a,b,c,d;e,f,g,h) -> (ra+b, sa, rc+d, sc; re+f, se, rg+h, sg)
+(a,b,c,d;e,f,g,h) ->
+(ra+b, sa, rc+d, sc; re+f, se, rg+h, sg)
 
 BLFT emission:
-
-    (a,b,c,d;e,f,g,h) -> (e,f,g,h; a-te, b-tf, c-tg, d-th)
+(a,b,c,d;e,f,g,h) ->
+(e,f,g,h; a-te, b-tf, c-tg, d-th)
 
 DLFT ingest formulas for X = p + q / X':
 
-    A = ap^2 + bp + c
-    B = 2apq + bq
-    C = aq^2
-    D = dp^2 + ep + f
-    E = 2dpq + eq
-    F = dq^2
+A = ap^2 + bp + c
+B = 2apq + bq
+C = aq^2
+D = dp^2 + ep + f
+E = 2dpq + eq
+F = dq^2
 
 DLFT emission:
-
-    (a,b,c;d,e,f) -> (d,e,f; a-td, b-te, c-tf)
+(a,b,c;d,e,f) ->
+(d,e,f; a-td, b-te, c-tf)
 
 DLFT collapse on EOF uses highest surviving degree:
 - if d != 0, collapse to a/d
@@ -211,9 +213,16 @@ Public operations currently implemented:
 - Sub
 - Mul
 - Div
+- Sqrt
+- Take(n)
+- Rational(n)
+
+Take(n) means take up to n emitted regular terms and materialize a finite exact PQ stream.
+If the source ends earlier, Take(n) returns the shorter finite stream.
+
+Rational(n) means the exact rational represented by the finite prefix returned by Take(n).
 
 Pending public operations on the critical path:
-- Sqrt
 - later Sin
 - later Tanh
 
@@ -229,12 +238,22 @@ Current named sources and wrappers include:
 - Pi()
 - FromRational(...)
 
-All procedural named sources should look ahead one term and provide an exact current Range whenever feasible.
+E() is now an infinite procedural regular-CF source:
+- [2; 1,2,1, 1,4,1, 1,6,1, ...]
+
+Pi() is now an infinite procedural direct GCF source using the Gauss / arctan(1) pattern:
+- head term (0,4)
+- then stage n >= 1 emits (2n-1, n^2)
+
+All procedural named sources should look ahead one term and provide the best exact current Range whenever feasible.
+For infinite one-lookahead sources, that may produce open/open endpoint intervals.
+
 All BB tests of named sources should check both emitted terms and Range() at each step.
+Procedural named sources should be validated to at least 50 terms when practical.
+Current Pi RCF gold-standard validation may use OEIS A001203, currently to 98 terms.
 
 Named sources must not require source-specific knowledge in core.
 Core must work only from PQ terms, Range(), and normal collapse behavior.
-Pi to 98 places on OEIS https://oeis.org/A001203
 
 ----------------------------------------------------------------------
 10. sqrt design decision
@@ -254,10 +273,18 @@ Current permanent substrate already in place for sqrt:
 - RCFStream interface
 - PQStreamFromRCF adapter
 - PQStreamFromRational constructor
+- feedback/replay support for emitted approximation terms
+
+Current sqrt signoff status:
+- sqrt(4) = 2 green
+- sqrt(1) = 1 green
+- sqrt(1/4) = 1/2 green
+- negative finite input rejection green
+- remaining parked pending red: sqrt(2) known prefix
 
 Planned sqrt refinement map:
 
-    Y_next = (Y + X / Y) / 2
+Y_next = (Y + X / Y) / 2
 
 where Y is the emerging output stream itself, fed back as the current approximation stream.
 
@@ -292,6 +319,8 @@ Black-box tests verify:
 
 Intentional panic sites should have explicit tests.
 
+Later, add property-based tests where they materially strengthen confidence.
+
 ----------------------------------------------------------------------
 12. non-goals for v1
 ----------------------------------------------------------------------
@@ -312,6 +341,9 @@ The current architecture is:
 - one RCFStream model
 - BLFT for current binary and unary transform work
 - DLFT for square and finite/rational unary work
-- a planned Gosper/Ouroboros feedback controller for sqrt
+- a Gosper/Ouroboros feedback controller for sqrt
 - exact arithmetic everywhere
 - certified regular output only
+- finite-prefix extraction and rational approximation for emitted output
+- procedural infinite named sources for E and Pi
+- planned trig framework as a sibling package, with Sin first and Tanh second

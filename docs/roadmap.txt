@@ -1,6 +1,4 @@
-gosper-gcf roadmap
-
-purpose
+gosper-gcf roadmap purpose
 
 This document is the execution roadmap for gosper-gcf.
 It emphasizes sequencing, test strategy, and current development slices.
@@ -17,26 +15,32 @@ Completed enough:
 - public BLFT ops: Reciprocal, Add, Sub, Mul, Div
 - DLFT engine for finite/rational unary work
 - public Square
+- public Sqrt, implemented enough for all easy signoff cases
+- GCF.Take(n)
+- GCF.Rational(n)
 - named Sqrt2 procedural source
-- named E and Pi finite-prefix sources with exact per-step ranges
+- named E infinite procedural source
+- named Pi infinite procedural Gauss source
 - RCFStream interface
 - PQStreamFromRCF
 - PQStreamFromRational
 - named.FromRational convenience wrapper
+- exact range BB checks for named E and Pi
+- stronger Pi validation against OEIS A001203
 
 Deferred but tracked:
 - DLFT infinite algebraic-source cases under the current PQStream + Range contract, especially Square(Sqrt2())
 
 Current milestone:
-- start real Sqrt using a Gosper/Ouroboros feedback design
+- keep the one remaining sqrt signoff red parked
+- design trig as a sibling package
+- implement Sin first, then Tanh
 
 Critical path to target formula:
-1. Sqrt
-2. robust named E
-3. robust named Pi
-4. Sin
-5. Tanh
-6. final target expression integration
+1. finish parked sqrt(2) signoff
+2. Sin
+3. Tanh
+4. final target expression integration
 
 ----------------------------------------------------------------------
 2. completed phases
@@ -101,23 +105,27 @@ Done enough for current scope:
 - Reciprocal
 
 Phase 7 - richer operations and named
-Partially done:
+Done enough for current scope:
 - Add
 - Sub
 - Mul
 - Div
+- Sqrt public path implemented enough for easy signoff cases
+- Take(n)
+- Rational(n)
 - named Sqrt2
-- named E prefix source
-- named Pi prefix source
+- named E infinite procedural source
+- named Pi infinite procedural Gauss source
 - FromRational wrapper
 - exact range BB checks for named E and Pi
+- stronger Pi prefix and convergent validation
 
 ----------------------------------------------------------------------
-3. active phase - sqrt
+3. parked phase - sqrt
 ----------------------------------------------------------------------
 
 Goal:
-Implement Sqrt(X) as a live Gosper/Ouroboros feedback stream.
+- finish full Sqrt(X) signoff as a live Gosper/Ouroboros feedback stream
 
 Hard requirements:
 - no preread to EOF
@@ -131,60 +139,90 @@ Current permanent substrate already available:
 - RCFStream
 - PQStreamFromRCF
 - PQStreamFromRational
-- existing public ops needed for Newton refinement:
-  Add, Div, Mul, Reciprocal, Square
+- feedback/replay support for emitted approximation terms
+- existing public ops needed for Newton refinement: Add, Div, Mul, Reciprocal, Square
 
 Pending BB signoff list for sqrt:
-- TestBB_GCF_SqrtOfFourIsExactlyTwo
 - TestBB_GCF_SqrtOfTwoMatchesKnownPrefix
-- TestBB_GCF_SqrtOfOneIsExactlyOne
-- TestBB_GCF_SqrtOfOneQuarterIsOneHalf
-- TestBB_GCF_SqrtRejectsNegativeFiniteInput
 
 Status of pending sqrt tests:
 - intentionally skipped by default
 - runnable with RUN_PENDING_TESTS=1
-- skip logic must be removed as each test turns green
+- the remaining parked pending red is sqrt(2) known-prefix behavior
+
+Related deferred BB gap outside sqrt proper:
+- TestBB_SquareOfSqrt2IsExactlyTwo remains intentionally pending under the current DLFT infinite algebraic-source limitation
 
 ----------------------------------------------------------------------
-4. immediate implementation order for sqrt
+4. next active phase - trig framework
+----------------------------------------------------------------------
+
+Goal:
+- create a reusable trig framework in a sibling package
+- implement Sin first
+- implement Tanh second
+- leave the rest of the trig / hyperbolic family to later follow-on work
+
+Planned package direction:
+- core remains algebraic and foundational
+- named remains constants and convenience wrappers
+- trig becomes the sibling package for transcendental kernels and public trig builders
+
+Shared framework plan:
+- replay/fork support for one lazily emitted kernel stream reused by multiple algebraic consumers
+- one shared odd-denominator Lambert-family kernel framework
+- circular half-angle kernel for tan(x/2)
+- hyperbolic half-angle kernel for tanh(x/2)
+- thin algebraic composers layered on top of those kernels
+
+Public implementation order:
+1. trig.Sin(x) in radians
+2. named.SinDegrees(x) as a wrapper using Pi()/180
+3. trig.Tanh(x)
+4. later Cos, Tan, and the remaining circular / hyperbolic family
+
+Target cycle budget:
+- aim to finish Sin and Tanh together in fewer than seven R/G cycles
+
+----------------------------------------------------------------------
+5. immediate implementation order for trig
 ----------------------------------------------------------------------
 
 Step 1
-Add the permanent feedback-stream substrate that lets emitted RCF terms be reused as an input approximation stream.
+Add the trig package skeleton and the full pending BB signoff suite for Sin and Tanh.
 
 Step 2
-Build the sqrt Newton/Ouroboros controller using:
-    Y_next = (Y + X / Y) / 2
-with Y equal to the emerging output stream.
+Add the replay/fork substrate and the first WB tests for it.
 
 Step 3
-Turn the easy pending BB tests green first:
-- sqrt(4) = 2
-- sqrt(1) = 1
-- sqrt(1/4) = 1/2
-- negative input rejection
+Add the shared Lambert-family half-angle kernel substrate and its WB tests.
 
 Step 4
-Turn sqrt(2) prefix green.
+Implement Sin in radians on top of the circular half-angle kernel.
+
+Step 5
+Implement named.SinDegrees as a Pi()/180 wrapper around trig.Sin.
+
+Step 6
+Implement Tanh on top of the hyperbolic half-angle kernel.
 
 Acceptance rule:
-As each pending BB test turns green, remove its skip gate.
+- As each pending BB test turns green, remove its skip gate.
 
 ----------------------------------------------------------------------
-5. later work
+6. later work
 ----------------------------------------------------------------------
 
-Still later after sqrt:
-- replace finite-prefix named E and Pi with stronger or truly infinite sources as needed
-- Sin
-- Tanh
+Still later after Sin and Tanh:
+- finish the parked sqrt(2) signoff case if still deferred
+- implement the rest of the trig / hyperbolic family
 - target formula integration
 - revisit DLFT infinite algebraic-source gap
 - implement Cmp if and when needed
+- add property-based tests where they materially strengthen confidence
 
 ----------------------------------------------------------------------
-6. testing and workflow rules
+7. testing and workflow rules
 ----------------------------------------------------------------------
 
 Feature-start workflow:
@@ -196,13 +234,13 @@ Feature-start workflow:
 
 All procedural named sources should provide exact current ranges where feasible.
 All BB tests of named sources should verify Range() at each step.
+Procedural named-source validation should reach at least 50 terms when practical.
+Use stronger published gold standards, such as OEIS, when available and appropriate.
 
 Use RUN_PENDING_TESTS=1 to force pending tests on and expose the full TODO surface for a feature.
 
 ----------------------------------------------------------------------
-7. current top priority
+8. current top priority
 ----------------------------------------------------------------------
 
-Implement the first permanent sqrt substrate and the first WB tests for it.
-No temporary finite-only code.
-No deviations from Gosper/Ouroboros purity without explicit agreement.
+Keep the one parked sqrt(2) pending red explicit, but begin the trig framework and implement Sin first.
