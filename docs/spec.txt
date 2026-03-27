@@ -23,10 +23,7 @@ No floats anywhere in production code, tests, or correctness helpers.
 Target formula:
 sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69 deg))
 
-Approximate decimal value:
-39.662078093772932975335360621196
-
-Useful rational approximations:
+Rational and decimal approximations:
 299647/7555 ~= 39.6620780939774983454665784249
 
 ----------------------------------------------------------------------

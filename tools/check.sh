@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# tools/check.zsh v2
+# tools/check.zsh v3
 
 set -euo pipefail
 
@@ -22,21 +22,26 @@ fi
 print -P "%F{cyan}==> go vet%f"
 go vet ./core
 go vet ./named
+go vet ./trig
 
 print -P "%F{cyan}==> staticcheck%f"
 staticcheck ./core
 staticcheck ./named
+staticcheck ./trig
+
 
 
 print -P "%F{cyan}==> tests (no cache)%f"
 go test -count=1 ./core
 go test -count=1 ./named
+go test -count=1 ./trig
 
 
 print -P "%F{cyan}==> coverage summary%f"
 mkdir -p ./tmp
 go test -count=1 -coverprofile=./tmp/cover_cf.out ./core
 go test -count=1 -coverprofile=./tmp/cover_cfsource.out ./named
+go test -count=1 -coverprofile=./tmp/cover_cfsource.out ./trig
 
 print -P "%F{green}OK%f"
-# tools/check.zsh v2
+# tools/check.zsh v3
