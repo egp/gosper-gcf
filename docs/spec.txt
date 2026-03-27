@@ -234,6 +234,7 @@ All BB tests of named sources should check both emitted terms and Range() at eac
 
 Named sources must not require source-specific knowledge in core.
 Core must work only from PQ terms, Range(), and normal collapse behavior.
+Pi to 98 places on OEIS https://oeis.org/A001203
 
 ----------------------------------------------------------------------
 10. sqrt design decision

@@ -1,4 +1,4 @@
-// named/pi.go v3
+// named/pi.go v7
 package named
 
 import (
@@ -7,68 +7,87 @@ import (
 	"github.com/egp/gosper-gcf/core"
 )
 
-func Pi() core.PQStream {
-	return mustFiniteRCFPrefixStream([]int64{3, 7, 15, 1, 292, 1, 1, 1, 2})
+type piGaussStream struct {
+	index int
 }
 
-func mustFiniteRCFPrefixStream(terms []int64) core.PQStream {
-	if len(terms) == 0 {
-		panic("named: finite RCF prefix stream requires at least one term")
+func Pi() core.PQStream {
+	return &piGaussStream{index: 0}
+}
+
+func piGaussTermAt(index int) core.PQTerm {
+	if index < 0 {
+		panic("piGaussTermAt: negative index")
 	}
 
-	steps := make([]core.FinitePQStep, len(terms))
-	suffixes := suffixRationalsFromRCFTerms(terms)
-
-	for i, term := range terms {
-		steps[i] = core.FinitePQStep{
-			Term: core.PQTerm{
-				P: big.NewInt(term),
-				Q: big.NewInt(1),
-			},
-			Range: exactRangeForNamedRational(suffixes[i]),
+	if index == 0 {
+		return core.PQTerm{
+			P: big.NewInt(0),
+			Q: big.NewInt(4),
 		}
 	}
 
-	stream, status := core.NewFinitePQStream(steps)
-	if status != core.StatusOK {
-		panic("named: failed to construct finite RCF prefix stream")
+	n := int64(index)
+	return core.PQTerm{
+		P: big.NewInt(2*n - 1),
+		Q: big.NewInt(n * n),
 	}
-	return stream
 }
 
-func suffixRationalsFromRCFTerms(terms []int64) []core.Rational {
-	n := len(terms)
-	out := make([]core.Rational, n)
-
-	current := core.NewRational(big.NewInt(terms[n-1]), big.NewInt(1))
-	out[n-1] = current
-
-	for i := n - 2; i >= 0; i-- {
-		a := big.NewInt(terms[i])
-
-		num := new(big.Int).Mul(a, current.Num())
-		num.Add(num, current.Den())
-
-		den := current.Num()
-		current = core.NewRational(num, den)
-		out[i] = current
+func piGaussLookaheadRange(index int) core.Range {
+	if index < 0 {
+		panic("piGaussLookaheadRange: negative index")
 	}
 
-	return out
-}
+	if index == 0 {
+		return core.Range{
+			Lo: core.Endpoint{
+				Value: core.RationalFromInt64(0),
+				Open:  true,
+			},
+			Hi: core.Endpoint{
+				Value: core.RationalFromInt64(4),
+				Open:  true,
+			},
+			Inside: true,
+		}
+	}
 
-func exactRangeForNamedRational(value core.Rational) core.Range {
+	n := int64(index)
+	p := 2*n - 1
+	q := n * n
+	nextOdd := 2*n + 1
+
 	return core.Range{
 		Lo: core.Endpoint{
-			Value: value,
-			Open:  false,
+			Value: core.RationalFromInt64(p),
+			Open:  true,
 		},
 		Hi: core.Endpoint{
-			Value: value,
-			Open:  false,
+			Value: core.NewRational(
+				big.NewInt(p*nextOdd+q),
+				big.NewInt(nextOdd),
+			),
+			Open: true,
 		},
 		Inside: true,
 	}
 }
 
-// named/pi.go v3
+func (s *piGaussStream) NextPQ() (core.PQTerm, core.PQStream, core.Status) {
+	if s == nil {
+		panic("piGaussStream.NextPQ: nil receiver")
+	}
+
+	return piGaussTermAt(s.index), &piGaussStream{index: s.index + 1}, core.StatusOK
+}
+
+func (s *piGaussStream) Range() core.Range {
+	if s == nil {
+		panic("piGaussStream.Range: nil receiver")
+	}
+
+	return piGaussLookaheadRange(s.index)
+}
+
+// named/pi.go v7
