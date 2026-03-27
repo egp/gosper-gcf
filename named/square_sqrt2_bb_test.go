@@ -3,6 +3,7 @@ package named_test
 
 import (
 	"math/big"
+	"os"
 	"testing"
 	"time"
 
@@ -12,9 +13,13 @@ import (
 
 const pendingTestSquareOfSqrt2 = true
 
+func shouldSkipPendingSqrt() bool {
+	return pendingTestSquareOfSqrt2 && os.Getenv("RUN_PENDING_TESTS") == ""
+}
+
 func TestBB_SquareOfSqrt2IsExactlyTwo(t *testing.T) {
-	if pendingTestSquareOfSqrt2 {
-		t.Skip("pending DLFT support for infinite algebraic streams under current PQStream+Range contract")
+	if shouldSkipPendingSqrt() {
+		t.Skip("pending square(sqrt(2)); set RUN_PENDING_TESTS=1 to run anyway")
 	}
 
 	g := core.Square(named.Sqrt2())

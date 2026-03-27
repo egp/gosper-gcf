@@ -13,9 +13,6 @@ import (
 const pendingTestNamedERange = true
 
 func TestBB_Named_E_RangeTracksBestLookaheadInterval50(t *testing.T) {
-	if shouldSkipPendingNamedERange() {
-		t.Skip("pending robust named E() range behavior; set RUN_PENDING_TESTS=1 to run anyway")
-	}
 
 	terms := eTermsNamedRange(51)
 	var src core.PQStream = named.E()

@@ -14,9 +14,6 @@ import (
 const pendingTestNamedE = true
 
 func TestBB_Named_E_MatchesKnownPrefix50(t *testing.T) {
-	if shouldSkipPendingNamedE() {
-		t.Skip("pending robust named E() source; set RUN_PENDING_TESTS=1 to run anyway")
-	}
 
 	g := core.NewGCF1(identityUnaryCoeffsNamedConstants(), named.E())
 	assertRCFPrefixNamedConstants(t, g, eTermsNamedConstants(50))

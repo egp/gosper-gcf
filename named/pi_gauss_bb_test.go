@@ -1,9 +1,8 @@
-// named/pi_gauss_bb_test.go v2
+// named/pi_gauss_bb_test.go v3
 package named_test
 
 import (
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -11,13 +10,7 @@ import (
 	"github.com/egp/gosper-gcf/named"
 )
 
-const pendingTestNamedPiGauss = true
-
 func TestBB_Named_Pi_SourcePQPrefix50(t *testing.T) {
-	if shouldSkipPendingNamedPiGauss() {
-		t.Skip("pending procedural Gauss Pi source; set RUN_PENDING_TESTS=1 to run anyway")
-	}
-
 	src := named.Pi()
 	for i := 0; i < 50; i++ {
 		wantP, wantQ := expectedPiGaussPQ(i)
@@ -37,10 +30,6 @@ func TestBB_Named_Pi_SourcePQPrefix50(t *testing.T) {
 }
 
 func TestBB_Named_Pi_SourceRangeLookahead50(t *testing.T) {
-	if shouldSkipPendingNamedPiGauss() {
-		t.Skip("pending procedural Gauss Pi source; set RUN_PENDING_TESTS=1 to run anyway")
-	}
-
 	src := named.Pi()
 	for i := 0; i < 50; i++ {
 		want := expectedPiGaussRange(i)
@@ -54,46 +43,51 @@ func TestBB_Named_Pi_SourceRangeLookahead50(t *testing.T) {
 	}
 }
 
-func TestBB_Named_Pi_RCFPrefixMatchesKnownPrefix(t *testing.T) {
-	if shouldSkipPendingNamedPiGauss() {
-		t.Skip("pending procedural Gauss Pi source; set RUN_PENDING_TESTS=1 to run anyway")
-	}
-
+func TestBB_Named_Pi_RCFPrefixMatchesOEISPrefix98(t *testing.T) {
 	g := core.NewGCF1(identityUnaryCoeffsPiGauss(), named.Pi())
-	assertRCFPrefixPiGauss(t, g, []int64{3, 7, 15, 1, 292, 1, 1, 1})
+	assertRCFPrefixPiGauss(t, g, oeisPiRCFTerms98())
 }
 
-func TestBB_Named_Pi_TakeAndRationalValidate(t *testing.T) {
-	if shouldSkipPendingNamedPiGauss() {
-		t.Skip("pending procedural Gauss Pi source; set RUN_PENDING_TESTS=1 to run anyway")
-	}
+func TestBB_Named_Pi_Take8MatchesOEISFinitePrefix(t *testing.T) {
+	terms := oeisPiRCFTerms98()[:8]
+	suffixes := suffixRationalsFromRCFTermsPiBB(terms)
 
 	g := core.NewGCF1(identityUnaryCoeffsPiGauss(), named.Pi())
+	src := g.Take(len(terms))
 
-	taken := g.Take(4)
+	for i, wantTerm := range terms {
+		_, tail := assertFinitePiStep(
+			t,
+			src,
+			i+1,
+			wantTerm,
+			1,
+			suffixes[i],
+		)
+		src = tail
+	}
 
-	_, tail2 := assertFinitePiStep(t, taken, 1, 3, 1, core.NewRational(big.NewInt(355), big.NewInt(113)))
-	_, tail3 := assertFinitePiStep(t, tail2, 2, 7, 1, core.NewRational(big.NewInt(113), big.NewInt(16)))
-	_, tail4 := assertFinitePiStep(t, tail3, 3, 15, 1, core.NewRational(big.NewInt(16), big.NewInt(1)))
-	_, tail5 := assertFinitePiStep(t, tail4, 4, 1, 1, core.RationalFromInt64(1))
-	assertFinitePiEOF(t, tail5, 5)
-
-	g2 := core.NewGCF1(identityUnaryCoeffsPiGauss(), named.Pi())
-	if got := g2.Rational(1); got.Cmp(core.RationalFromInt64(3)) != 0 {
-		t.Fatalf("Rational(1) = %v/%v, want 3/1", got.Num(), got.Den())
-	}
-	g3 := core.NewGCF1(identityUnaryCoeffsPiGauss(), named.Pi())
-	if got := g3.Rational(2); got.Cmp(core.NewRational(big.NewInt(22), big.NewInt(7))) != 0 {
-		t.Fatalf("Rational(2) = %v/%v, want 22/7", got.Num(), got.Den())
-	}
-	g4 := core.NewGCF1(identityUnaryCoeffsPiGauss(), named.Pi())
-	if got := g4.Rational(4); got.Cmp(core.NewRational(big.NewInt(355), big.NewInt(113))) != 0 {
-		t.Fatalf("Rational(4) = %v/%v, want 355/113", got.Num(), got.Den())
-	}
+	assertFinitePiEOF(t, src, len(terms)+1)
 }
 
-func shouldSkipPendingNamedPiGauss() bool {
-	return pendingTestNamedPiGauss && os.Getenv("RUN_PENDING_TESTS") == ""
+func TestBB_Named_Pi_RationalMatchesOEISConvergents(t *testing.T) {
+	terms := oeisPiRCFTerms98()
+	depths := []int{1, 2, 4, 8, 12, 20}
+
+	for _, depth := range depths {
+		g := core.NewGCF1(identityUnaryCoeffsPiGauss(), named.Pi())
+		got := g.Rational(depth)
+		want := convergentFromRCFTermsPiBB(terms[:depth])
+
+		if got.Cmp(want) != 0 {
+			t.Fatalf(
+				"Rational(%d) = %v/%v, want %v/%v",
+				depth,
+				got.Num(), got.Den(),
+				want.Num(), want.Den(),
+			)
+		}
+	}
 }
 
 func identityUnaryCoeffsPiGauss() core.BLFTCoefficients {
@@ -142,6 +136,43 @@ func expectedPiGaussRange(index int) core.Range {
 		},
 		Inside: true,
 	}
+}
+
+func oeisPiRCFTerms98() []int64 {
+	return []int64{
+		3, 7, 15, 1, 292, 1, 1, 1, 2, 1, 3, 1, 14, 2, 1, 1, 2, 2, 2, 2,
+		1, 84, 2, 1, 1, 15, 3, 13, 1, 4, 2, 6, 6, 99, 1, 2, 2, 6, 3, 5,
+		1, 1, 6, 8, 1, 7, 1, 2, 3, 7, 1, 2, 1, 1, 12, 1, 1, 1, 3, 1,
+		1, 8, 1, 1, 2, 1, 6, 1, 1, 5, 2, 2, 3, 1, 2, 4, 4, 16, 1, 161,
+		45, 1, 22, 1, 2, 2, 1, 4, 1, 2, 24, 1, 2, 1, 3, 1, 2, 1,
+	}
+}
+
+func suffixRationalsFromRCFTermsPiBB(terms []int64) []core.Rational {
+	n := len(terms)
+	out := make([]core.Rational, n)
+
+	current := core.NewRational(big.NewInt(terms[n-1]), big.NewInt(1))
+	out[n-1] = current
+
+	for i := n - 2; i >= 0; i-- {
+		a := big.NewInt(terms[i])
+
+		num := new(big.Int).Mul(a, current.Num())
+		num.Add(num, current.Den())
+
+		den := new(big.Int).Set(current.Num())
+
+		current = core.NewRational(num, den)
+		out[i] = current
+	}
+
+	return out
+}
+
+func convergentFromRCFTermsPiBB(terms []int64) core.Rational {
+	suffixes := suffixRationalsFromRCFTermsPiBB(terms)
+	return suffixes[0]
 }
 
 func assertRCFPrefixPiGauss(t *testing.T, g *core.GCF, want []int64) {
@@ -194,20 +225,29 @@ func assertPiRange(t *testing.T, got core.Range, want core.Range, step int) {
 		t.Fatalf("step %d Hi.Open = %v, want %v", step, got.Hi.Open, want.Hi.Open)
 	}
 	if got.Lo.Value.Cmp(want.Lo.Value) != 0 {
-		t.Fatalf("step %d Lo = %v/%v, want %v/%v",
+		t.Fatalf(
+			"step %d Lo = %v/%v, want %v/%v",
 			step, got.Lo.Value.Num(), got.Lo.Value.Den(),
 			want.Lo.Value.Num(), want.Lo.Value.Den(),
 		)
 	}
 	if got.Hi.Value.Cmp(want.Hi.Value) != 0 {
-		t.Fatalf("step %d Hi = %v/%v, want %v/%v",
+		t.Fatalf(
+			"step %d Hi = %v/%v, want %v/%v",
 			step, got.Hi.Value.Num(), got.Hi.Value.Den(),
 			want.Hi.Value.Num(), want.Hi.Value.Den(),
 		)
 	}
 }
 
-func assertFinitePiStep(t *testing.T, src core.PQStream, step int, wantP, wantQ int64, wantRange core.Rational) (core.PQTerm, core.PQStream) {
+func assertFinitePiStep(
+	t *testing.T,
+	src core.PQStream,
+	step int,
+	wantP int64,
+	wantQ int64,
+	wantRange core.Rational,
+) (core.PQTerm, core.PQStream) {
 	t.Helper()
 
 	gotRange := src.Range()
@@ -215,7 +255,8 @@ func assertFinitePiStep(t *testing.T, src core.PQStream, step int, wantP, wantQ 
 		t.Fatalf("step %d range openness/inside wrong", step)
 	}
 	if gotRange.Lo.Value.Cmp(wantRange) != 0 || gotRange.Hi.Value.Cmp(wantRange) != 0 {
-		t.Fatalf("step %d range = [%v/%v,%v/%v], want exact %v/%v",
+		t.Fatalf(
+			"step %d range = [%v/%v,%v/%v], want exact %v/%v",
 			step,
 			gotRange.Lo.Value.Num(), gotRange.Lo.Value.Den(),
 			gotRange.Hi.Value.Num(), gotRange.Hi.Value.Den(),
@@ -233,6 +274,7 @@ func assertFinitePiStep(t *testing.T, src core.PQStream, step int, wantP, wantQ 
 	if term.Q.Cmp(big.NewInt(wantQ)) != 0 {
 		t.Fatalf("step %d Q = %v, want %d", step, term.Q, wantQ)
 	}
+
 	return term, tail
 }
 
@@ -245,4 +287,4 @@ func assertFinitePiEOF(t *testing.T, src core.PQStream, step int) {
 	}
 }
 
-// named/pi_gauss_bb_test.go v2
+// named/pi_gauss_bb_test.go v3

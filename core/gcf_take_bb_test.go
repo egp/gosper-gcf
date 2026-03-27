@@ -14,9 +14,6 @@ const pendingTestGCFTake = true
 const pendingTestGCFRational = true
 
 func TestBB_GCF_Take_PrefixOfInfiniteSourceIsFiniteExactPQStream(t *testing.T) {
-	if shouldSkipPendingGCFTake() {
-		t.Skip("pending GCF.Take(n); set RUN_PENDING_TESTS=1 to run anyway")
-	}
 
 	g := core.NewGCF1(identityUnaryCoeffsTake(), named.E())
 	taken := g.Take(3)
@@ -52,9 +49,6 @@ func TestBB_GCF_Take_PrefixOfInfiniteSourceIsFiniteExactPQStream(t *testing.T) {
 }
 
 func TestBB_GCF_Rational_ReturnsConvergentOfTakenPrefix(t *testing.T) {
-	if shouldSkipPendingGCFRational() {
-		t.Skip("pending GCF.Rational(n); set RUN_PENDING_TESTS=1 to run anyway")
-	}
 
 	g := core.NewGCF1(identityUnaryCoeffsTake(), named.E())
 	got := g.Rational(3)
@@ -70,9 +64,6 @@ func TestBB_GCF_Rational_ReturnsConvergentOfTakenPrefix(t *testing.T) {
 }
 
 func TestBB_GCF_Take_StopsAtEOF_WhenSourceHasFewerTerms(t *testing.T) {
-	if shouldSkipPendingGCFTake() {
-		t.Skip("pending GCF.Take(n); set RUN_PENDING_TESTS=1 to run anyway")
-	}
 
 	g := core.NewGCF1(
 		identityUnaryCoeffsTake(),

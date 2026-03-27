@@ -13,9 +13,6 @@ import (
 const pendingTestSqrt = true
 
 func TestBB_GCF_SqrtOfFourIsExactlyTwo(t *testing.T) {
-	if shouldSkipPendingSqrt() {
-		t.Skip("pending public sqrt unary operation; set RUN_PENDING_TESTS=1 to run anyway")
-	}
 
 	stream, status := core.NewFinitePQStream([]core.FinitePQStep{
 		{
@@ -64,9 +61,6 @@ func TestBB_GCF_SqrtOfTwoMatchesKnownPrefix(t *testing.T) {
 }
 
 func TestBB_GCF_SqrtOfOneIsExactlyOne(t *testing.T) {
-	if shouldSkipPendingSqrt() {
-		t.Skip("pending public sqrt unary operation; set RUN_PENDING_TESTS=1 to run anyway")
-	}
 
 	stream, status := core.NewFinitePQStream([]core.FinitePQStep{
 		{
@@ -95,9 +89,6 @@ func TestBB_GCF_SqrtOfOneIsExactlyOne(t *testing.T) {
 }
 
 func TestBB_GCF_SqrtOfOneQuarterIsOneHalf(t *testing.T) {
-	if shouldSkipPendingSqrt() {
-		t.Skip("pending public sqrt unary operation; set RUN_PENDING_TESTS=1 to run anyway")
-	}
 
 	stream, status := core.NewFinitePQStream([]core.FinitePQStep{
 		{
@@ -134,9 +125,6 @@ func TestBB_GCF_SqrtOfOneQuarterIsOneHalf(t *testing.T) {
 }
 
 func TestBB_GCF_SqrtRejectsNegativeFiniteInput(t *testing.T) {
-	if shouldSkipPendingSqrt() {
-		t.Skip("pending public sqrt unary operation; set RUN_PENDING_TESTS=1 to run anyway")
-	}
 
 	stream, status := core.NewFinitePQStream([]core.FinitePQStep{
 		{
