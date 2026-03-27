@@ -1,4 +1,4 @@
-// trig/sin_wb_test.go v1
+// trig/sin_wb_test.go v2
 package trig
 
 import (
@@ -9,12 +9,32 @@ import (
 	"github.com/egp/gosper-gcf/core"
 )
 
+func TestWB_HalfInputForSin_ZeroIsExactlyZero(t *testing.T) {
+	g := observePQAsRCFForSin(halfInputForSin(
+		core.PQStreamFromRational(core.RationalFromInt64(0)),
+	))
+	assertExactRCFSequenceSin(t, g, []int64{0})
+}
+
+func TestWB_HalfInputForSin_OneIsExactlyOneHalf(t *testing.T) {
+	g := observePQAsRCFForSin(halfInputForSin(
+		core.PQStreamFromRational(core.RationalFromInt64(1)),
+	))
+	assertExactRCFSequenceSin(t, g, []int64{0, 2})
+}
+
+func TestWB_HalfInputForSin_MinusOneIsExactlyMinusOneHalf(t *testing.T) {
+	g := observePQAsRCFForSin(halfInputForSin(
+		core.PQStreamFromRational(core.RationalFromInt64(-1)),
+	))
+	assertExactRCFSequenceSin(t, g, []int64{-1, 2})
+}
+
 func TestWB_SinFromTanHalf_ZeroIsExactlyZero(t *testing.T) {
 	g := sinFromTanHalf(exactTerminalGCFForSin(
 		[]int64{0},
 		0, 1,
 	))
-
 	assertExactRCFSequenceSin(t, g, []int64{0})
 }
 
@@ -23,7 +43,6 @@ func TestWB_SinFromTanHalf_OneHalfIsExactlyFourFifths(t *testing.T) {
 		[]int64{0, 2},
 		1, 2,
 	))
-
 	assertExactRCFSequenceSin(t, g, []int64{0, 1, 4})
 }
 
@@ -32,8 +51,27 @@ func TestWB_SinFromTanHalf_OneIsExactlyOne(t *testing.T) {
 		[]int64{1},
 		1, 1,
 	))
-
 	assertExactRCFSequenceSin(t, g, []int64{1})
+}
+
+func observePQAsRCFForSin(x core.PQStream) *core.GCF {
+	if x == nil {
+		panic("observePQAsRCFForSin: nil input")
+	}
+
+	return core.NewGCF1(
+		core.BLFTCoefficients{
+			A: big.NewInt(0),
+			B: big.NewInt(1),
+			C: big.NewInt(0),
+			D: big.NewInt(0),
+			E: big.NewInt(0),
+			F: big.NewInt(0),
+			G: big.NewInt(0),
+			H: big.NewInt(1),
+		},
+		x,
+	)
 }
 
 func exactTerminalGCFForSin(terms []int64, num, den int64) *core.GCF {
@@ -95,4 +133,4 @@ func nextRCFWithTimeoutSin(t *testing.T, g *core.GCF, timeout time.Duration) (co
 	}
 }
 
-// trig/sin_wb_test.go v1
+// trig/sin_wb_test.go v2

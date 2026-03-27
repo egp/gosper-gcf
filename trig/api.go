@@ -1,4 +1,4 @@
-// trig/api.go v2
+// trig/api.go v3
 package trig
 
 import (
@@ -34,4 +34,4 @@ func exactRangeTrig(num, den int64) core.Range {
 	}
 }
 
-// trig/api.go v2
+// trig/api.go v3
