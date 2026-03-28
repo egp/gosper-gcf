@@ -42,5 +42,5 @@ jobs:
         run: ./tools/check.sh
 
       - name: Tests (no cache)
-        run: go test -count=1 ./core ./named
+        run: go test -count=1 ./core ./named ./trig
 # eof go.yml v4
