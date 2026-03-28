@@ -1,4 +1,4 @@
-// core/gcf_unary_range_openness_wb_test.go v1
+// core/gcf_unary_range_openness_wb_test.go v3
 package core
 
 import (
@@ -69,4 +69,101 @@ func TestWB_GCF_UnaryRange_IdentityPreservesEndpointOpenness(t *testing.T) {
 	}
 }
 
-// core/gcf_unary_range_openness_wb_test.go v1
+func TestWB_GCF_UnaryRange_IdentityPreservesOutsideKindAndEndpoints(t *testing.T) {
+	src := &staticRangePQStream{
+		rng: Range{
+			Lo: Endpoint{
+				Value: NewRational(big.NewInt(5), big.NewInt(2)),
+				Open:  false,
+			},
+			Hi: Endpoint{
+				Value: RationalFromInt64(3),
+				Open:  true,
+			},
+			Inside: false,
+		},
+	}
+
+	g := NewGCF1(
+		BLFTCoefficients{
+			A: big.NewInt(0),
+			B: big.NewInt(1),
+			C: big.NewInt(0),
+			D: big.NewInt(0),
+			E: big.NewInt(0),
+			F: big.NewInt(0),
+			G: big.NewInt(0),
+			H: big.NewInt(1),
+		},
+		src,
+	)
+
+	got := g.Range()
+
+	if got.Inside {
+		t.Fatalf("Inside = true, want false")
+	}
+	if got.Lo.Open {
+		t.Fatalf("Lo.Open = true, want false")
+	}
+	if !got.Hi.Open {
+		t.Fatalf("Hi.Open = false, want true")
+	}
+	if got.Lo.Value.Cmp(NewRational(big.NewInt(5), big.NewInt(2))) != 0 {
+		t.Fatalf("Lo = %v/%v, want 5/2", got.Lo.Value.Num(), got.Lo.Value.Den())
+	}
+	if got.Hi.Value.Cmp(RationalFromInt64(3)) != 0 {
+		t.Fatalf("Hi = %v/%v, want 3/1", got.Hi.Value.Num(), got.Hi.Value.Den())
+	}
+}
+
+func TestWB_GCF_UnaryRange_IdentitySecondRangeCallStillPreservesOutsideKindAndEndpoints(t *testing.T) {
+	src := &staticRangePQStream{
+		rng: Range{
+			Lo: Endpoint{
+				Value: NewRational(big.NewInt(5), big.NewInt(2)),
+				Open:  false,
+			},
+			Hi: Endpoint{
+				Value: RationalFromInt64(3),
+				Open:  true,
+			},
+			Inside: false,
+		},
+	}
+
+	g := NewGCF1(
+		BLFTCoefficients{
+			A: big.NewInt(0),
+			B: big.NewInt(1),
+			C: big.NewInt(0),
+			D: big.NewInt(0),
+			E: big.NewInt(0),
+			F: big.NewInt(0),
+			G: big.NewInt(0),
+			H: big.NewInt(1),
+		},
+		src,
+	)
+
+	_ = g.Range()
+	got := g.Range()
+
+	if got.Inside {
+		t.Fatalf("Inside = true, want false")
+	}
+	if got.Lo.Open {
+		t.Fatalf("Lo.Open = true, want false")
+	}
+	if !got.Hi.Open {
+		t.Fatalf("Hi.Open = false, want true")
+	}
+	if got.Lo.Value.Cmp(NewRational(big.NewInt(5), big.NewInt(2))) != 0 {
+		t.Fatalf("Lo = %v/%v, want 5/2", got.Lo.Value.Num(), got.Lo.Value.Den())
+	}
+	if got.Hi.Value.Cmp(RationalFromInt64(3)) != 0 {
+		t.Fatalf("Hi = %v/%v, want 3/1", got.Hi.Value.Num(), got.Hi.Value.Den())
+	}
+}
+
+// core/gcf_unary_range_openness_wb_test.go v3

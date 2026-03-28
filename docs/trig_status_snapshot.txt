@@ -1,0 +1,81 @@
+trig_status_snapshot.txt
+
+Project: gosper-gcf
+Focus: trig only
+Github main: https://github.com/egp/gosper-gcf
+
+Committed / already-green trig work
+- trig/ package exists and is the active next feature area.
+- Replay/fork substrate for replayed RCF tails was built and green.
+- Lambert-family framework work was taken through these green slices:
+  - lambert mode metadata
+  - stage coefficient algebra
+  - stageAt()
+  - finite truncation recursion
+  - preview root
+  - Root() delegating to preview root
+- Exported radians Sin path was taken green before work shifted to named.SinDegrees:
+  - trig.Sin wired through sinRadians
+  - halfInputForSin = exact x/2
+  - sinFromTanHalf = exact 2t/(1+t^2)
+- Tanh has NOT been implemented yet.
+- named.SinDegrees has NOT been completed yet.
+
+Current local WIP files
+- core/blft_range.go          (modified; uploaded snapshot shows v6)
+- core/blft_range_wb_test.go  (modified; uploaded snapshot shows v2)
+- core/gcf_unary_range_openness_wb_test.go (modified; uploaded snapshot shows v2)
+- named/sin_degrees.go        (modified; uploaded snapshot shows v4)
+- named/sin_degrees_wb_test.go (new in WIP; uploaded snapshot shows v1)
+- There is also WIP around core/blft_exact_input_range_wb_test.go from later chat state.
+- Ask for a git status to confirm what is WIP, and I will paste any WIP file you need
+
+Current local WIP intent
+- named.SinDegrees is now trying to do the right thing:
+  - degreesToRadiansForSin(x) builds x * Pi() / 180 exactly
+  - then returns core.PQStreamFromRCF(radians)
+  - then SinDegrees(x) calls trig.Sin on that PQ stream
+- The 180-degrees WB was added:
+  - 180° should match the Pi prefix
+
+Where progress stalled
+- We moved from named-layer bugs into core capability gaps.
+- First blocker:
+  - CornerRange panics on non-inside ranges
+  - current local blft_range.go only special-cases constant / affineX / affineY
+  - there is no exact-input reduction yet
+- Second blocker:
+  - a core-local reproducer later exposed chooseIngestX panicking on mixed inside/outside pairs
+- Third blocker:
+  - another core-local reproducer later hit "Rational denominator is zero" in collapseUnaryXEOF
+- Net: named.SinDegrees is blocked by core mixed-range / exact-input / EOF-collapse behavior, not by the trig design itself.
+
+Most important deterministic observations
+- This is not evidence that the trig design is wrong.
+- The Lambert/Sin framework itself made real progress and got multiple green slices.
+- The remaining trouble is in core range/ingest/collapse behavior exposed by the exact degrees->radians path.
+- The uploaded WIP snapshot still shows blft_range.go v6 without the exact-input reduction patch, so the current named CornerRange panic is expected from that local file.
+- Any successor should trust:
+  - committed main for all non-WIP files
+  - the local WIP files above as the current source of truth for ongoing work
+
+Best next plan
+1. Do NOT redesign trig yet, but evaluate the design for flaws or possible improvements.
+2. Keep all already-green trig/Lambert/Sin work unless a concrete regression appears.
+3. Resume from the current WIP files only.
+4. Core-first debugging path:
+   a) land exact-input reduction in core/blft_range.go
+   b) extend chooseIngestX for mixed cases when one side is exact closed
+   c) diagnose/fix collapseUnaryXEOF zero-denominator path
+5. Once the 180° -> Pi WB is green:
+   a) turn on SinDegrees BB signoff for 30°, 90°, -30°, 69°
+6. After SinDegrees is green:
+   a) implement Tanh using the already-green Lambert hyperbolic root
+   b) composition should mirror Sin: 2u / (1 + u^2)
+7. Then return to the target formula.
+
+Recommended first message to successor
+- “Use GitHub main as authority except for current WIP files already listed.
+  Treat trig framework and radians Sin as already accomplished.
+  Focus only on unblocking named.SinDegrees through core range/choose/collapse behavior.
+  Do not redesign trig unless a concrete core fix proves impossible.”

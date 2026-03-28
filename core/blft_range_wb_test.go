@@ -1,4 +1,4 @@
-// core/blft_range_wb_test.go v1
+// core/blft_range_wb_test.go v2
 package core
 
 import (
@@ -103,6 +103,60 @@ func TestWB_BLFT_CornerRangeConstantFunctionIsExact(t *testing.T) {
 	}
 }
 
+func TestWB_BLFT_CornerRangeIdentityOverOutsideXRange(t *testing.T) {
+	s := blftState{
+		A: big.NewInt(0),
+		B: big.NewInt(1),
+		C: big.NewInt(0),
+		D: big.NewInt(0),
+		E: big.NewInt(0),
+		F: big.NewInt(0),
+		G: big.NewInt(0),
+		H: big.NewInt(1),
+	}
+
+	xr := Range{
+		Lo: Endpoint{
+			Value: NewRational(big.NewInt(5), big.NewInt(2)),
+			Open:  false,
+		},
+		Hi: Endpoint{
+			Value: RationalFromInt64(3),
+			Open:  true,
+		},
+		Inside: false,
+	}
+	yr := Range{
+		Lo: Endpoint{
+			Value: RationalFromInt64(0),
+			Open:  false,
+		},
+		Hi: Endpoint{
+			Value: RationalFromInt64(0),
+			Open:  false,
+		},
+		Inside: true,
+	}
+
+	got := s.CornerRange(xr, yr)
+
+	if got.Inside {
+		t.Fatal("Inside = true, want false")
+	}
+	if got.Lo.Open {
+		t.Fatal("Lo.Open = true, want false")
+	}
+	if !got.Hi.Open {
+		t.Fatal("Hi.Open = false, want true")
+	}
+	if got.Lo.Value.Cmp(NewRational(big.NewInt(5), big.NewInt(2))) != 0 {
+		t.Fatalf("Lo = %v/%v, want 5/2", got.Lo.Value.Num(), got.Lo.Value.Den())
+	}
+	if got.Hi.Value.Cmp(RationalFromInt64(3)) != 0 {
+		t.Fatalf("Hi = %v/%v, want 3/1", got.Hi.Value.Num(), got.Hi.Value.Den())
+	}
+}
+
 func TestWB_BLFT_TieBreakGoesToX(t *testing.T) {
 	xRange := Range{
 		Lo: Endpoint{
@@ -132,4 +186,4 @@ func TestWB_BLFT_TieBreakGoesToX(t *testing.T) {
 	}
 }
 
-// core/blft_range_wb_test.go v1
+// core/blft_range_wb_test.go v2
