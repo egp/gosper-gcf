@@ -1,9 +1,10 @@
-gosper-gcf roadmap purpose
+gosper-gcf roadmap
 
+purpose
 This document is the execution roadmap for gosper-gcf.
 It emphasizes sequencing, test strategy, and current development slices.
 
-----------------------------------------------------------------------
+----------------------------------------------------------------------  
 1. current status
 ----------------------------------------------------------------------
 
@@ -25,24 +26,30 @@ Completed enough:
 - PQStreamFromRCF
 - PQStreamFromRational
 - named.FromRational convenience wrapper
+- trig package with public Sin and Tanh
+- named.SinDegrees exact wrapper via Pi()/180
+- replay/fork substrate for trig kernels
+- Lambert-family kernel framework
 - exact range BB checks for named E and Pi
 - stronger Pi validation against OEIS A001203
 
 Deferred but tracked:
-- DLFT infinite algebraic-source cases under the current PQStream + Range contract, especially Square(Sqrt2())
+- DLFT infinite algebraic-source cases under the current PQStream + Range contract,
+  especially Square(Sqrt2())
+- full general outside/outside BLFT range solver, including correlated/diagonal cases,
+  to replace the current narrow special cases used to unblock SinDegrees and related paths
 
 Current milestone:
 - keep the one remaining sqrt signoff red parked
-- design trig as a sibling package
-- implement Sin first, then Tanh
+- finish the last pending SinDegrees signoff panic/wrong-answer issues
+- keep trig work stable after Sin/Tanh landing
 
 Critical path to target formula:
 1. finish parked sqrt(2) signoff
-2. Sin
-3. Tanh
-4. final target expression integration
+2. finish pending SinDegrees signoff
+3. final target expression integration
 
-----------------------------------------------------------------------
+----------------------------------------------------------------------  
 2. completed phases
 ----------------------------------------------------------------------
 
@@ -91,6 +98,9 @@ Done enough for current scope:
 - CanEmitRCFTerm
 - emission formula
 - live unary and binary evaluator paths
+- exact-input reduction
+- affine/LFT unary range handling
+- targeted non-inside special cases needed to unblock current trig work
 
 Cmp is still deferred until needed.
 
@@ -117,10 +127,21 @@ Done enough for current scope:
 - named E infinite procedural source
 - named Pi infinite procedural Gauss source
 - FromRational wrapper
+- named.SinDegrees
 - exact range BB checks for named E and Pi
 - stronger Pi prefix and convergent validation
 
-----------------------------------------------------------------------
+Phase 8 - trig framework
+Done enough for current scope:
+- trig sibling package
+- replay/fork support
+- shared Lambert-family kernel framework
+- circular half-angle kernel for tan(x/2)
+- hyperbolic half-angle kernel for tanh(x/2)
+- trig.Sin(x) in radians
+- trig.Tanh(x)
+
+----------------------------------------------------------------------  
 3. parked phase - sqrt
 ----------------------------------------------------------------------
 
@@ -151,78 +172,46 @@ Status of pending sqrt tests:
 - the remaining parked pending red is sqrt(2) known-prefix behavior
 
 Related deferred BB gap outside sqrt proper:
-- TestBB_SquareOfSqrt2IsExactlyTwo remains intentionally pending under the current DLFT infinite algebraic-source limitation
+- TestBB_SquareOfSqrt2IsExactlyTwo remains intentionally pending under the current
+  DLFT infinite algebraic-source limitation
 
-----------------------------------------------------------------------
-4. next active phase - trig framework
+----------------------------------------------------------------------  
+4. current trig cleanup slice
 ----------------------------------------------------------------------
 
 Goal:
-- create a reusable trig framework in a sibling package
-- implement Sin first
-- implement Tanh second
-- leave the rest of the trig / hyperbolic family to later follow-on work
+- finish remaining pending SinDegrees signoff behavior on top of the shipped trig framework
 
-Planned package direction:
-- core remains algebraic and foundational
-- named remains constants and convenience wrappers
-- trig becomes the sibling package for transcendental kernels and public trig builders
+Current situation:
+- the exact degrees->radians path is already in place
+- replay/fork range maintenance is implemented enough for current Sin/Tanh behavior
+- the remaining pending SinDegrees red is in core binary range evaluation on non-inside paths
 
-Shared framework plan:
-- replay/fork support for one lazily emitted kernel stream reused by multiple algebraic consumers
-- one shared odd-denominator Lambert-family kernel framework
-- circular half-angle kernel for tan(x/2)
-- hyperbolic half-angle kernel for tanh(x/2)
-- thin algebraic composers layered on top of those kernels
-
-Public implementation order:
-1. trig.Sin(x) in radians
-2. named.SinDegrees(x) as a wrapper using Pi()/180
-3. trig.Tanh(x)
-4. later Cos, Tan, and the remaining circular / hyperbolic family
-
-Target cycle budget:
-- aim to finish Sin and Tanh together in fewer than seven R/G cycles
-
-----------------------------------------------------------------------
-5. immediate implementation order for trig
-----------------------------------------------------------------------
-
-Step 1
-Add the trig package skeleton and the full pending BB signoff suite for Sin and Tanh.
-
-Step 2
-Add the replay/fork substrate and the first WB tests for it.
-
-Step 3
-Add the shared Lambert-family half-angle kernel substrate and its WB tests.
-
-Step 4
-Implement Sin in radians on top of the circular half-angle kernel.
-
-Step 5
-Implement named.SinDegrees as a Pi()/180 wrapper around trig.Sin.
-
-Step 6
-Implement Tanh on top of the hyperbolic half-angle kernel.
+Immediate approach:
+1. use narrow safe range special-cases to remove current pending SinDegrees panics
+2. add WB tests for each newly exposed non-inside path
+3. postpone the full general outside/outside BLFT solver until after signoff is restored
 
 Acceptance rule:
-- As each pending BB test turns green, remove its skip gate.
+- as each pending SinDegrees BB turns green, remove its skip gate
 
-----------------------------------------------------------------------
-6. later work
+----------------------------------------------------------------------  
+5. later work
 ----------------------------------------------------------------------
 
-Still later after Sin and Tanh:
-- finish the parked sqrt(2) signoff case if still deferred
-- implement the rest of the trig / hyperbolic family
+Still later after current SinDegrees cleanup and parked sqrt:
+- finish the parked sqrt(2) signoff case
 - target formula integration
 - revisit DLFT infinite algebraic-source gap
 - implement Cmp if and when needed
 - add property-based tests where they materially strengthen confidence
+- implement the rest of the trig / hyperbolic family
+- replace the current narrow non-inside BLFT special cases with a complete
+  general outside/outside BLFT range solver, including denominator-crossing
+  handling and correlated/diagonal follow-on work where needed
 
-----------------------------------------------------------------------
-7. testing and workflow rules
+----------------------------------------------------------------------  
+6. testing and workflow rules
 ----------------------------------------------------------------------
 
 Feature-start workflow:
@@ -236,11 +225,12 @@ All procedural named sources should provide exact current ranges where feasible.
 All BB tests of named sources should verify Range() at each step.
 Procedural named-source validation should reach at least 50 terms when practical.
 Use stronger published gold standards, such as OEIS, when available and appropriate.
-
 Use RUN_PENDING_TESTS=1 to force pending tests on and expose the full TODO surface for a feature.
 
-----------------------------------------------------------------------
-8. current top priority
+----------------------------------------------------------------------  
+7. current top priority
 ----------------------------------------------------------------------
 
-Keep the one parked sqrt(2) pending red explicit, but begin the trig framework and implement Sin first.
+Finish the remaining pending SinDegrees non-inside binary-range panic first.
+Keep the parked sqrt(2) pending red explicit and defer the full general
+outside/outside BLFT range solver until after current signoff is restored.
