@@ -1,13 +1,63 @@
-// trig/tanh.go v1
+// trig/tanh.go v3
 package trig
 
-import "github.com/egp/gosper-gcf/core"
+import (
+	"math/big"
+
+	"github.com/egp/gosper-gcf/core"
+)
 
 func tanhRadians(x core.PQStream) *core.GCF {
 	if x == nil {
 		panic("tanhRadians: nil input")
 	}
-	return hyperbolicHalfAngleKernel(x)
+
+	return tanhFromTanhHalf(hyperbolicHalfAngleKernel(halfInputForTanh(x)))
 }
 
-// trig/tanh.go v1
+func halfInputForTanh(x core.PQStream) core.PQStream {
+	if x == nil {
+		panic("halfInputForTanh: nil input")
+	}
+
+	half := core.NewGCF1(
+		core.BLFTCoefficients{
+			A: big.NewInt(0),
+			B: big.NewInt(1),
+			C: big.NewInt(0),
+			D: big.NewInt(0),
+			E: big.NewInt(0),
+			F: big.NewInt(0),
+			G: big.NewInt(0),
+			H: big.NewInt(2),
+		},
+		x,
+	)
+
+	return newPQFromRCFReplay(half)
+}
+
+func tanhFromTanhHalf(t core.RCFStream) *core.GCF {
+	if t == nil {
+		panic("tanhFromTanhHalf: nil input")
+	}
+
+	left, right := newPQPairFromRCFReplay(t)
+
+	return core.NewGCF2(
+		core.BLFTCoefficients{
+			A: big.NewInt(0),
+			B: big.NewInt(2),
+			C: big.NewInt(0),
+			D: big.NewInt(0),
+			E: big.NewInt(1),
+			F: big.NewInt(0),
+			G: big.NewInt(0),
+			H: big.NewInt(1),
+		},
+		left,
+		right,
+	)
+}
+
+// trig/tanh.go v3
