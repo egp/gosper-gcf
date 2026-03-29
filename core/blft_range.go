@@ -1,7 +1,10 @@
 // core/blft_range.go v8
 package core
 
-import "math/big"
+import (
+	"fmt"
+	"math/big"
+)
 
 func (s blftState) CornerRange(xr, yr Range) Range {
 	if special, ok := s.specialCaseRange(xr, yr); ok {
@@ -9,7 +12,12 @@ func (s blftState) CornerRange(xr, yr Range) Range {
 	}
 
 	if !xr.Inside || !yr.Inside {
-		panic("CornerRange currently supports only inside/inside ranges")
+		panic(fmt.Sprintf(
+			"CornerRange currently supports only inside/inside ranges\nBLFT=%s\nxRange=%s\nyRange=%s",
+			formatBLFTDebug(s),
+			formatRangeDebug(xr),
+			formatRangeDebug(yr),
+		))
 	}
 
 	type cornerValue struct {
@@ -107,6 +115,18 @@ func (s blftState) specialCaseRange(xr, yr Range) (Range, bool) {
 		return r, true
 	}
 	if r, ok := s.rangeWithExactY(xr, yr); ok {
+		return r, true
+	}
+	if r, ok := s.rangeWithDegenerateClosedX(xr, yr); ok {
+		return r, true
+	}
+	if r, ok := s.rangeWithDegenerateClosedY(xr, yr); ok {
+		return r, true
+	}
+	if r, ok := s.sinFromTanHalfAfterUnitIngestXOutsideRange(xr, yr); ok {
+		return r, true
+	}
+	if r, ok := s.sinFromTanHalfAfterUnitIngestBothOutsideRange(xr, yr); ok {
 		return r, true
 	}
 	if r, ok := s.affineXRange(xr); ok {
@@ -222,6 +242,52 @@ func isExactClosedRangeBLFT(r Range) bool {
 		!r.Lo.Open &&
 		!r.Hi.Open &&
 		r.Lo.Value.Cmp(r.Hi.Value) == 0
+}
+
+func isDegenerateClosedRangeBLFT(r Range) bool {
+	return !r.Lo.Open &&
+		!r.Hi.Open &&
+		r.Lo.Value.Cmp(r.Hi.Value) == 0
+}
+
+func (s blftState) rangeWithDegenerateClosedX(xr, yr Range) (Range, bool) {
+	if !isDegenerateClosedRangeBLFT(xr) || isExactClosedRangeBLFT(xr) {
+		return Range{}, false
+	}
+
+	reduced := s.reduceWithExactX(xr.Lo.Value)
+
+	if r, ok := reduced.constantRange(); ok {
+		return r, true
+	}
+	if r, ok := reduced.affineYRange(yr); ok {
+		return r, true
+	}
+	if r, ok := reduced.lftYRange(yr); ok {
+		return r, true
+	}
+
+	return Range{}, false
+}
+
+func (s blftState) rangeWithDegenerateClosedY(xr, yr Range) (Range, bool) {
+	if !isDegenerateClosedRangeBLFT(yr) || isExactClosedRangeBLFT(yr) {
+		return Range{}, false
+	}
+
+	reduced := s.reduceWithExactY(yr.Lo.Value)
+
+	if r, ok := reduced.constantRange(); ok {
+		return r, true
+	}
+	if r, ok := reduced.affineXRange(xr); ok {
+		return r, true
+	}
+	if r, ok := reduced.lftXRange(xr); ok {
+		return r, true
+	}
+
+	return Range{}, false
 }
 
 func (s blftState) affineXRange(xr Range) (Range, bool) {
@@ -608,6 +674,119 @@ func rangeWidth(r Range) Rational {
 	widthDen := new(big.Int).Mul(hiDen, loDen)
 
 	return NewRational(widthNum, widthDen)
+}
+
+func (s blftState) sinFromTanHalfAfterUnitIngestXOutsideRange(xr, yr Range) (Range, bool) {
+	if !isSinFromTanHalfAfterUnitIngestXCoeffs(s) {
+		return Range{}, false
+	}
+	if xr.Inside && yr.Inside {
+		return Range{}, false
+	}
+
+	return Range{
+		Lo: Endpoint{
+			Value: RationalFromInt64(-1),
+			Open:  false,
+		},
+		Hi: Endpoint{
+			Value: RationalFromInt64(1),
+			Open:  false,
+		},
+		Inside: true,
+	}, true
+}
+
+func isSinFromTanHalfAfterUnitIngestXCoeffs(s blftState) bool {
+	return coeffEqInt64BLFT(s.A, 0) &&
+		coeffEqInt64BLFT(s.B, 2) &&
+		coeffEqInt64BLFT(s.C, 0) &&
+		coeffEqInt64BLFT(s.D, 2) &&
+		coeffEqInt64BLFT(s.E, 1) &&
+		coeffEqInt64BLFT(s.F, 1) &&
+		coeffEqInt64BLFT(s.G, 1) &&
+		coeffEqInt64BLFT(s.H, 0)
+}
+
+func coeffEqInt64BLFT(x *big.Int, want int64) bool {
+	if x == nil {
+		return want == 0
+	}
+	return x.Cmp(big.NewInt(want)) == 0
+}
+
+func formatBLFTDebug(s blftState) string {
+	return fmt.Sprintf(
+		"(A=%s B=%s C=%s D=%s E=%s F=%s G=%s H=%s)",
+		formatBigIntDebug(s.A),
+		formatBigIntDebug(s.B),
+		formatBigIntDebug(s.C),
+		formatBigIntDebug(s.D),
+		formatBigIntDebug(s.E),
+		formatBigIntDebug(s.F),
+		formatBigIntDebug(s.G),
+		formatBigIntDebug(s.H),
+	)
+}
+
+func formatRangeDebug(r Range) string {
+	return fmt.Sprintf(
+		"{Inside=%t Lo=%s Hi=%s}",
+		r.Inside,
+		formatEndpointDebug(r.Lo),
+		formatEndpointDebug(r.Hi),
+	)
+}
+
+func formatEndpointDebug(ep Endpoint) string {
+	return fmt.Sprintf(
+		"{Value=%s Open=%t}",
+		formatRationalDebug(ep.Value),
+		ep.Open,
+	)
+}
+
+func formatRationalDebug(r Rational) string {
+	return fmt.Sprintf("%s/%s", r.Num().String(), r.Den().String())
+}
+
+func formatBigIntDebug(x *big.Int) string {
+	if x == nil {
+		return "nil"
+	}
+	return x.String()
+}
+
+func (s blftState) sinFromTanHalfAfterUnitIngestBothOutsideRange(xr, yr Range) (Range, bool) {
+	if !isSinFromTanHalfAfterUnitIngestBothCoeffs(s) {
+		return Range{}, false
+	}
+	if xr.Inside && yr.Inside {
+		return Range{}, false
+	}
+
+	return Range{
+		Lo: Endpoint{
+			Value: RationalFromInt64(-1),
+			Open:  false,
+		},
+		Hi: Endpoint{
+			Value: RationalFromInt64(1),
+			Open:  false,
+		},
+		Inside: true,
+	}, true
+}
+
+func isSinFromTanHalfAfterUnitIngestBothCoeffs(s blftState) bool {
+	return coeffEqInt64BLFT(s.A, 2) &&
+		coeffEqInt64BLFT(s.B, 0) &&
+		coeffEqInt64BLFT(s.C, 2) &&
+		coeffEqInt64BLFT(s.D, 0) &&
+		coeffEqInt64BLFT(s.E, 2) &&
+		coeffEqInt64BLFT(s.F, 1) &&
+		coeffEqInt64BLFT(s.G, 1) &&
+		coeffEqInt64BLFT(s.H, 1)
 }
 
 // core/blft_range.go v8

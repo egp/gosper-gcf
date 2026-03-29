@@ -1,4 +1,4 @@
-// core/blft_choose.go v3
+// core/blft_choose.go v5
 package core
 
 func chooseIngestX(xRange, yRange Range) bool {
@@ -15,7 +15,13 @@ func chooseIngestX(xRange, yRange Range) bool {
 		return false
 	}
 
-	panic("chooseIngestX currently supports only inside/inside ranges")
+	if xRange.Inside != yRange.Inside {
+		return xRange.Inside
+	}
+
+	xWidth := rangeWidth(xRange)
+	yWidth := rangeWidth(yRange)
+	return xWidth.Cmp(yWidth) >= 0
 }
 
 func isExactClosedRangeChoose(r Range) bool {
@@ -25,4 +31,4 @@ func isExactClosedRangeChoose(r Range) bool {
 		r.Lo.Value.Cmp(r.Hi.Value) == 0
 }
 
-// core/blft_choose.go v3
+// core/blft_choose.go v5
