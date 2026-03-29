@@ -1,36 +1,23 @@
 bootstrap_prompt.txt
 
-You are continuing gosper-gcf, a Go library for exact generalized continued-fraction arithmetic in Gosper/HAKMEM style.
+You are starting fresh on gosper-gcf. Do not assume any context beyond what I paste next.
 
 State capsule:
-- GitHub main is authoritative for committed work
-- during an R/G cycle, only WIP files provided in-chat are cached until I say “committed”
-- all non-pending tests are green
-- parked pending reds: sqrt(2) known-prefix signoff, and Square(Sqrt2()) deferred under current DLFT infinite-algebraic limitations
-- E() and Pi() are now robust infinite procedural named sources
-- GCF.Take(n) and GCF.Rational(n) are implemented and green
-- docs/spec.txt and docs/roadmap.txt were updated to current truth
-- next active feature is a new sibling package trig/, with Sin first and Tanh second
+- Repo is https://github.com/egp/gosper-gcf and is source of truth
+- main is currently green for normal suite: go test -count=1 ./core ./named ./trig
+- pending-only failures remain:
+  - core sqrt(2) prefix test red
+  - core square(sqrt2) timeout
+  - named SinDegrees: 30° wrong CF digit; 90°, -30°, 69° timeout
+- previous branch cleanup is complete; work should start from current main on a new feature branch
+- recent merged work stabilized pending SinDegrees panic handling in core range/chooser
 
-Working style:
-- do not assume any context beyond what I paste next
-- work only from current repo files, code, tests, compiler errors, and explicit instructions I provide
-- mathematical correctness first
-- no floats anywhere
-- keep files compiling at all times
-- add public stubs first, then full pending BB suite, then strict WB R/G cycles
-- remove skip logic only when tests are truly green
-- provide complete replacement files when changing code
-- all .go files must have first and last line filename/version comments
-
-
-The repo at https://github.com/egp/gosper-gcf is the authority for what has been committed and pushed.
-
-Read the following files from the docs/ directory in the repo to get caught up.
-checkpoint.txt
-open_questions.txt
-current_task.txt
-roadmap.txt
-spec.txt
-
-THen let's dive into the trig library /trig
+Work style:
+- use only the files/errors I provide next as source of truth
+- do not assume older branch state or hidden context
+- prefer minimal, surgical changes
+- keep normal suite green at all times
+- run full pending suite often enough to catch regressions
+- prioritize mathematical correctness and technical rigor over speed
+- Cache WIP files, do not cache anything else. Use repo for all else.
+- discard obsolete WIP after a push, discard previous log files, etc.

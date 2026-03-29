@@ -1,19 +1,18 @@
 current_task.txt
 
-Start the trig framework in a new sibling package trig/.
-Do the feature-start step first: add the full pending BB signoff suite for Sin and Tanh, with compile-safe wrong stubs so everything builds.
-Use the approved shared design:
-- replay/fork substrate for lazily emitted kernel prefixes
-- shared odd-denominator Lambert-family kernel
-- circular half-angle kernel tan(x/2)
-- hyperbolic half-angle kernel tanh(x/2)
-- trig.Sin(x) in radians
-- named.SinDegrees(x) as Pi()/180 wrapper
-- trig.Tanh(x) after Sin
-Acceptance criteria for the first slice:
-- code compiles
-- full pending BB suite for Sin and Tanh exists
-- first WB slice is ready to begin
-- parked sqrt(2) pending red remains untouched
-Single highest-priority design question:
-- exact internal framework and package/file structure for trig replay + Lambert half-angle kernels shared by both Sin and Tanh
+Start from current main on a new feature branch for SinDegrees semantic fixes.
+First task: diagnose and fix pending SinDegrees failures without regressing the normal suite.
+
+Current highest-priority failure:
+- RUN_PENDING_TESTS=1 go test -count=1 ./named -run 'TestBB_Named_SinDegrees_ThirtyIsExactlyOneHalf'
+- observed failure: term 2 = 1, want 2
+
+Acceptance criteria:
+- normal suite remains green: go test -count=1 ./core ./named ./trig
+- pending SinDegrees no longer has panics
+- ideally all pending named SinDegrees tests pass; at minimum the next step should be evidence-based and reduce failures without regressions
+- keep sqrt(2) and square(sqrt2) parked unless directly needed
+
+Recommended first move:
+- rerun full pending suite from current main
+- inspect trig-layer files (especially circular Lambert / replay / progress path) before touching core again

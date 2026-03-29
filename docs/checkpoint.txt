@@ -1,19 +1,24 @@
 checkpoint.txt
 
-gosper-gcf: Go library for exact generalized continued-fraction arithmetic in Gosper/HAKMEM style.
-Authoritative committed source: GitHub main; during an R/G cycle, only WIP files provided in-chat are cached until user says “committed”.
-Current milestone: post-BLFT/DLFT unary/binary core; Sqrt parked with one pending red; E, Pi, Take(n), and Rational(n) are complete; next active feature is trig framework with Sin first, then Tanh.
-Working core pieces: exact Status/PQTerm/RCFTerm/Rational/Range/Endpoint; finite + procedural PQStream; GCF shell; BLFT ops Reciprocal/Add/Sub/Mul/Div; DLFT for finite/rational unary work; Square; PQStreamFromRCF; PQStreamFromRational; GCF.Take(n); GCF.Rational(n).
-Working named pieces: Sqrt2() procedural source; E() infinite procedural regular-CF source with strong Range() and 50-step validation; Pi() infinite procedural Gauss source with strong Range(), OEIS-backed RCF validation, and Take/Rational checks.
-Sqrt architecture in place: feedbackRCFStream substrate; sqrt controller; Ourorobos feedback loop; observed live refinement path; easy sqrt BBs green.
-Known failures: only parked pending red is TestBB_GCF_SqrtOfTwoMatchesKnownPrefix; Square(Sqrt2()) remains intentionally pending under the current DLFT infinite-algebraic gap.
-All non-pending tests are green.
-docs/spec.txt and docs/roadmap.txt were updated to reflect current committed truth, including E/Pi procedural sources, Take/Rational, parked sqrt(2), and planned trig package.
-Next immediate task: start trig framework as new sibling package trig/, with full pending BB suite for Sin and Tanh, then implement Sin first and Tanh second.
-Approved design direction: trig/ owns transcendental kernels/builders; core remains algebraic; named holds constants and degree wrappers.
-Shared trig design: one replay/fork substrate for lazily emitted kernel prefixes; one shared odd-denominator Lambert-family engine; circular half-angle kernel tan(x/2); hyperbolic half-angle kernel tanh(x/2).
-Public target order: trig.Sin(x) in radians, named.SinDegrees(x) via Pi()/180 wrapper, then trig.Tanh(x), later the rest of trig/hyperbolic family.
-Constraints: mathematical correctness first, no floats, prefer Gosper/Ouroboros purity, keep files compiling at all times.
-Process: feature start = full pending BB suite + compile-safe wrong stubs; then strict WB red/green cycles; remove skips only when genuinely green; run RUN_PENDING_TESTS=1 at start of each cycle.
-File convention: every .go file must have first and last line filename/version comments.
-Patch style: provide complete replacement files, keep code streamlined, avoid useless wrapper functions.
+Project: gosper-gcf
+Repo state: main is clean and green for normal suite; obsolete branches were deleted.
+Current main commit is the merged diagnose work that stabilized pending SinDegrees panic handling in core range/chooser.
+What works:
+- go test -count=1 ./core ./named ./trig is green on main
+- cleanup is done: main only, no active diagnose/WIP branches
+- core pending SinDegrees panic front was eliminated on the merged branch
+What is still broken (PENDING only):
+- RUN_PENDING_TESTS=1 go test -count=1 ./core ./named ./trig is red
+- core: TestBB_GCF_SqrtOfTwoMatchesKnownPrefix still fails (term 5 status = 1, want 0)
+- core: TestBB_SquareOfSqrt2IsExactlyTwo times out
+- named: TestBB_Named_SinDegrees_ThirtyIsExactlyOneHalf gives term 2 = 1, want 2
+- named: TestBB_Named_SinDegrees_NinetyIsExactlyOne times out
+- named: TestBB_Named_SinDegrees_MinusThirtyIsExactlyMinusOneHalf times out
+- named: TestBB_Named_SinDegrees_SixtyNineMatchesKnownPrefix times out
+Most recent validated interpretation:
+- remaining SinDegrees failures are no longer core-panic issues; they are now semantic/progress issues
+- likely next work is in trig layer (Lambert/replay/progress), not more broad core surgery
+Immediate next step:
+- create a fresh feature branch from main for SinDegrees semantic fixes
+- rerun full pending suite frequently, not just isolated named tests
+- tackle SinDegrees first; keep sqrt/square(sqrt2) parked until SinDegrees is stable

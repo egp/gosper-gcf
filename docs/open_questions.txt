@@ -1,7 +1,6 @@
 open_questions.txt
 
-- Exact public/package split: trig.Sin/trig.Tanh in trig/, and degrees wrappers only in named/?
-- Exact shape of the shared replay/fork substrate for kernel outputs: generic observed-prefix fan-out helper or trig-specific helper?
-- Exact internal API for the shared Lambert-family engine: one parameterized kernel for circular vs hyperbolic, or two thin wrappers over one common evaluator?
-- For Sin v1, how much circular argument reduction/quadrant logic is in scope, versus principal-domain-only behavior plus degrees wrappers?
-- Which exact BB signoff cases for Sin and Tanh should be included in cycle 1 versus deferred to later hardening/property tests?
+- Is the remaining SinDegrees problem primarily in trig/lambert.go, trig/replay_rcf.go, or the interaction of replayed kernel output with sinFromTanHalf?
+- Does the circular Lambert root currently provide enough progress/accuracy for exact-angle cases like 30° and 90°, or is there a deeper root-generation limitation?
+- Are the 90° / -30° / 69° timeouts caused by lack of progress in replay/caching, or by a semantically wrong but non-panicking kernel path?
+- After SinDegrees is fixed, do sqrt(2) and square(sqrt2) still fail independently, or are any of those failures sharing a common progress/collapse issue?
