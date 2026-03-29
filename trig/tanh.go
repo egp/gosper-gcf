@@ -1,4 +1,4 @@
-// trig/tanh.go v3
+// trig/tanh.go v4
 package trig
 
 import (
@@ -42,22 +42,7 @@ func tanhFromTanhHalf(t core.RCFStream) *core.GCF {
 		panic("tanhFromTanhHalf: nil input")
 	}
 
-	left, right := newPQPairFromRCFReplay(t)
-
-	return core.NewGCF2(
-		core.BLFTCoefficients{
-			A: big.NewInt(0),
-			B: big.NewInt(2),
-			C: big.NewInt(0),
-			D: big.NewInt(0),
-			E: big.NewInt(1),
-			F: big.NewInt(0),
-			G: big.NewInt(0),
-			H: big.NewInt(1),
-		},
-		left,
-		right,
-	)
+	return doubleAngleFromHalfQuotient(t)
 }
 
-// trig/tanh.go v3
+// trig/tanh.go v4

@@ -1,4 +1,4 @@
-// trig/tanh_wb_test.go v2
+// trig/tanh_wb_test.go v3
 package trig
 
 import (
@@ -183,5 +183,38 @@ func nextRCFWithTimeoutTanhWB(t *testing.T, g *core.GCF, timeout time.Duration) 
 		return core.NewRCFTerm(nil), core.StatusInvalidInput
 	}
 }
+func TestWB_DoubleAngleFromHalfQuotient_NilPanics(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("doubleAngleFromHalfQuotient(nil) did not panic")
+		}
+	}()
 
-// trig/tanh_wb_test.go v2
+	_ = doubleAngleFromHalfQuotient(nil)
+}
+
+func TestWB_DoubleAngleFromHalfQuotient_ZeroIsExactlyZero(t *testing.T) {
+	g := doubleAngleFromHalfQuotient(exactTerminalGCFForTanh(
+		[]int64{0},
+		0, 1,
+	))
+	assertExactRCFSequenceTanhWB(t, g, []int64{0})
+}
+
+func TestWB_DoubleAngleFromHalfQuotient_OneHalfIsExactlyFourFifths(t *testing.T) {
+	g := doubleAngleFromHalfQuotient(exactTerminalGCFForTanh(
+		[]int64{0, 2},
+		1, 2,
+	))
+	assertExactRCFSequenceTanhWB(t, g, []int64{0, 1, 4})
+}
+
+func TestWB_DoubleAngleFromHalfQuotient_OneIsExactlyOne(t *testing.T) {
+	g := doubleAngleFromHalfQuotient(exactTerminalGCFForTanh(
+		[]int64{1},
+		1, 1,
+	))
+	assertExactRCFSequenceTanhWB(t, g, []int64{1})
+}
+
+// trig/tanh_wb_test.go v3
