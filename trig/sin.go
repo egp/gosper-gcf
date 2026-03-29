@@ -1,4 +1,5 @@
-// trig/sin.go v2
+// trig/sin.go v4
+
 package trig
 
 import (
@@ -38,6 +39,14 @@ func sinFromTanHalf(t core.RCFStream) *core.GCF {
 		panic("sinFromTanHalf: nil input")
 	}
 
+	return doubleAngleFromHalfQuotient(t)
+}
+
+func doubleAngleFromHalfQuotient(t core.RCFStream) *core.GCF {
+	if t == nil {
+		panic("doubleAngleFromHalfQuotient: nil input")
+	}
+
 	left, right := newPQPairFromRCFReplay(t)
 
 	return core.NewGCF2(
@@ -62,7 +71,8 @@ func newPQPairFromRCFReplay(src core.RCFStream) (core.PQStream, core.PQStream) {
 	}
 
 	root := newReplayRCF(src)
+
 	return &pqFromRCFReplay{fork: root.Fork()}, &pqFromRCFReplay{fork: root.Fork()}
 }
 
-// trig/sin.go v2
+// trig/sin.go v4
