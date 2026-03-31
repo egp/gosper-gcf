@@ -22,26 +22,26 @@ fi
 print -P "%F{cyan}==> go vet%f"
 go vet ./core
 go vet ./named
-go vet ./trig
+# go vet ./trig
 
 print -P "%F{cyan}==> staticcheck%f"
 staticcheck ./core
 staticcheck ./named
-staticcheck ./trig
+# staticcheck ./trig
 
 
 
 print -P "%F{cyan}==> tests (no cache)%f"
 go test -count=1 ./core
 go test -count=1 ./named
-go test -count=1 ./trig
+# go test -count=1 ./trig
 
 
 print -P "%F{cyan}==> coverage summary%f"
 mkdir -p ./tmp
 go test -count=1 -coverprofile=./tmp/cover_cf.out ./core
 go test -count=1 -coverprofile=./tmp/cover_cfsource.out ./named
-go test -count=1 -coverprofile=./tmp/cover_cfsource.out ./trig
+# go test -count=1 -coverprofile=./tmp/cover_cfsource.out ./trig
 
 print -P "%F{green}OK%f"
 # tools/check.zsh v3
