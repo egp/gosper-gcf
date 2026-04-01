@@ -1,4 +1,4 @@
-// core/blft_collapse_xeof_runtime_wb_test.go v2
+// core/blft_collapse_xeof_runtime_wb_test.go v3
 package core
 
 import (
@@ -23,12 +23,15 @@ func TestWB_BLFT_CollapseBinaryXEOF_RuntimeAfterIngest_DegreesScale_BecomesIdent
 		Q: big.NewInt(1),
 	})
 
-	got := exactRationalFromUnaryEngine(
+	got, err := exactRationalFromUnaryEngine(
 		s.CollapseBinaryXEOF(),
 		PQStreamFromRational(NewRational(big.NewInt(22), big.NewInt(7))),
 	)
-	want := NewRational(big.NewInt(22), big.NewInt(7))
+	if err != nil {
+		t.Fatalf("exactRationalFromUnaryEngine error = %v", err)
+	}
 
+	want := NewRational(big.NewInt(22), big.NewInt(7))
 	if got.Cmp(want) != 0 {
 		t.Fatalf(
 			"collapsed result = %v/%v, want %v/%v",
@@ -38,4 +41,4 @@ func TestWB_BLFT_CollapseBinaryXEOF_RuntimeAfterIngest_DegreesScale_BecomesIdent
 	}
 }
 
-// core/blft_collapse_xeof_runtime_wb_test.go v2
+// core/blft_collapse_xeof_runtime_wb_test.go v3

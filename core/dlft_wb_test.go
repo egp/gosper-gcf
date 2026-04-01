@@ -1,4 +1,4 @@
-// core/dlft_wb_test.go v1
+// core/dlft_wb_test.go v2
 package core
 
 import (
@@ -23,11 +23,11 @@ func TestWB_DLFT_IngestXMatchesFormula(t *testing.T) {
 
 	want := dlftState{
 		A: big.NewInt(18),  // a p^2 + b p + c = 1*9 + 2*3 + 3
-		B: big.NewInt(40),  // 2 a p q + b q   = 2*1*3*5 + 2*5
-		C: big.NewInt(25),  // a q^2           = 1*25
+		B: big.NewInt(40),  // 2 a p q + b q = 2*1*3*5 + 2*5
+		C: big.NewInt(25),  // a q^2 = 1*25
 		D: big.NewInt(57),  // d p^2 + e p + f = 4*9 + 5*3 + 6
-		E: big.NewInt(145), // 2 d p q + e q   = 2*4*3*5 + 5*5
-		F: big.NewInt(100), // d q^2           = 4*25
+		E: big.NewInt(145), // 2 d p q + e q = 2*4*3*5 + 5*5
+		F: big.NewInt(100), // d q^2 = 4*25
 	}
 
 	assertDLFTStateEqual(t, got, want)
@@ -70,10 +70,8 @@ func TestWB_DLFT_CollapseChoosesHighestSurvivingDegree(t *testing.T) {
 
 		got := s.CollapseToRational()
 		want := NewRational(big.NewInt(6), big.NewInt(8))
-
 		if got.Cmp(want) != 0 {
-			t.Fatalf("CollapseToRational() = %v/%v, want %v/%v",
-				got.Num(), got.Den(), want.Num(), want.Den())
+			t.Fatalf("CollapseToRational() = %v/%v, want %v/%v", got.Num(), got.Den(), want.Num(), want.Den())
 		}
 	})
 
@@ -89,10 +87,8 @@ func TestWB_DLFT_CollapseChoosesHighestSurvivingDegree(t *testing.T) {
 
 		got := s.CollapseToRational()
 		want := NewRational(big.NewInt(9), big.NewInt(12))
-
 		if got.Cmp(want) != 0 {
-			t.Fatalf("CollapseToRational() = %v/%v, want %v/%v",
-				got.Num(), got.Den(), want.Num(), want.Den())
+			t.Fatalf("CollapseToRational() = %v/%v, want %v/%v", got.Num(), got.Den(), want.Num(), want.Den())
 		}
 	})
 
@@ -108,10 +104,8 @@ func TestWB_DLFT_CollapseChoosesHighestSurvivingDegree(t *testing.T) {
 
 		got := s.CollapseToRational()
 		want := NewRational(big.NewInt(10), big.NewInt(15))
-
 		if got.Cmp(want) != 0 {
-			t.Fatalf("CollapseToRational() = %v/%v, want %v/%v",
-				got.Num(), got.Den(), want.Num(), want.Den())
+			t.Fatalf("CollapseToRational() = %v/%v, want %v/%v", got.Num(), got.Den(), want.Num(), want.Den())
 		}
 	})
 }
@@ -138,25 +132,24 @@ func TestWB_DLFT_ConstantCandidateRangeIsExact(t *testing.T) {
 		Inside: true,
 	}
 
-	got := s.CandidateRange(xRange)
+	got, err := s.CandidateRange(xRange)
+	if err != nil {
+		t.Fatalf("CandidateRange error = %v", err)
+	}
 	want := NewRational(big.NewInt(3), big.NewInt(2))
-
 	if !got.Inside {
 		t.Fatal("CandidateRange().Inside = false, want true")
 	}
 	if got.Lo.Value.Cmp(want) != 0 {
-		t.Fatalf("Lo = %v/%v, want %v/%v",
-			got.Lo.Value.Num(), got.Lo.Value.Den(), want.Num(), want.Den())
+		t.Fatalf("Lo = %v/%v, want %v/%v", got.Lo.Value.Num(), got.Lo.Value.Den(), want.Num(), want.Den())
 	}
 	if got.Hi.Value.Cmp(want) != 0 {
-		t.Fatalf("Hi = %v/%v, want %v/%v",
-			got.Hi.Value.Num(), got.Hi.Value.Den(), want.Num(), want.Den())
+		t.Fatalf("Hi = %v/%v, want %v/%v", got.Hi.Value.Num(), got.Hi.Value.Den(), want.Num(), want.Den())
 	}
 }
 
 func assertDLFTStateEqual(t *testing.T, got, want dlftState) {
 	t.Helper()
-
 	assertBigIntEqual(t, "A", got.A, want.A)
 	assertBigIntEqual(t, "B", got.B, want.B)
 	assertBigIntEqual(t, "C", got.C, want.C)
@@ -165,4 +158,4 @@ func assertDLFTStateEqual(t *testing.T, got, want dlftState) {
 	assertBigIntEqual(t, "F", got.F, want.F)
 }
 
-// core/dlft_wb_test.go v1
+// core/dlft_wb_test.go v2

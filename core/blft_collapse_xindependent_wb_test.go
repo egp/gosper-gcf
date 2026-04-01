@@ -1,4 +1,4 @@
-// core/blft_collapse_xindependent_wb_test.go v1
+// core/blft_collapse_xindependent_wb_test.go v2
 package core
 
 import (
@@ -20,18 +20,22 @@ func TestWB_BLFT_CollapseIndependentOfX_ProjectY_PreservesY(t *testing.T) {
 
 	u := collapseIndependentOfXToUnary(s)
 
-	got := exactRationalFromUnaryEngine(
+	got, err := exactRationalFromUnaryEngine(
 		u,
 		PQStreamFromRational(NewRational(big.NewInt(22), big.NewInt(7))),
 	)
+	if err != nil {
+		t.Fatalf("exactRationalFromUnaryEngine error = %v", err)
+	}
 
 	want := NewRational(big.NewInt(22), big.NewInt(7))
 	if got.Cmp(want) != 0 {
 		t.Fatalf(
 			"collapsed unary applied to 22/7 = %v/%v, want %v/%v",
-			got.Num(), got.Den(), want.Num(), want.Den(),
+			got.Num(), got.Den(),
+			want.Num(), want.Den(),
 		)
 	}
 }
 
-// core/blft_collapse_xindependent_wb_test.go v1
+// core/blft_collapse_xindependent_wb_test.go v2

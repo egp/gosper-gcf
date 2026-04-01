@@ -1,3 +1,4 @@
+// core/blft_affine_xy_exact_point_wb_test.go v2
 package core
 
 import (
@@ -18,19 +19,36 @@ func TestWB_BLFT_BinaryRange_AffineAverage_ExactPointX_InsideY(t *testing.T) {
 	})
 
 	xr := Range{
-		Lo:     Endpoint{Value: NewRational(big.NewInt(218340), big.NewInt(75601)), Open: false},
-		Hi:     Endpoint{Value: NewRational(big.NewInt(218340), big.NewInt(75601)), Open: false},
+		Lo: Endpoint{
+			Value: NewRational(big.NewInt(218340), big.NewInt(75601)),
+			Open:  false,
+		},
+		Hi: Endpoint{
+			Value: NewRational(big.NewInt(218340), big.NewInt(75601)),
+			Open:  false,
+		},
 		Inside: false,
 	}
+
 	yr := Range{
-		Lo:     Endpoint{Value: RationalFromInt64(0), Open: true},
-		Hi:     Endpoint{Value: NewRational(big.NewInt(75601), big.NewInt(218340)), Open: true},
+		Lo: Endpoint{
+			Value: RationalFromInt64(0),
+			Open:  true,
+		},
+		Hi: Endpoint{
+			Value: NewRational(big.NewInt(75601), big.NewInt(218340)),
+			Open:  true,
+		},
 		Inside: true,
 	}
 
-	got := s.BinaryRange(xr, yr)
-
+	got, err := s.BinaryRange(xr, yr)
+	if err != nil {
+		t.Fatalf("BinaryRange error = %v", err)
+	}
 	if !got.Inside {
 		t.Fatal("Inside = false, want true")
 	}
 }
+
+// core/blft_affine_xy_exact_point_wb_test.go v2

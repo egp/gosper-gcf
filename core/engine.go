@@ -1,8 +1,8 @@
-// core/engine.go v1
+// core/engine.go v2
 package core
 
 type unaryEngine interface {
-	UnaryRange(xRange Range) Range
+	UnaryRange(xRange Range) (Range, error)
 	CanEmitRCFTerm(r Range) (RCFTerm, bool)
 	EmitUnary(term RCFTerm) unaryEngine
 	IngestUnaryX(term PQTerm) unaryEngine
@@ -10,7 +10,7 @@ type unaryEngine interface {
 }
 
 type binaryEngine interface {
-	BinaryRange(xRange, yRange Range) Range
+	BinaryRange(xRange, yRange Range) (Range, error)
 	CanEmitRCFTerm(r Range) (RCFTerm, bool)
 	EmitBinary(term RCFTerm) binaryEngine
 	IngestBinaryX(term PQTerm) binaryEngine
@@ -22,4 +22,4 @@ type binaryEngine interface {
 	IndependentOfY() bool
 }
 
-// core/engine.go v1
+// core/engine.go v2

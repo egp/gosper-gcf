@@ -1,4 +1,4 @@
-// core/gcf_dlft.go v3
+// core/gcf_dlft.go v4
 package core
 
 func NewDLFT1(coeffs DLFTCoefficients, x PQStream) *GCF {
@@ -14,15 +14,13 @@ func newDLFT1WithResolvedConfig(coeffs DLFTCoefficients, x PQStream, cfg Config)
 		cfg: cfg,
 		x:   x,
 	}
-
 	if x != nil {
 		g.unary = &unaryEvaluatorState{
 			engine: newDLFTState(coeffs),
 			x:      x,
 		}
 	}
-
 	return g
 }
 
-// core/gcf_dlft.go v3
+// core/gcf_dlft.go v4

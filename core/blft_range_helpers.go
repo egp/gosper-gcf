@@ -37,15 +37,19 @@ func coeffOrZero(x *big.Int) *big.Int {
 	}
 	return new(big.Int).Set(x)
 }
-
-func preferXOnTie(xRange, yRange Range) bool {
+func preferXOnTie(xRange, yRange Range) (bool, error) {
 	if !xRange.Inside || !yRange.Inside {
-		panic("preferXOnTie currently supports only inside/inside ranges")
+		return false, fmt.Errorf(
+			"preferXOnTie: %w: xRange=%s yRange=%s",
+			ErrUnsupportedRangeCase,
+			formatRangeDebug(xRange),
+			formatRangeDebug(yRange),
+		)
 	}
 
 	xWidth := rangeWidth(xRange)
 	yWidth := rangeWidth(yRange)
-	return xWidth.Cmp(yWidth) <= 0
+	return xWidth.Cmp(yWidth) <= 0, nil
 }
 
 func rangeIncludesRational(r Range, q Rational) bool {

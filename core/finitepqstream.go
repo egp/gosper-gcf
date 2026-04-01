@@ -1,7 +1,10 @@
-// core/finitepqstream.go v1
+// core/finitepqstream.go v2
 package core
 
-import "math/big"
+import (
+	"fmt"
+	"math/big"
+)
 
 type FinitePQStep struct {
 	Term  PQTerm
@@ -24,7 +27,6 @@ func NewFinitePQStream(steps []FinitePQStep) (PQStream, Status) {
 		if !isValidFinitePQTerm(steps[i].Term, i == 0) {
 			return nil, StatusInvalidInput
 		}
-
 		tail = &finitePQStream{
 			step: cloneFinitePQStep(steps[i]),
 			tail: tail,
@@ -34,46 +36,41 @@ func NewFinitePQStream(steps []FinitePQStep) (PQStream, Status) {
 	return tail, StatusOK
 }
 
-func (s *finitePQStream) NextPQ() (PQTerm, PQStream, Status) {
+func (s *finitePQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	if s == nil {
-		panic("finitePQStream receiver is nil")
+		return PQTerm{}, finitePQEOF, StatusEOF, fmt.Errorf("finitePQStream.NextPQ: %w", ErrNilReceiver)
 	}
-
-	return clonePQTerm(s.step.Term), s.tail, StatusOK
+	return clonePQTerm(s.step.Term), s.tail, StatusOK, nil
 }
 
-func (s *finitePQStream) Range() Range {
+func (s *finitePQStream) Range() (Range, error) {
 	if s == nil {
-		panic("finitePQStream receiver is nil")
+		return Range{}, fmt.Errorf("finitePQStream.Range: %w", ErrNilReceiver)
 	}
-
-	return cloneRange(s.step.Range)
+	return cloneRange(s.step.Range), nil
 }
 
-func (s *eofPQStream) NextPQ() (PQTerm, PQStream, Status) {
+func (s *eofPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	return PQTerm{
 		P: big.NewInt(0),
 		Q: big.NewInt(0),
-	}, finitePQEOF, StatusEOF
+	}, finitePQEOF, StatusEOF, nil
 }
 
-func (s *eofPQStream) Range() Range {
-	panic("Range() is undefined on EOF PQStream")
+func (s *eofPQStream) Range() (Range, error) {
+	return Range{}, fmt.Errorf("eofPQStream.Range: %w", ErrUndefinedRangeOnEOFStream)
 }
 
 func isValidFinitePQTerm(term PQTerm, isFirst bool) bool {
 	if term.P == nil || term.Q == nil {
 		return false
 	}
-
 	if term.Q.Sign() == 0 {
 		return false
 	}
-
 	if isFirst {
 		return true
 	}
-
 	return term.P.Sign() > 0 && term.Q.Sign() > 0
 }
 
@@ -93,31 +90,10 @@ func clonePQTerm(term PQTerm) PQTerm {
 
 func cloneRange(r Range) Range {
 	return Range{
-		Lo:     cloneEndpoint(r.Lo),
-		Hi:     cloneEndpoint(r.Hi),
+		Lo:     Endpoint{Value: NewRational(r.Lo.Value.Num(), r.Lo.Value.Den()), Open: r.Lo.Open},
+		Hi:     Endpoint{Value: NewRational(r.Hi.Value.Num(), r.Hi.Value.Den()), Open: r.Hi.Open},
 		Inside: r.Inside,
 	}
 }
 
-func cloneEndpoint(e Endpoint) Endpoint {
-	return Endpoint{
-		Value: cloneRational(e.Value),
-		Open:  e.Open,
-	}
-}
-
-func cloneRational(r Rational) Rational {
-	return Rational{
-		num: cloneBigInt(r.num),
-		den: cloneBigInt(r.den),
-	}
-}
-
-func cloneBigInt(x *big.Int) *big.Int {
-	if x == nil {
-		return nil
-	}
-	return new(big.Int).Set(x)
-}
-
-// core/finitepqstream.go v1
+// core/finitepqstream.go v2

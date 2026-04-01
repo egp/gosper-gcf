@@ -1,4 +1,4 @@
-// core/sqrt_controller_wb_test.go v3
+// core/sqrt_controller_wb_test.go v4
 package core
 
 import (
@@ -12,17 +12,17 @@ type sqrtControllerCountingPQStream struct {
 	rng        Range
 }
 
-func (s *sqrtControllerCountingPQStream) NextPQ() (PQTerm, PQStream, Status) {
+func (s *sqrtControllerCountingPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	s.nextCalls++
 	return PQTerm{
 		P: big.NewInt(1),
 		Q: big.NewInt(1),
-	}, s, StatusOK
+	}, s, StatusOK, nil
 }
 
-func (s *sqrtControllerCountingPQStream) Range() Range {
+func (s *sqrtControllerCountingPQStream) Range() (Range, error) {
 	s.rangeCalls++
-	return s.rng
+	return s.rng, nil
 }
 
 func TestWB_SqrtController_BuildRefinementGraph_UsesNewtonStructure(t *testing.T) {
@@ -32,13 +32,10 @@ func TestWB_SqrtController_BuildRefinementGraph_UsesNewtonStructure(t *testing.T
 
 	c := newSqrtController(x)
 	y := c.ourorobosApproximation()
-
 	got := c.buildRefinement(y)
-
 	if got == nil {
 		t.Fatalf("refinement = nil, want *GCF")
 	}
-
 	if got.y != c.half {
 		t.Fatalf("top-level right operand = %T, want controller half source", got.y)
 	}
@@ -47,12 +44,10 @@ func TestWB_SqrtController_BuildRefinementGraph_UsesNewtonStructure(t *testing.T
 	if !ok {
 		t.Fatalf("top-level left operand type = %T, want *rcfAsPQStream", got.x)
 	}
-
 	addNode, ok := leftAdapter.src.(*GCF)
 	if !ok {
 		t.Fatalf("adapter src type = %T, want *GCF add node", leftAdapter.src)
 	}
-
 	if addNode.x != y {
 		t.Fatalf("add left operand != y ourorobos approximation")
 	}
@@ -61,12 +56,10 @@ func TestWB_SqrtController_BuildRefinementGraph_UsesNewtonStructure(t *testing.T
 	if !ok {
 		t.Fatalf("add right operand type = %T, want *rcfAsPQStream", addNode.y)
 	}
-
 	divNode, ok := rightAdapter.src.(*GCF)
 	if !ok {
 		t.Fatalf("right adapter src type = %T, want *GCF div node", rightAdapter.src)
 	}
-
 	if divNode.x != x {
 		t.Fatalf("div left operand != x radicand")
 	}
@@ -81,10 +74,12 @@ func TestWB_SqrtController_HalfSource_IsExactOneHalf(t *testing.T) {
 	}
 
 	c := newSqrtController(x)
+	got, err := c.halfSource().Range()
+	if err != nil {
+		t.Fatalf("halfSource Range error = %v", err)
+	}
 
-	got := c.halfSource().Range()
 	want := exactRangeFromRational(NewRational(big.NewInt(1), big.NewInt(2)))
-
 	assertSqrtControllerExactRange(t, got, want)
 }
 
@@ -94,9 +89,8 @@ func TestWB_SqrtController_SeedApproximation_DoesNotPrereadX(t *testing.T) {
 	}
 
 	c := newSqrtController(x)
-
 	seed := c.seedApproximation()
-	_, _, _ = seed.NextPQ()
+	_, _, _, _ = seed.NextPQ()
 
 	if x.nextCalls != 0 {
 		t.Fatalf("x.NextPQ calls = %d, want 0", x.nextCalls)
@@ -105,15 +99,13 @@ func TestWB_SqrtController_SeedApproximation_DoesNotPrereadX(t *testing.T) {
 
 func assertSqrtControllerExactRange(t *testing.T, got Range, want Range) {
 	t.Helper()
-
 	if got.Inside != want.Inside {
 		t.Fatalf("Inside = %v, want %v", got.Inside, want.Inside)
 	}
 	if got.Lo.Open != want.Lo.Open || got.Hi.Open != want.Hi.Open {
 		t.Fatalf(
 			"openness = (%v,%v), want (%v,%v)",
-			got.Lo.Open, got.Hi.Open,
-			want.Lo.Open, want.Hi.Open,
+			got.Lo.Open, got.Hi.Open, want.Lo.Open, want.Hi.Open,
 		)
 	}
 	if got.Lo.Value.Cmp(want.Lo.Value) != 0 || got.Hi.Value.Cmp(want.Hi.Value) != 0 {
@@ -127,4 +119,4 @@ func assertSqrtControllerExactRange(t *testing.T, got Range, want Range) {
 	}
 }
 
-// core/sqrt_controller_wb_test.go v3
+// core/sqrt_controller_wb_test.go v4

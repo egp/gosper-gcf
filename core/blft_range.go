@@ -3,18 +3,19 @@ package core
 
 import "fmt"
 
-func (s blftState) CornerRange(xr, yr Range) Range {
+func (s blftState) CornerRange(xr, yr Range) (Range, error) {
 	if special, ok := s.specialCaseRange(xr, yr); ok {
-		return special
+		return special, nil
 	}
 
 	if !xr.Inside || !yr.Inside {
-		panic(fmt.Sprintf(
-			"CornerRange currently supports only inside/inside ranges\nBLFT=%s\nxRange=%s\nyRange=%s",
+		return Range{}, fmt.Errorf(
+			"CornerRange: %w\nBLFT=%s\nxRange=%s\nyRange=%s",
+			ErrUnsupportedRangeCase,
 			formatBLFTDebug(s),
 			formatRangeDebug(xr),
 			formatRangeDebug(yr),
-		))
+		)
 	}
 
 	type cornerValue struct {
@@ -61,11 +62,11 @@ func (s blftState) CornerRange(xr, yr Range) Range {
 		for _, v := range values {
 			raw = append(raw, v.value)
 		}
-		return outsideRangeFromValues(raw)
+		return outsideRangeFromValues(raw), nil
 	}
 
 	if len(values) == 0 {
-		return outsideRangeFromValues(nil)
+		return outsideRangeFromValues(nil), nil
 	}
 
 	lo := values[0].value
@@ -101,7 +102,7 @@ func (s blftState) CornerRange(xr, yr Range) Range {
 			Open:  hiOpen,
 		},
 		Inside: true,
-	}
+	}, nil
 }
 
 func (s blftState) specialCaseRange(xr, yr Range) (Range, bool) {

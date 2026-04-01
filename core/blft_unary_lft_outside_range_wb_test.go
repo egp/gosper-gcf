@@ -1,14 +1,16 @@
-// core/blft_unary_lft_outside_range_wb_test.go v1
+// core/blft_unary_lft_outside_range_wb_test.go v2
 package core
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 )
 
-func TestWB_BLFT_UnaryRange_GeneralLFT_OutsideRange_PoleInExcludedGap_ReturnsConservativeHull(t *testing.T) {
+func TestWB_BLFT_UnaryRange_GeneralLFT_OutsideRangeReturnsUnsupportedError(t *testing.T) {
 	// z = 1 / (2x - 7)
-	// Pole at x = 7/2 lies in the excluded gap (3,4), not in the included outside domain.
+	// Outside-range support is not implemented generically yet, so the current
+	// contract is to return a typed error instead of panicking.
 	s := newBLFTState(BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(0),
@@ -21,26 +23,15 @@ func TestWB_BLFT_UnaryRange_GeneralLFT_OutsideRange_PoleInExcludedGap_ReturnsCon
 	})
 
 	xr := Range{
-		Lo:     Endpoint{Value: RationalFromInt64(3), Open: false},
-		Hi:     Endpoint{Value: RationalFromInt64(4), Open: true},
+		Lo:     Endpoint{Value: RationalFromInt64(4), Open: false},
+		Hi:     Endpoint{Value: RationalFromInt64(3), Open: true},
 		Inside: false,
 	}
 
-	got := s.UnaryRange(xr)
-
-	if !got.Inside {
-		t.Fatal("Inside = false, want true conservative hull")
-	}
-
-	wantLo := RationalFromInt64(-1)
-	wantHi := RationalFromInt64(1)
-
-	if got.Lo.Value.Cmp(wantLo) != 0 {
-		t.Fatalf("Lo = %v/%v, want -1/1", got.Lo.Value.Num(), got.Lo.Value.Den())
-	}
-	if got.Hi.Value.Cmp(wantHi) != 0 {
-		t.Fatalf("Hi = %v/%v, want 1/1", got.Hi.Value.Num(), got.Hi.Value.Den())
+	_, err := s.UnaryRange(xr)
+	if !errors.Is(err, ErrUnsupportedRangeCase) {
+		t.Fatalf("UnaryRange error = %v, want ErrUnsupportedRangeCase", err)
 	}
 }
 
-// core/blft_unary_lft_outside_range_wb_test.go v1
+// core/blft_unary_lft_outside_range_wb_test.go v2

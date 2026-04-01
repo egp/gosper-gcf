@@ -1,7 +1,10 @@
-// core/gcf.go v13
+// core/gcf.go v14
 package core
 
-import "math/big"
+import (
+	"fmt"
+	"math/big"
+)
 
 type exactTerminalState struct {
 	terms []RCFTerm
@@ -21,12 +24,10 @@ type binaryEvaluatorState struct {
 }
 
 type GCF struct {
-	coeffs BLFTCoefficients
-	cfg    Config
-
-	x PQStream
-	y PQStream
-
+	coeffs   BLFTCoefficients
+	cfg      Config
+	x        PQStream
+	y        PQStream
 	stream   RCFStream
 	terminal *exactTerminalState
 	unary    *unaryEvaluatorState
@@ -71,8 +72,12 @@ func newObservedRCFGCF(src RCFStream) *GCF {
 
 func newObservedRCFGCFWithResolvedConfig(src RCFStream, cfg Config) *GCF {
 	if src == nil {
-		panic("newObservedRCFGCFWithResolvedConfig: nil source")
+		return &GCF{
+			cfg:    cfg,
+			stream: newErrorRCFStream(fmt.Errorf("newObservedRCFGCFWithResolvedConfig: %w", ErrNilObservedSource)),
+		}
 	}
+
 	return &GCF{
 		cfg:    cfg,
 		stream: src,
@@ -119,15 +124,21 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 		x:      x,
 		y:      y,
 	}
-
 	if x == nil || y == nil {
 		return g
 	}
 
 	state := newBLFTState(coeffs)
+
 	switch {
 	case state.IndependentOfY():
-		final := exactRationalFromUnaryEngine(collapseIndependentOfYToUnary(state), x)
+		final, err := exactRationalFromUnaryEngine(collapseIndependentOfYToUnary(state), x)
+		if err != nil {
+			return &GCF{
+				cfg:    cfg,
+				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of Y: %w", err)),
+			}
+		}
 		return newExactTerminalGCFWithResolvedConfig(
 			rcfTermsFromRational(final),
 			exactRangeFromRational(final),
@@ -135,7 +146,13 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 		)
 
 	case state.IndependentOfX():
-		final := exactRationalFromUnaryEngine(collapseIndependentOfXToUnary(state), y)
+		final, err := exactRationalFromUnaryEngine(collapseIndependentOfXToUnary(state), y)
+		if err != nil {
+			return &GCF{
+				cfg:    cfg,
+				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of X: %w", err)),
+			}
+		}
 		return newExactTerminalGCFWithResolvedConfig(
 			rcfTermsFromRational(final),
 			exactRangeFromRational(final),
@@ -152,9 +169,9 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 	}
 }
 
-func (g *GCF) NextRCF() (RCFTerm, Status) {
+func (g *GCF) NextRCF() (RCFTerm, Status, error) {
 	if g == nil {
-		panic("GCF receiver is nil")
+		return NewRCFTerm(nil), StatusEOF, fmt.Errorf("GCF.NextRCF: %w", ErrNilReceiver)
 	}
 
 	if g.stream != nil {
@@ -163,11 +180,11 @@ func (g *GCF) NextRCF() (RCFTerm, Status) {
 
 	if g.terminal != nil {
 		if g.terminal.next >= len(g.terminal.terms) {
-			return NewRCFTerm(nil), StatusEOF
+			return NewRCFTerm(nil), StatusEOF, nil
 		}
 		term := g.terminal.terms[g.terminal.next]
 		g.terminal.next++
-		return NewRCFTerm(term.A()), StatusOK
+		return NewRCFTerm(term.A()), StatusOK, nil
 	}
 
 	if g.unary != nil {
@@ -178,12 +195,12 @@ func (g *GCF) NextRCF() (RCFTerm, Status) {
 		return g.nextBinaryRCF()
 	}
 
-	return NewRCFTerm(nil), StatusEOF
+	return NewRCFTerm(nil), StatusEOF, nil
 }
 
-func (g *GCF) Range() Range {
+func (g *GCF) Range() (Range, error) {
 	if g == nil {
-		panic("GCF receiver is nil")
+		return Range{}, fmt.Errorf("GCF.Range: %w", ErrNilReceiver)
 	}
 
 	if g.stream != nil {
@@ -191,21 +208,25 @@ func (g *GCF) Range() Range {
 	}
 
 	if g.terminal != nil {
-		return cloneRange(g.terminal.rng)
+		return cloneRange(g.terminal.rng), nil
 	}
 
 	if g.unary != nil {
 		if isEOFPQStream(g.unary.x) {
-			return exactRangeFromRational(g.unary.engine.CollapseUnaryEOF())
+			return exactRangeFromRational(g.unary.engine.CollapseUnaryEOF()), nil
 		}
-		return g.unary.engine.UnaryRange(g.unary.x.Range())
+		xRange, err := g.unary.x.Range()
+		if err != nil {
+			return Range{}, fmt.Errorf("GCF.Range: unary child range: %w", err)
+		}
+		return g.unary.engine.UnaryRange(xRange)
 	}
 
 	if g.binary != nil {
 		return g.binaryRange()
 	}
 
-	return exactRangeFromRational(RationalFromInt64(0))
+	return exactRangeFromRational(RationalFromInt64(0)), nil
 }
 
 func (g *GCF) Config() Config {
@@ -215,7 +236,7 @@ func (g *GCF) Config() Config {
 	return g.cfg
 }
 
-func (g *GCF) nextUnaryRCF() (RCFTerm, Status) {
+func (g *GCF) nextUnaryRCF() (RCFTerm, Status, error) {
 	for {
 		if isEOFPQStream(g.unary.x) {
 			collapsed := g.unary.engine.CollapseUnaryEOF()
@@ -228,7 +249,16 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status) {
 			return g.NextRCF()
 		}
 
-		currentRange := g.unary.engine.UnaryRange(g.unary.x.Range())
+		xRange, err := g.unary.x.Range()
+		if err != nil {
+			return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextUnaryRCF: child range: %w", err)
+		}
+
+		currentRange, err := g.unary.engine.UnaryRange(xRange)
+		if err != nil {
+			return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextUnaryRCF: unary range: %w", err)
+		}
+
 		if term, ok := g.unary.engine.CanEmitRCFTerm(currentRange); ok {
 			if isExactIntegerRangeWithTerm(currentRange, term) {
 				g.terminal = &exactTerminalState{
@@ -237,13 +267,17 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status) {
 					next:  0,
 				}
 				g.unary = nil
-				return term, StatusOK
+				return term, StatusOK, nil
 			}
 			g.unary.engine = g.unary.engine.EmitUnary(term)
-			return term, StatusOK
+			return term, StatusOK, nil
 		}
 
-		term, tail, status := g.unary.x.NextPQ()
+		term, tail, status, err := g.unary.x.NextPQ()
+		if err != nil {
+			return NewRCFTerm(nil), status, fmt.Errorf("nextUnaryRCF: NextPQ: %w", err)
+		}
+
 		switch status {
 		case StatusOK:
 			g.unary.engine = g.unary.engine.IngestUnaryX(term)
@@ -251,12 +285,12 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status) {
 		case StatusEOF:
 			g.unary.x = tail
 		default:
-			panic("nextUnaryRCF: invalid input status")
+			return NewRCFTerm(nil), status, fmt.Errorf("nextUnaryRCF: %w: status=%v", ErrInvalidUnaryInputStatus, status)
 		}
 	}
 }
 
-func (g *GCF) nextBinaryRCF() (RCFTerm, Status) {
+func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 	for {
 		if isEOFPQStream(g.binary.x) && isEOFPQStream(g.binary.y) {
 			collapsed := g.binary.engine.CollapseBinaryBothEOF()
@@ -270,7 +304,10 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status) {
 		}
 
 		if isEOFPQStream(g.binary.x) {
-			final := exactRationalFromUnaryEngine(g.binary.engine.CollapseBinaryXEOF(), g.binary.y)
+			final, err := exactRationalFromUnaryEngine(g.binary.engine.CollapseBinaryXEOF(), g.binary.y)
+			if err != nil {
+				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse X EOF: %w", err)
+			}
 			g.terminal = &exactTerminalState{
 				terms: cloneRCFTerms(rcfTermsFromRational(final)),
 				rng:   exactRangeFromRational(final),
@@ -281,7 +318,10 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status) {
 		}
 
 		if isEOFPQStream(g.binary.y) {
-			final := exactRationalFromUnaryEngine(g.binary.engine.CollapseBinaryYEOF(), g.binary.x)
+			final, err := exactRationalFromUnaryEngine(g.binary.engine.CollapseBinaryYEOF(), g.binary.x)
+			if err != nil {
+				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse Y EOF: %w", err)
+			}
 			g.terminal = &exactTerminalState{
 				terms: cloneRCFTerms(rcfTermsFromRational(final)),
 				rng:   exactRangeFromRational(final),
@@ -291,7 +331,20 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status) {
 			return g.NextRCF()
 		}
 
-		currentRange := g.binary.engine.BinaryRange(g.binary.x.Range(), g.binary.y.Range())
+		xRange, err := g.binary.x.Range()
+		if err != nil {
+			return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: left range: %w", err)
+		}
+		yRange, err := g.binary.y.Range()
+		if err != nil {
+			return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: right range: %w", err)
+		}
+
+		currentRange, err := g.binary.engine.BinaryRange(xRange, yRange)
+		if err != nil {
+			return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: binary range: %w", err)
+		}
+
 		if term, ok := g.binary.engine.CanEmitRCFTerm(currentRange); ok {
 			if isExactIntegerRangeWithTerm(currentRange, term) {
 				g.terminal = &exactTerminalState{
@@ -300,14 +353,17 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status) {
 					next:  0,
 				}
 				g.binary = nil
-				return term, StatusOK
+				return term, StatusOK, nil
 			}
 			g.binary.engine = g.binary.engine.EmitBinary(term)
-			return term, StatusOK
+			return term, StatusOK, nil
 		}
 
-		if chooseIngestX(g.binary.x.Range(), g.binary.y.Range()) {
-			term, tail, status := g.binary.x.NextPQ()
+		if chooseIngestX(xRange, yRange) {
+			term, tail, status, err := g.binary.x.NextPQ()
+			if err != nil {
+				return NewRCFTerm(nil), status, fmt.Errorf("nextBinaryRCF: left NextPQ: %w", err)
+			}
 			switch status {
 			case StatusOK:
 				g.binary.engine = g.binary.engine.IngestBinaryX(term)
@@ -315,10 +371,13 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status) {
 			case StatusEOF:
 				g.binary.x = tail
 			default:
-				panic("nextBinaryRCF: invalid left-input status")
+				return NewRCFTerm(nil), status, fmt.Errorf("nextBinaryRCF: %w: status=%v", ErrInvalidBinaryLeftStatus, status)
 			}
 		} else {
-			term, tail, status := g.binary.y.NextPQ()
+			term, tail, status, err := g.binary.y.NextPQ()
+			if err != nil {
+				return NewRCFTerm(nil), status, fmt.Errorf("nextBinaryRCF: right NextPQ: %w", err)
+			}
 			switch status {
 			case StatusOK:
 				g.binary.engine = g.binary.engine.IngestBinaryY(term)
@@ -326,46 +385,66 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status) {
 			case StatusEOF:
 				g.binary.y = tail
 			default:
-				panic("nextBinaryRCF: invalid right-input status")
+				return NewRCFTerm(nil), status, fmt.Errorf("nextBinaryRCF: %w: status=%v", ErrInvalidBinaryRightStatus, status)
 			}
 		}
 	}
 }
 
-func (g *GCF) binaryRange() Range {
+func (g *GCF) binaryRange() (Range, error) {
 	if g.binary == nil {
-		panic("binaryRange called without binary evaluator state")
+		return Range{}, fmt.Errorf("binaryRange: %w", ErrMissingBinaryState)
 	}
 
 	switch {
 	case isEOFPQStream(g.binary.x) && isEOFPQStream(g.binary.y):
-		return exactRangeFromRational(g.binary.engine.CollapseBinaryBothEOF())
+		return exactRangeFromRational(g.binary.engine.CollapseBinaryBothEOF()), nil
 
 	case isEOFPQStream(g.binary.x):
-		return g.binary.engine.CollapseBinaryXEOF().UnaryRange(g.binary.y.Range())
+		yRange, err := g.binary.y.Range()
+		if err != nil {
+			return Range{}, fmt.Errorf("binaryRange: right range: %w", err)
+		}
+		return g.binary.engine.CollapseBinaryXEOF().UnaryRange(yRange)
 
 	case isEOFPQStream(g.binary.y):
-		return g.binary.engine.CollapseBinaryYEOF().UnaryRange(g.binary.x.Range())
+		xRange, err := g.binary.x.Range()
+		if err != nil {
+			return Range{}, fmt.Errorf("binaryRange: left range: %w", err)
+		}
+		return g.binary.engine.CollapseBinaryYEOF().UnaryRange(xRange)
 
 	default:
-		return g.binary.engine.BinaryRange(g.binary.x.Range(), g.binary.y.Range())
+		xRange, err := g.binary.x.Range()
+		if err != nil {
+			return Range{}, fmt.Errorf("binaryRange: left range: %w", err)
+		}
+		yRange, err := g.binary.y.Range()
+		if err != nil {
+			return Range{}, fmt.Errorf("binaryRange: right range: %w", err)
+		}
+		return g.binary.engine.BinaryRange(xRange, yRange)
 	}
 }
 
-func exactRationalFromUnaryEngine(engine unaryEngine, stream PQStream) Rational {
+func exactRationalFromUnaryEngine(engine unaryEngine, stream PQStream) (Rational, error) {
 	current := engine
 	input := stream
 
 	for {
-		term, tail, status := input.NextPQ()
+		term, tail, status, err := input.NextPQ()
+		if err != nil {
+			return Rational{}, fmt.Errorf("exactRationalFromUnaryEngine: NextPQ: %w", err)
+		}
+
 		switch status {
 		case StatusOK:
 			current = current.IngestUnaryX(term)
 			input = tail
 		case StatusEOF:
-			return current.CollapseUnaryEOF()
+			return current.CollapseUnaryEOF(), nil
 		default:
-			panic("exactRationalFromUnaryEngine: invalid input status")
+			return Rational{}, fmt.Errorf("exactRationalFromUnaryEngine: %w: status=%v", ErrInvalidUnaryInputStatus, status)
 		}
 	}
 }
@@ -398,7 +477,6 @@ func collapseXEOFToUnary(coeffs blftState) blftState {
 	if isIndependentOfX(coeffs) {
 		return collapseIndependentOfXToUnary(coeffs)
 	}
-
 	return blftState{
 		A: big.NewInt(0),
 		B: cloneBigInt(coeffs.A),
@@ -415,7 +493,6 @@ func collapseYEOFToUnary(coeffs blftState) blftState {
 	if isIndependentOfY(coeffs) {
 		return collapseIndependentOfYToUnary(coeffs)
 	}
-
 	return blftState{
 		A: big.NewInt(0),
 		B: cloneBigInt(coeffs.A),
@@ -429,17 +506,11 @@ func collapseYEOFToUnary(coeffs blftState) blftState {
 }
 
 func isIndependentOfY(coeffs blftState) bool {
-	return coeffIsZero(coeffs.A) &&
-		coeffIsZero(coeffs.C) &&
-		coeffIsZero(coeffs.E) &&
-		coeffIsZero(coeffs.G)
+	return coeffIsZero(coeffs.A) && coeffIsZero(coeffs.C) && coeffIsZero(coeffs.E) && coeffIsZero(coeffs.G)
 }
 
 func isIndependentOfX(coeffs blftState) bool {
-	return coeffIsZero(coeffs.A) &&
-		coeffIsZero(coeffs.B) &&
-		coeffIsZero(coeffs.E) &&
-		coeffIsZero(coeffs.F)
+	return coeffIsZero(coeffs.A) && coeffIsZero(coeffs.B) && coeffIsZero(coeffs.E) && coeffIsZero(coeffs.F)
 }
 
 func coeffIsZero(x *big.Int) bool {
@@ -489,4 +560,4 @@ func cloneRCFTerms(terms []RCFTerm) []RCFTerm {
 	return out
 }
 
-// core/gcf.go v13
+// core/gcf.go v14
