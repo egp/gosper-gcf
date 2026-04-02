@@ -1,4 +1,4 @@
-// core/blft_range_helpers.go v2
+// core/blft_range_helpers.go v3
 package core
 
 import (
@@ -27,6 +27,30 @@ func orderedRangeFromEndpoints(lo, hi Endpoint, inside bool) Range {
 	}
 }
 
+func affineRangeFromEndpoints(lo, hi Endpoint, inside bool, scale, denom *big.Int) Range {
+	if inside {
+		return orderedRangeFromEndpoints(lo, hi, true)
+	}
+
+	if affineSlopeSign(scale, denom) < 0 {
+		return Range{
+			Lo:     hi,
+			Hi:     lo,
+			Inside: false,
+		}
+	}
+
+	return Range{
+		Lo:     lo,
+		Hi:     hi,
+		Inside: false,
+	}
+}
+
+func affineSlopeSign(scale, denom *big.Int) int {
+	return coeffOrZero(scale).Sign() * coeffOrZero(denom).Sign()
+}
+
 func isZeroCoeff(x *big.Int) bool {
 	return x == nil || x.Sign() == 0
 }
@@ -37,6 +61,7 @@ func coeffOrZero(x *big.Int) *big.Int {
 	}
 	return new(big.Int).Set(x)
 }
+
 func preferXOnTie(xRange, yRange Range) (bool, error) {
 	if !xRange.Inside || !yRange.Inside {
 		return false, fmt.Errorf(
@@ -69,7 +94,6 @@ func rangeIncludesRational(r Range, q Rational) bool {
 
 func collectRationalsFromEndpointsAndValue(lo Endpoint, loOK bool, hi Endpoint, hiOK bool, extra Rational) []Rational {
 	values := make([]Rational, 0, 3)
-
 	if loOK {
 		values = append(values, lo.Value)
 	}
@@ -77,20 +101,17 @@ func collectRationalsFromEndpointsAndValue(lo Endpoint, loOK bool, hi Endpoint, 
 		values = append(values, hi.Value)
 	}
 	values = append(values, extra)
-
 	return values
 }
 
 func outsideRangeFromEndpointValues(lo Endpoint, loOK bool, hi Endpoint, hiOK bool) Range {
 	values := make([]Rational, 0, 2)
-
 	if loOK {
 		values = append(values, lo.Value)
 	}
 	if hiOK {
 		values = append(values, hi.Value)
 	}
-
 	return outsideRangeFromValues(values)
 }
 
@@ -106,7 +127,6 @@ func insideHullRangeFromValues(values []Rational) Range {
 
 	lo := values[0]
 	hi := values[0]
-
 	for _, v := range values[1:] {
 		if v.Cmp(lo) < 0 {
 			lo = v
@@ -158,7 +178,6 @@ func outsideRangeFromValues(values []Rational) Range {
 
 	lo := values[0]
 	hi := values[0]
-
 	for _, v := range values[1:] {
 		if v.Cmp(lo) < 0 {
 			lo = v
@@ -259,4 +278,4 @@ func formatBigIntDebug(x *big.Int) string {
 	return x.String()
 }
 
-// core/blft_range_helpers.go v2
+// core/blft_range_helpers.go v3

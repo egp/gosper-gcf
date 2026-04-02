@@ -1,14 +1,12 @@
-// core/blft_range_exact.go v1
+// core/blft_range_exact.go v2
 package core
 
 import "math/big"
 
 func (s blftState) constantRange() (Range, bool) {
-	if !isZeroCoeff(s.A) || !isZeroCoeff(s.B) || !isZeroCoeff(s.C) ||
-		!isZeroCoeff(s.E) || !isZeroCoeff(s.F) || !isZeroCoeff(s.G) {
+	if !isZeroCoeff(s.A) || !isZeroCoeff(s.B) || !isZeroCoeff(s.C) || !isZeroCoeff(s.E) || !isZeroCoeff(s.F) || !isZeroCoeff(s.G) {
 		return Range{}, false
 	}
-
 	if isZeroCoeff(s.H) {
 		return Range{}, false
 	}
@@ -23,19 +21,15 @@ func (s blftState) rangeWithExactX(xr, yr Range) (Range, bool) {
 	}
 
 	reduced := s.reduceWithExactX(xr.Lo.Value)
-
 	if r, ok := reduced.constantRange(); ok {
 		return r, true
 	}
-
-	if r, ok := reduced.affineYRange(yr); ok {
+	if r, ok := reduced.affineYRangePreserveOutside(yr); ok {
 		return r, true
 	}
-
 	if r, ok := reduced.lftYRange(yr); ok {
 		return r, true
 	}
-
 	return Range{}, false
 }
 
@@ -45,19 +39,15 @@ func (s blftState) rangeWithExactY(xr, yr Range) (Range, bool) {
 	}
 
 	reduced := s.reduceWithExactY(yr.Lo.Value)
-
 	if r, ok := reduced.constantRange(); ok {
 		return r, true
 	}
-
-	if r, ok := reduced.affineXRange(xr); ok {
+	if r, ok := reduced.affineXRangePreserveOutside(xr); ok {
 		return r, true
 	}
-
 	if r, ok := reduced.lftXRange(xr); ok {
 		return r, true
 	}
-
 	return Range{}, false
 }
 
@@ -100,7 +90,6 @@ func addScaledCoeffsBLFT(leftCoeff, leftScale, rightCoeff, rightScale *big.Int) 
 	if leftCoeff != nil {
 		left = new(big.Int).Mul(new(big.Int).Set(leftCoeff), new(big.Int).Set(leftScale))
 	}
-
 	if rightCoeff != nil {
 		right = new(big.Int).Mul(new(big.Int).Set(rightCoeff), new(big.Int).Set(rightScale))
 	}
@@ -109,16 +98,11 @@ func addScaledCoeffsBLFT(leftCoeff, leftScale, rightCoeff, rightScale *big.Int) 
 }
 
 func isExactClosedRangeBLFT(r Range) bool {
-	return r.Inside &&
-		!r.Lo.Open &&
-		!r.Hi.Open &&
-		r.Lo.Value.Cmp(r.Hi.Value) == 0
+	return r.Inside && !r.Lo.Open && !r.Hi.Open && r.Lo.Value.Cmp(r.Hi.Value) == 0
 }
 
 func isDegenerateClosedRangeBLFT(r Range) bool {
-	return !r.Lo.Open &&
-		!r.Hi.Open &&
-		r.Lo.Value.Cmp(r.Hi.Value) == 0
+	return !r.Lo.Open && !r.Hi.Open && r.Lo.Value.Cmp(r.Hi.Value) == 0
 }
 
 func (s blftState) rangeWithDegenerateClosedX(xr, yr Range) (Range, bool) {
@@ -127,19 +111,15 @@ func (s blftState) rangeWithDegenerateClosedX(xr, yr Range) (Range, bool) {
 	}
 
 	reduced := s.reduceWithExactX(xr.Lo.Value)
-
 	if r, ok := reduced.constantRange(); ok {
 		return r, true
 	}
-
-	if r, ok := reduced.affineYRange(yr); ok {
+	if r, ok := reduced.affineYRangePreserveOutside(yr); ok {
 		return r, true
 	}
-
 	if r, ok := reduced.lftYRange(yr); ok {
 		return r, true
 	}
-
 	return Range{}, false
 }
 
@@ -149,20 +129,48 @@ func (s blftState) rangeWithDegenerateClosedY(xr, yr Range) (Range, bool) {
 	}
 
 	reduced := s.reduceWithExactY(yr.Lo.Value)
-
 	if r, ok := reduced.constantRange(); ok {
 		return r, true
 	}
-
-	if r, ok := reduced.affineXRange(xr); ok {
+	if r, ok := reduced.affineXRangePreserveOutside(xr); ok {
 		return r, true
 	}
-
 	if r, ok := reduced.lftXRange(xr); ok {
 		return r, true
 	}
-
 	return Range{}, false
 }
 
-// core/blft_range_exact.go v1
+func (s blftState) affineXRangePreserveOutside(xr Range) (Range, bool) {
+	if !isZeroCoeff(s.A) || !isZeroCoeff(s.C) || !isZeroCoeff(s.E) || !isZeroCoeff(s.F) || !isZeroCoeff(s.G) {
+		return Range{}, false
+	}
+	if isZeroCoeff(s.H) {
+		return Range{}, false
+	}
+	if isZeroCoeff(s.B) && !isZeroCoeff(s.D) {
+		return Range{}, false
+	}
+
+	lo := applyAffineEndpointX(xr.Lo, s.B, s.D, s.H)
+	hi := applyAffineEndpointX(xr.Hi, s.B, s.D, s.H)
+	return affineRangeFromEndpoints(lo, hi, xr.Inside, s.B, s.H), true
+}
+
+func (s blftState) affineYRangePreserveOutside(yr Range) (Range, bool) {
+	if !isZeroCoeff(s.A) || !isZeroCoeff(s.B) || !isZeroCoeff(s.E) || !isZeroCoeff(s.F) || !isZeroCoeff(s.G) {
+		return Range{}, false
+	}
+	if isZeroCoeff(s.H) {
+		return Range{}, false
+	}
+	if isZeroCoeff(s.C) && !isZeroCoeff(s.D) {
+		return Range{}, false
+	}
+
+	lo := applyAffineEndpointY(yr.Lo, s.C, s.D, s.H)
+	hi := applyAffineEndpointY(yr.Hi, s.C, s.D, s.H)
+	return affineRangeFromEndpoints(lo, hi, yr.Inside, s.C, s.H), true
+}
+
+// core/blft_range_exact.go v2
