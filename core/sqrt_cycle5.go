@@ -1,4 +1,4 @@
-// core/sqrt_cycle5.go v3
+// core/sqrt_cycle5.go v4
 package core
 
 import "fmt"
@@ -29,14 +29,19 @@ func (s *sqrtApproximationPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	} else {
 		s.controller.seed = tail
 	}
+
 	return term, s, status, nil
 }
 
-func (s *sqrtApproximationPQStream) Range() (Range, error) {
+func (s *sqrtApproximationPQStream) CurrentInterval() (Interval, error) {
 	if s == nil || s.controller == nil {
-		return Range{}, fmt.Errorf("sqrtApproximationPQStream.Range: %w", ErrNilReceiver)
+		return Interval{}, fmt.Errorf("sqrtApproximationPQStream.CurrentInterval: %w", ErrNilReceiver)
 	}
-	return s.controller.activeApproximation().Range()
+	return s.controller.activeApproximation().CurrentInterval()
+}
+
+func (s *sqrtApproximationPQStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 type sqrtObservedRefinementStream struct {
@@ -67,7 +72,7 @@ func (s *sqrtObservedRefinementStream) NextRCF() (RCFTerm, Status, error) {
 		return NewRCFTerm(nil), StatusEOF, fmt.Errorf("sqrtObservedRefinementStream.NextRCF: %w", ErrNilReceiver)
 	}
 
-	rng, err := s.inner.Range()
+	rng, err := s.inner.CurrentInterval()
 	if err != nil {
 		return NewRCFTerm(nil), StatusEOF, err
 	}
@@ -76,19 +81,25 @@ func (s *sqrtObservedRefinementStream) NextRCF() (RCFTerm, Status, error) {
 	if err != nil {
 		return term, status, err
 	}
+
 	if status == StatusOK {
 		if err := s.controller.feedCertifiedTerm(term, rng); err != nil {
 			return term, status, err
 		}
 	}
+
 	return term, status, nil
 }
 
-func (s *sqrtObservedRefinementStream) Range() (Range, error) {
+func (s *sqrtObservedRefinementStream) CurrentInterval() (Interval, error) {
 	if s == nil || s.controller == nil || s.inner == nil {
-		return Range{}, fmt.Errorf("sqrtObservedRefinementStream.Range: %w", ErrNilReceiver)
+		return Interval{}, fmt.Errorf("sqrtObservedRefinementStream.CurrentInterval: %w", ErrNilReceiver)
 	}
-	return s.inner.Range()
+	return s.inner.CurrentInterval()
 }
 
-// core/sqrt_cycle5.go v3
+func (s *sqrtObservedRefinementStream) Range() (Range, error) {
+	return s.CurrentInterval()
+}
+
+// core/sqrt_cycle5.go v4

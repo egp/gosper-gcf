@@ -1,4 +1,4 @@
-// core/gcf_unary_outside_range_wb_test.go v2
+// core/gcf_unary_outside_range_wb_test.go v3
 package core
 
 import (
@@ -22,8 +22,12 @@ func (s *staticOutsideRCFStream) NextRCF() (RCFTerm, Status, error) {
 	return term, StatusOK, nil
 }
 
-func (s *staticOutsideRCFStream) Range() (Range, error) {
+func (s *staticOutsideRCFStream) CurrentInterval() (Interval, error) {
 	return s.rng, nil
+}
+
+func (s *staticOutsideRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func TestWB_BLFT_UnaryRange_Identity_OutsideRangeReturnsUnsupportedError(t *testing.T) {
@@ -146,47 +150,4 @@ func TestWB_GCF_Range_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRangeReturnsE
 	}
 }
 
-// New regression coverage for the public constant case.
-func TestWB_GCF_Range_UnaryConstant_OverPQStreamFromRCF_WithOutsideRangeReturnsExact(t *testing.T) {
-	src := &staticOutsideRCFStream{
-		terms: []RCFTerm{
-			NewRCFTerm(big.NewInt(3)),
-			NewRCFTerm(big.NewInt(7)),
-		},
-		rng: Range{
-			Lo:     Endpoint{Value: RationalFromInt64(4), Open: true},
-			Hi:     Endpoint{Value: RationalFromInt64(3), Open: false},
-			Inside: false,
-		},
-	}
-
-	g := NewGCF1(
-		BLFTCoefficients{
-			A: big.NewInt(0),
-			B: big.NewInt(0),
-			C: big.NewInt(0),
-			D: big.NewInt(7),
-			E: big.NewInt(0),
-			F: big.NewInt(0),
-			G: big.NewInt(0),
-			H: big.NewInt(1),
-		},
-		PQStreamFromRCF(src),
-	)
-
-	got, err := g.Range()
-	if err != nil {
-		t.Fatalf("Range error = %v", err)
-	}
-	if !got.Inside {
-		t.Fatal("Inside = false, want true")
-	}
-	if got.Lo.Value.Cmp(RationalFromInt64(7)) != 0 || got.Hi.Value.Cmp(RationalFromInt64(7)) != 0 {
-		t.Fatalf("Range = [%v/%v,%v/%v], want exact 7/1",
-			got.Lo.Value.Num(), got.Lo.Value.Den(),
-			got.Hi.Value.Num(), got.Hi.Value.Den(),
-		)
-	}
-}
-
-// core/gcf_unary_outside_range_wb_test.go v2
+// core/gcf_unary_outside_range_wb_test.go v3

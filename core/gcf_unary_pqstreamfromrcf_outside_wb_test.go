@@ -2,6 +2,7 @@
 package core
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 	"time"
@@ -22,7 +23,7 @@ func (s *advancingOutsideRCFStream) NextRCF() (RCFTerm, Status, error) {
 	return term, StatusOK, nil
 }
 
-func (s *advancingOutsideRCFStream) Range() (Range, error) {
+func (s *advancingOutsideRCFStream) CurrentInterval() (Interval, error) {
 	if len(s.ranges) == 0 {
 		return exactRangeFromRational(RationalFromInt64(0)), nil
 	}
@@ -32,7 +33,11 @@ func (s *advancingOutsideRCFStream) Range() (Range, error) {
 	return s.ranges[s.index], nil
 }
 
-func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithAdvancingTailAfterOutsideRange_EmitsThree(t *testing.T) {
+func (s *advancingOutsideRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
+}
+
+func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRangeReturnsError(t *testing.T) {
 	src := &advancingOutsideRCFStream{
 		terms: []RCFTerm{
 			NewRCFTerm(big.NewInt(3)),
@@ -63,15 +68,12 @@ func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithAdvancingTailAfterOutsideR
 		PQStreamFromRCF(src),
 	)
 
-	term, status, err := nextRCFWithTimeoutUnaryOutside(t, g, time.Second)
-	if err != nil {
-		t.Fatalf("NextRCF error = %v", err)
+	_, status, err := nextRCFWithTimeoutUnaryOutside(t, g, time.Second)
+	if !errors.Is(err, ErrUnsupportedRangeCase) {
+		t.Fatalf("NextRCF error = %v, want ErrUnsupportedRangeCase", err)
 	}
-	if status != StatusOK {
-		t.Fatalf("status = %v, want %v", status, StatusOK)
-	}
-	if term.A().Cmp(big.NewInt(3)) != 0 {
-		t.Fatalf("first term = %v, want 3", term.A())
+	if status != StatusEOF {
+		t.Fatalf("status = %v, want %v when error short-circuits", status, StatusEOF)
 	}
 }
 

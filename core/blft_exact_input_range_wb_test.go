@@ -1,4 +1,4 @@
-// core/blft_exact_input_range_wb_test.go v3
+// core/blft_exact_input_range_wb_test.go v4
 package core
 
 import (
@@ -22,8 +22,12 @@ func (s *exactInputRangeRCFStream) NextRCF() (RCFTerm, Status, error) {
 	return term, StatusOK, nil
 }
 
-func (s *exactInputRangeRCFStream) Range() (Range, error) {
+func (s *exactInputRangeRCFStream) CurrentInterval() (Interval, error) {
 	return s.rng, nil
+}
+
+func (s *exactInputRangeRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 type exactInputRangePQStream struct {
@@ -37,8 +41,12 @@ func (s *exactInputRangePQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	}, s, StatusEOF, nil
 }
 
-func (s *exactInputRangePQStream) Range() (Range, error) {
+func (s *exactInputRangePQStream) CurrentInterval() (Interval, error) {
 	return s.rng, nil
+}
+
+func (s *exactInputRangePQStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func TestWB_BLFT_BinaryRange_DegreesScale_Exact180PreservesOutsideYRange(t *testing.T) {
@@ -81,7 +89,6 @@ func TestWB_BLFT_BinaryRange_DegreesScale_Exact180PreservesOutsideYRange(t *test
 	if err != nil {
 		t.Fatalf("BinaryRange error = %v", err)
 	}
-
 	if got.Inside {
 		t.Fatal("Inside = true, want false")
 	}
@@ -113,7 +120,6 @@ func TestWB_GCF_BinaryRange_DegreesScale_Exact180PreservesOutsideYRange(t *testi
 			Inside: true,
 		},
 	}
-
 	ysrc := &exactInputRangePQStream{
 		rng: Range{
 			Lo: Endpoint{
@@ -147,7 +153,6 @@ func TestWB_GCF_BinaryRange_DegreesScale_Exact180PreservesOutsideYRange(t *testi
 	if err != nil {
 		t.Fatalf("Range error = %v", err)
 	}
-
 	if got.Inside {
 		t.Fatal("Inside = true, want false")
 	}
@@ -250,12 +255,13 @@ func TestWB_ExactInputRange_PQHelper_ImplementsErrorChannelShape(t *testing.T) {
 		t.Fatalf("status = %v, want %v", status, StatusEOF)
 	}
 
-	rng, err := src.Range()
+	rng, err := src.CurrentInterval()
 	if err != nil {
-		t.Fatalf("Range error = %v", err)
+		t.Fatalf("CurrentInterval error = %v", err)
 	}
 	if rng.Lo.Value.Cmp(RationalFromInt64(9)) != 0 || rng.Hi.Value.Cmp(RationalFromInt64(9)) != 0 {
-		t.Fatalf("Range = [%v/%v,%v/%v], want exact 9/1",
+		t.Fatalf(
+			"Range = [%v/%v,%v/%v], want exact 9/1",
 			rng.Lo.Value.Num(), rng.Lo.Value.Den(),
 			rng.Hi.Value.Num(), rng.Hi.Value.Den(),
 		)
@@ -286,4 +292,4 @@ func nextRCFWithTimeoutExactInputRange(t *testing.T, g *GCF, timeout time.Durati
 	}
 }
 
-// core/blft_exact_input_range_wb_test.go v3
+// core/blft_exact_input_range_wb_test.go v4

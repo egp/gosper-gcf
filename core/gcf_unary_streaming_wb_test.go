@@ -1,4 +1,4 @@
-// core/gcf_unary_streaming_wb_test.go v2
+// core/gcf_unary_streaming_wb_test.go v3
 package core
 
 import (
@@ -20,9 +20,13 @@ func (s *countingPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	}, s, StatusEOF, nil
 }
 
-func (s *countingPQStream) Range() (Range, error) {
+func (s *countingPQStream) CurrentInterval() (Interval, error) {
 	s.rangeCalls++
 	return s.rng, nil
+}
+
+func (s *countingPQStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func TestWB_GCF_UnaryStreaming_ExactIntegerRangeEmitsWithoutIngest(t *testing.T) {
@@ -100,4 +104,4 @@ func TestWB_GCF_UnaryStreaming_RangeQueryDoesNotIngest(t *testing.T) {
 	}
 }
 
-// core/gcf_unary_streaming_wb_test.go v2
+// core/gcf_unary_streaming_wb_test.go v3

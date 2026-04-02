@@ -1,4 +1,4 @@
-// core/gcf_unary_pqstreamfromrcf_tail_range_wb_test.go v2
+// core/gcf_unary_pqstreamfromrcf_tail_range_wb_test.go v3
 package core
 
 import (
@@ -22,7 +22,7 @@ func (s *steppingRCFStream) NextRCF() (RCFTerm, Status, error) {
 	return term, StatusOK, nil
 }
 
-func (s *steppingRCFStream) Range() (Range, error) {
+func (s *steppingRCFStream) CurrentInterval() (Interval, error) {
 	if len(s.ranges) == 0 {
 		return exactRangeFromRational(RationalFromInt64(0)), nil
 	}
@@ -30,6 +30,10 @@ func (s *steppingRCFStream) Range() (Range, error) {
 		return s.ranges[len(s.ranges)-1], nil
 	}
 	return s.ranges[s.index], nil
+}
+
+func (s *steppingRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func TestWB_BLFT_UnaryRange_IdentityAfterOneIngest_WithExactTailRange_IsExact22Over7(t *testing.T) {
@@ -52,6 +56,7 @@ func TestWB_BLFT_UnaryRange_IdentityAfterOneIngest_WithExactTailRange_IsExact22O
 	if err != nil {
 		t.Fatalf("UnaryRange error = %v", err)
 	}
+
 	want := exactRangeFromRational(NewRational(big.NewInt(22), big.NewInt(7)))
 	assertExactSameRangeTailWB(t, got, want)
 }
@@ -75,12 +80,12 @@ func TestWB_PQStreamFromRCF_RangeTracksUpdatedUnderlyingTailRange(t *testing.T) 
 
 	pq := PQStreamFromRCF(src)
 
-	got0, err := pq.Range()
+	got0, err := pq.CurrentInterval()
 	if err != nil {
-		t.Fatalf("initial Range error = %v", err)
+		t.Fatalf("initial CurrentInterval error = %v", err)
 	}
 	if got0.Inside {
-		t.Fatal("initial Range().Inside = true, want false")
+		t.Fatal("initial CurrentInterval().Inside = true, want false")
 	}
 
 	_, tail, status, err := pq.NextPQ()
@@ -91,9 +96,9 @@ func TestWB_PQStreamFromRCF_RangeTracksUpdatedUnderlyingTailRange(t *testing.T) 
 		t.Fatalf("first status = %v, want %v", status, StatusOK)
 	}
 
-	got1, err := tail.Range()
+	got1, err := tail.CurrentInterval()
 	if err != nil {
-		t.Fatalf("tail Range error = %v", err)
+		t.Fatalf("tail CurrentInterval error = %v", err)
 	}
 	want1 := exactRangeFromRational(RationalFromInt64(7))
 	assertExactSameRangeTailWB(t, got1, want1)
@@ -194,4 +199,4 @@ func assertExactSameRangeTailWB(t *testing.T, got, want Range) {
 	}
 }
 
-// core/gcf_unary_pqstreamfromrcf_tail_range_wb_test.go v2
+// core/gcf_unary_pqstreamfromrcf_tail_range_wb_test.go v3

@@ -1,4 +1,4 @@
-// core/rcf_adapter_wb_test.go v2
+// core/rcf_adapter_wb_test.go v3
 package core
 
 import (
@@ -27,14 +27,18 @@ func (s *fakeRCFStream) NextRCF() (RCFTerm, Status, error) {
 	return term, StatusOK, nil
 }
 
-func (s *fakeRCFStream) Range() (Range, error) {
+func (s *fakeRCFStream) CurrentInterval() (Interval, error) {
 	if s.rangeErr != nil {
-		return Range{}, s.rangeErr
+		return Interval{}, s.rangeErr
 	}
 	if s.next >= len(s.rngs) {
-		return Range{}, ErrUndefinedRangeOnEOFStream
+		return Interval{}, ErrUndefinedRangeOnEOFStream
 	}
 	return s.rngs[s.next], nil
+}
+
+func (s *fakeRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func TestWB_PQStreamFromRCF_MapsTermsToQEqualsOne(t *testing.T) {
@@ -127,6 +131,7 @@ func TestWB_PQStreamFromRCF_EOFMapsCleanly(t *testing.T) {
 		terms: nil,
 		rngs:  nil,
 	}
+
 	pq := PQStreamFromRCF(rcf)
 
 	term, _, status, err := pq.NextPQ()
@@ -170,6 +175,7 @@ func exactRangeWB(num, den int64) Range {
 
 func assertExactRangeWB(t *testing.T, got Range, want Rational, step int) {
 	t.Helper()
+
 	if !got.Inside {
 		t.Fatalf("range %d Inside=false, want true", step)
 	}
@@ -187,4 +193,4 @@ func assertExactRangeWB(t *testing.T, got Range, want Rational, step int) {
 	}
 }
 
-// core/rcf_adapter_wb_test.go v2
+// core/rcf_adapter_wb_test.go v3
