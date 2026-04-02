@@ -1,4 +1,4 @@
-// named/square_sqrt2_bb_test.go v2
+// named/square_sqrt2_bb_test.go v3
 package named_test
 
 import (
@@ -20,7 +20,10 @@ func TestBB_SquareOfSqrt2IsExactlyTwo(t *testing.T) {
 
 	g := core.Square(named.Sqrt2())
 
-	term, status := nextRCFWithTimeoutSquareSqrt2(t, g, time.Second)
+	term, status, err := nextRCFWithTimeoutSquareSqrt2(t, g, time.Second)
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
 	if status != core.StatusOK {
 		t.Fatalf("first status = %v, want %v", status, core.StatusOK)
 	}
@@ -28,7 +31,10 @@ func TestBB_SquareOfSqrt2IsExactlyTwo(t *testing.T) {
 		t.Fatalf("first term = %v, want 2", term.A())
 	}
 
-	_, eofStatus := nextRCFWithTimeoutSquareSqrt2(t, g, time.Second)
+	_, eofStatus, err := nextRCFWithTimeoutSquareSqrt2(t, g, time.Second)
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
@@ -38,27 +44,29 @@ func shouldSkipPendingNamedSquareSqrt2() bool {
 	return pendingTestNamedSquareSqrt2 && os.Getenv("RUN_PENDING_TESTS") == ""
 }
 
-func nextRCFWithTimeoutSquareSqrt2(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status) {
+func nextRCFWithTimeoutSquareSqrt2(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status, error) {
 	t.Helper()
 
 	type result struct {
 		term   core.RCFTerm
 		status core.Status
+		err    error
 	}
 
 	ch := make(chan result, 1)
+
 	go func() {
-		term, status := g.NextRCF()
-		ch <- result{term: term, status: status}
+		term, status, err := g.NextRCF()
+		ch <- result{term: term, status: status, err: err}
 	}()
 
 	select {
 	case got := <-ch:
-		return got.term, got.status
+		return got.term, got.status, got.err
 	case <-time.After(timeout):
 		t.Fatalf("NextRCF() did not complete within %v", timeout)
-		return core.NewRCFTerm(nil), core.StatusInvalidInput
+		return core.NewRCFTerm(nil), core.StatusInvalidInput, nil
 	}
 }
 
-// named/square_sqrt2_bb_test.go v2
+// named/square_sqrt2_bb_test.go v3
