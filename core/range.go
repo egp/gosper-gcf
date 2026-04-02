@@ -1,4 +1,4 @@
-// core/range.go v4
+// core/range.go v5
 package core
 
 type RangeKind int
@@ -8,8 +8,15 @@ const (
 	RangeFull
 )
 
+type IntervalKind = RangeKind
+
+const (
+	IntervalArc  IntervalKind = RangeArc
+	IntervalFull IntervalKind = RangeFull
+)
+
 // Transitional compatibility aliases.
-// Under the new projective-arc model, Kind() distinguishes Arc vs Full,
+// Under the current projective-arc model, Kind() distinguishes Arc vs Full,
 // while the Inside field distinguishes inside vs outside arcs.
 const (
 	InsideInterval  = RangeArc
@@ -22,6 +29,8 @@ type Range struct {
 	Inside bool
 	Kind_  RangeKind
 }
+
+type Interval = Range
 
 func (r Range) Kind() RangeKind {
 	if r.Kind_ == RangeFull {
@@ -36,4 +45,4 @@ func (r Range) Cmp(_ Range) int {
 	return 0
 }
 
-// core/range.go v4
+// core/range.go v5

@@ -1,4 +1,4 @@
-// core/gcf_types.go v2
+// core/gcf_types.go v3
 package core
 
 import "fmt"
@@ -240,6 +240,10 @@ func (g *GCF) Range() (Range, error) {
 	return exactRangeFromRational(RationalFromInt64(0)), nil
 }
 
+func (g *GCF) CurrentInterval() (Interval, error) {
+	return g.Range()
+}
+
 func (g *GCF) Config() Config {
 	if g == nil {
 		return DefaultConfig()
@@ -247,4 +251,4 @@ func (g *GCF) Config() Config {
 	return g.cfg
 }
 
-// core/gcf_types.go v2
+// core/gcf_types.go v3
