@@ -19,6 +19,9 @@ func (s blftState) rangeWithExactX(xr, yr Range) (Range, bool) {
 	if !isExactClosedRangeBLFT(xr) {
 		return Range{}, false
 	}
+	if !s.dependsOnX() {
+		return Range{}, false
+	}
 
 	reduced := s.reduceWithExactX(xr.Lo.Value)
 	if r, ok := reduced.constantRange(); ok {
@@ -37,6 +40,9 @@ func (s blftState) rangeWithExactY(xr, yr Range) (Range, bool) {
 	if !isExactClosedRangeBLFT(yr) {
 		return Range{}, false
 	}
+	if !s.dependsOnY() {
+		return Range{}, false
+	}
 
 	reduced := s.reduceWithExactY(yr.Lo.Value)
 	if r, ok := reduced.constantRange(); ok {
@@ -49,6 +55,14 @@ func (s blftState) rangeWithExactY(xr, yr Range) (Range, bool) {
 		return r, true
 	}
 	return Range{}, false
+}
+
+func (s blftState) dependsOnX() bool {
+	return !isZeroCoeff(s.A) || !isZeroCoeff(s.B) || !isZeroCoeff(s.E) || !isZeroCoeff(s.F)
+}
+
+func (s blftState) dependsOnY() bool {
+	return !isZeroCoeff(s.A) || !isZeroCoeff(s.C) || !isZeroCoeff(s.E) || !isZeroCoeff(s.G)
 }
 
 func (s blftState) reduceWithExactX(x Rational) blftState {
