@@ -1,4 +1,4 @@
-// core/gcf_dlft_bb_test.go v1
+// core/gcf_dlft_bb_test.go v2
 package core_test
 
 import (
@@ -25,7 +25,10 @@ func TestBB_DLFT1_SquareOfFiniteInput(t *testing.T) {
 
 	g := core.NewDLFT1(dlftSquareCoeffs(), stream)
 
-	term1, status1 := g.NextRCF()
+	term1, status1, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
 	if status1 != core.StatusOK {
 		t.Fatalf("first status = %v, want %v", status1, core.StatusOK)
 	}
@@ -33,7 +36,10 @@ func TestBB_DLFT1_SquareOfFiniteInput(t *testing.T) {
 		t.Fatalf("first term = %v, want 2", term1.A())
 	}
 
-	term2, status2 := g.NextRCF()
+	term2, status2, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("second NextRCF error = %v", err)
+	}
 	if status2 != core.StatusOK {
 		t.Fatalf("second status = %v, want %v", status2, core.StatusOK)
 	}
@@ -41,7 +47,10 @@ func TestBB_DLFT1_SquareOfFiniteInput(t *testing.T) {
 		t.Fatalf("second term = %v, want 4", term2.A())
 	}
 
-	_, eofStatus := g.NextRCF()
+	_, eofStatus, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
@@ -73,4 +82,4 @@ func dlftExactRange(num, den int64) core.Range {
 	}
 }
 
-// core/gcf_dlft_bb_test.go v1
+// core/gcf_dlft_bb_test.go v2

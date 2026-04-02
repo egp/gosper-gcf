@@ -1,4 +1,4 @@
-// core/gcf_take_bb_test.go v3
+// core/gcf_take_bb_test.go v4
 package core_test
 
 import (
@@ -14,29 +14,15 @@ func TestBB_GCF_Take_PrefixOfInfiniteSourceIsFiniteExactPQStream(t *testing.T) {
 	taken := g.Take(3)
 
 	_, tail2 := assertFinitePQStepTake(
-		t,
-		taken,
-		1,
-		2,
-		1,
+		t, taken, 1, 2, 1,
 		core.NewRational(big.NewInt(8), big.NewInt(3)),
 	)
-
 	_, tail3 := assertFinitePQStepTake(
-		t,
-		tail2,
-		2,
-		1,
-		1,
+		t, tail2, 2, 1, 1,
 		core.NewRational(big.NewInt(3), big.NewInt(2)),
 	)
-
 	_, tail4 := assertFinitePQStepTake(
-		t,
-		tail3,
-		3,
-		2,
-		1,
+		t, tail3, 3, 2, 1,
 		core.RationalFromInt64(2),
 	)
 
@@ -45,14 +31,13 @@ func TestBB_GCF_Take_PrefixOfInfiniteSourceIsFiniteExactPQStream(t *testing.T) {
 
 func TestBB_GCF_Rational_ReturnsConvergentOfTakenPrefix(t *testing.T) {
 	g := core.NewGCF1(identityUnaryCoeffsTake(), named.E())
+
 	got := g.Rational(3)
 	want := core.NewRational(big.NewInt(8), big.NewInt(3))
-
 	if got.Cmp(want) != 0 {
 		t.Fatalf(
 			"Rational(3) = %v/%v, want %v/%v",
-			got.Num(), got.Den(),
-			want.Num(), want.Den(),
+			got.Num(), got.Den(), want.Num(), want.Den(),
 		)
 	}
 }
@@ -62,33 +47,18 @@ func TestBB_GCF_Take_StopsAtEOF_WhenSourceHasFewerTerms(t *testing.T) {
 		identityUnaryCoeffsTake(),
 		core.PQStreamFromRational(core.NewRational(big.NewInt(8), big.NewInt(3))),
 	)
-
 	taken := g.Take(10)
 
 	_, tail2 := assertFinitePQStepTake(
-		t,
-		taken,
-		1,
-		2,
-		1,
+		t, taken, 1, 2, 1,
 		core.NewRational(big.NewInt(8), big.NewInt(3)),
 	)
-
 	_, tail3 := assertFinitePQStepTake(
-		t,
-		tail2,
-		2,
-		1,
-		1,
+		t, tail2, 2, 1, 1,
 		core.NewRational(big.NewInt(3), big.NewInt(2)),
 	)
-
 	_, tail4 := assertFinitePQStepTake(
-		t,
-		tail3,
-		3,
-		2,
-		1,
+		t, tail3, 3, 2, 1,
 		core.RationalFromInt64(2),
 	)
 
@@ -118,14 +88,19 @@ func assertFinitePQStepTake(
 ) (core.PQTerm, core.PQStream) {
 	t.Helper()
 
-	gotRange := src.Range()
+	gotRange, err := src.Range()
+	if err != nil {
+		t.Fatalf("step %d Range error = %v", step, err)
+	}
 	assertExactTakeRange(t, gotRange, wantRange, step)
 
-	term, tail, status := src.NextPQ()
+	term, tail, status, err := src.NextPQ()
+	if err != nil {
+		t.Fatalf("step %d NextPQ error = %v", step, err)
+	}
 	if status != core.StatusOK {
 		t.Fatalf("step %d status = %v, want %v", step, status, core.StatusOK)
 	}
-
 	if term.P.Cmp(big.NewInt(wantP)) != 0 {
 		t.Fatalf("step %d P = %v, want %d", step, term.P, wantP)
 	}
@@ -139,7 +114,10 @@ func assertFinitePQStepTake(
 func assertFinitePQEOF(t *testing.T, src core.PQStream, step int) {
 	t.Helper()
 
-	_, _, status := src.NextPQ()
+	_, _, status, err := src.NextPQ()
+	if err != nil {
+		t.Fatalf("step %d EOF NextPQ error = %v", step, err)
+	}
 	if status != core.StatusEOF {
 		t.Fatalf("step %d status = %v, want %v", step, status, core.StatusEOF)
 	}
@@ -160,19 +138,15 @@ func assertExactTakeRange(t *testing.T, got core.Range, want core.Rational, step
 	if got.Lo.Value.Cmp(want) != 0 {
 		t.Fatalf(
 			"step %d Lo = %v/%v, want %v/%v",
-			step,
-			got.Lo.Value.Num(), got.Lo.Value.Den(),
-			want.Num(), want.Den(),
+			step, got.Lo.Value.Num(), got.Lo.Value.Den(), want.Num(), want.Den(),
 		)
 	}
 	if got.Hi.Value.Cmp(want) != 0 {
 		t.Fatalf(
 			"step %d Hi = %v/%v, want %v/%v",
-			step,
-			got.Hi.Value.Num(), got.Hi.Value.Den(),
-			want.Num(), want.Den(),
+			step, got.Hi.Value.Num(), got.Hi.Value.Den(), want.Num(), want.Den(),
 		)
 	}
 }
 
-// core/gcf_take_bb_test.go v3
+// core/gcf_take_bb_test.go v4

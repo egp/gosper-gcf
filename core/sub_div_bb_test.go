@@ -1,4 +1,4 @@
-// core/sub_div_bb_test.go v1
+// core/sub_div_bb_test.go v2
 package core_test
 
 import (
@@ -35,7 +35,10 @@ func TestBB_GCF_SubOfFiniteInputs(t *testing.T) {
 
 	g := core.Sub(x, y)
 
-	term1, status1 := g.NextRCF()
+	term1, status1, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
 	if status1 != core.StatusOK {
 		t.Fatalf("first status = %v, want %v", status1, core.StatusOK)
 	}
@@ -43,7 +46,10 @@ func TestBB_GCF_SubOfFiniteInputs(t *testing.T) {
 		t.Fatalf("first term = %v, want -1", term1.A())
 	}
 
-	term2, status2 := g.NextRCF()
+	term2, status2, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("second NextRCF error = %v", err)
+	}
 	if status2 != core.StatusOK {
 		t.Fatalf("second status = %v, want %v", status2, core.StatusOK)
 	}
@@ -51,7 +57,10 @@ func TestBB_GCF_SubOfFiniteInputs(t *testing.T) {
 		t.Fatalf("second term = %v, want 2", term2.A())
 	}
 
-	_, eofStatus := g.NextRCF()
+	_, eofStatus, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
@@ -84,7 +93,10 @@ func TestBB_GCF_DivOfFiniteInputs(t *testing.T) {
 
 	g := core.Div(x, y)
 
-	term1, status1 := g.NextRCF()
+	term1, status1, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
 	if status1 != core.StatusOK {
 		t.Fatalf("first status = %v, want %v", status1, core.StatusOK)
 	}
@@ -92,7 +104,10 @@ func TestBB_GCF_DivOfFiniteInputs(t *testing.T) {
 		t.Fatalf("first term = %v, want 0", term1.A())
 	}
 
-	term2, status2 := g.NextRCF()
+	term2, status2, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("second NextRCF error = %v", err)
+	}
 	if status2 != core.StatusOK {
 		t.Fatalf("second status = %v, want %v", status2, core.StatusOK)
 	}
@@ -100,7 +115,10 @@ func TestBB_GCF_DivOfFiniteInputs(t *testing.T) {
 		t.Fatalf("second term = %v, want 1", term2.A())
 	}
 
-	term3, status3 := g.NextRCF()
+	term3, status3, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("third NextRCF error = %v", err)
+	}
 	if status3 != core.StatusOK {
 		t.Fatalf("third status = %v, want %v", status3, core.StatusOK)
 	}
@@ -108,7 +126,10 @@ func TestBB_GCF_DivOfFiniteInputs(t *testing.T) {
 		t.Fatalf("third term = %v, want 3", term3.A())
 	}
 
-	_, eofStatus := g.NextRCF()
+	_, eofStatus, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
@@ -129,4 +150,4 @@ func subDivExactRange(num, den int64) core.Range {
 	}
 }
 
-// core/sub_div_bb_test.go v1
+// core/sub_div_bb_test.go v2

@@ -1,7 +1,8 @@
-// core/gcf_binary_phase5_bb_test.go v1
+// core/gcf_binary_phase5_bb_test.go v2
 package core_test
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -13,17 +14,17 @@ type binaryPhase5CountingStream struct {
 	calls *int
 }
 
-func (s *binaryPhase5CountingStream) NextPQ() (core.PQTerm, core.PQStream, core.Status) {
+func (s *binaryPhase5CountingStream) NextPQ() (core.PQTerm, core.PQStream, core.Status, error) {
 	if s.calls == nil {
 		panic("binaryPhase5CountingStream calls counter is nil")
 	}
-	*s.calls++
+	(*s.calls)++
 
 	if len(s.steps) == 0 {
 		return core.PQTerm{
 			P: big.NewInt(0),
 			Q: big.NewInt(0),
-		}, s, core.StatusEOF
+		}, s, core.StatusEOF, nil
 	}
 
 	head := s.steps[0]
@@ -32,14 +33,14 @@ func (s *binaryPhase5CountingStream) NextPQ() (core.PQTerm, core.PQStream, core.
 		calls: s.calls,
 	}
 
-	return head.Term, tail, core.StatusOK
+	return head.Term, tail, core.StatusOK, nil
 }
 
-func (s *binaryPhase5CountingStream) Range() core.Range {
+func (s *binaryPhase5CountingStream) Range() (core.Range, error) {
 	if len(s.steps) == 0 {
-		panic("Range() is undefined on EOF PQStream")
+		return core.Range{}, fmt.Errorf("binaryPhase5CountingStream.Range: undefined on EOF PQStream")
 	}
-	return s.steps[0].Range
+	return s.steps[0].Range, nil
 }
 
 func TestBB_GCF_BinaryProjectXPassesThroughLeftInput(t *testing.T) {
@@ -72,7 +73,6 @@ func TestBB_GCF_BinaryProjectXPassesThroughLeftInput(t *testing.T) {
 	}
 
 	g := core.NewGCF2(binaryPhase5ProjectXCoeffs(), x, y)
-
 	binaryPhase5AssertRCFSequence(t, g, []int64{3, 1, 4})
 }
 
@@ -102,7 +102,6 @@ func TestBB_GCF_BinaryProjectYPassesThroughRightInput(t *testing.T) {
 	}
 
 	g := core.NewGCF2(binaryPhase5ProjectYCoeffs(), x, y)
-
 	binaryPhase5AssertRCFSequence(t, g, []int64{2, 2})
 }
 
@@ -136,7 +135,6 @@ func TestBB_GCF_BinaryCollapseContinuesAfterOneSideEOF(t *testing.T) {
 	}
 
 	g := core.NewGCF2(binaryPhase5AddCoeffs(), x, y)
-
 	binaryPhase5AssertRCFSequence(t, g, []int64{3, 2})
 }
 
@@ -170,7 +168,10 @@ func TestBB_GCF_BinaryTieBreakConsumesXFirst(t *testing.T) {
 
 	g := core.NewGCF2(binaryPhase5ProjectXCoeffs(), x, y)
 
-	term, status := g.NextRCF()
+	term, status, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
 	if status != core.StatusOK {
 		t.Fatalf("first status = %v, want %v", status, core.StatusOK)
 	}
@@ -190,7 +191,10 @@ func binaryPhase5AssertRCFSequence(t *testing.T, g *core.GCF, want []int64) {
 	t.Helper()
 
 	for i, w := range want {
-		got, status := g.NextRCF()
+		got, status, err := g.NextRCF()
+		if err != nil {
+			t.Fatalf("term %d NextRCF error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -199,7 +203,10 @@ func binaryPhase5AssertRCFSequence(t *testing.T, g *core.GCF, want []int64) {
 		}
 	}
 
-	_, eofStatus := g.NextRCF()
+	_, eofStatus, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
@@ -273,4 +280,4 @@ func binaryPhase5InsideRange(lo, hi int64) core.Range {
 	}
 }
 
-// core/gcf_binary_phase5_bb_test.go v1
+// core/gcf_binary_phase5_bb_test.go v2
