@@ -1,4 +1,4 @@
-// core/feedback_rcf_stream.go v3
+// core/feedback_rcf_stream.go v4
 package core
 
 import (
@@ -27,7 +27,6 @@ func (s *feedbackRCFStream) Append(term RCFTerm, rng Range) error {
 	if s.closed {
 		return fmt.Errorf("feedbackRCFStream.Append: %w", ErrAppendAfterClose)
 	}
-
 	s.terms = append(s.terms, cloneFeedbackRCFTerm(term))
 	s.ranges = append(s.ranges, cloneFeedbackRCFRange(rng))
 	return nil
@@ -56,14 +55,18 @@ func (s *feedbackRCFStream) NextRCF() (RCFTerm, Status, error) {
 	return NewRCFTerm(nil), StatusEOF, fmt.Errorf("feedbackRCFStream.NextRCF: %w", ErrNoTermAvailableBeforeClose)
 }
 
-func (s *feedbackRCFStream) Range() (Range, error) {
+func (s *feedbackRCFStream) CurrentInterval() (Interval, error) {
 	if s == nil {
-		return Range{}, fmt.Errorf("feedbackRCFStream.Range: %w", ErrNilReceiver)
+		return Interval{}, fmt.Errorf("feedbackRCFStream.CurrentInterval: %w", ErrNilReceiver)
 	}
 	if s.next >= len(s.ranges) {
-		return Range{}, fmt.Errorf("feedbackRCFStream.Range: %w", ErrNoRemainingSuffixRange)
+		return Interval{}, fmt.Errorf("feedbackRCFStream.CurrentInterval: %w", ErrNoRemainingSuffixRange)
 	}
 	return cloneFeedbackRCFRange(s.ranges[s.next]), nil
+}
+
+func (s *feedbackRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func cloneFeedbackRCFTerm(term RCFTerm) RCFTerm {
@@ -90,4 +93,4 @@ func cloneFeedbackRCFRational(r Rational) Rational {
 	return NewRational(r.Num(), r.Den())
 }
 
-// core/feedback_rcf_stream.go v3
+// core/feedback_rcf_stream.go v4

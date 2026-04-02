@@ -1,4 +1,4 @@
-// core/rcf_to_pq.go v2
+// core/rcf_to_pq.go v3
 package core
 
 import (
@@ -37,11 +37,15 @@ func (s *rcfAsPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	}, s, StatusOK, nil
 }
 
-func (s *rcfAsPQStream) Range() (Range, error) {
+func (s *rcfAsPQStream) CurrentInterval() (Interval, error) {
 	if s == nil || s.src == nil {
-		return Range{}, fmt.Errorf("rcfAsPQStream.Range: %w", ErrNilReceiver)
+		return Interval{}, fmt.Errorf("rcfAsPQStream.CurrentInterval: %w", ErrNilReceiver)
 	}
-	return s.src.Range()
+	return s.src.CurrentInterval()
 }
 
-// core/rcf_to_pq.go v2
+func (s *rcfAsPQStream) Range() (Range, error) {
+	return s.CurrentInterval()
+}
+
+// core/rcf_to_pq.go v3

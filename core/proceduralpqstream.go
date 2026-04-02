@@ -1,4 +1,4 @@
-// core/proceduralpqstream.go v2
+// core/proceduralpqstream.go v3
 package core
 
 import (
@@ -21,7 +21,6 @@ func NewProceduralPQStream(first FinitePQStep, next ProceduralPQNext) (PQStream,
 	if !isValidFinitePQTerm(first.Term, true) {
 		return nil, StatusInvalidInput
 	}
-
 	return &proceduralPQStream{
 		step: cloneFinitePQStep(first),
 		next: next,
@@ -38,7 +37,6 @@ func (s *proceduralPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	}
 
 	nextStep, nextNext, status := s.next()
-
 	switch status {
 	case StatusOK:
 		if !isValidFinitePQTerm(nextStep.Term, false) {
@@ -57,11 +55,15 @@ func (s *proceduralPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	}
 }
 
-func (s *proceduralPQStream) Range() (Range, error) {
+func (s *proceduralPQStream) CurrentInterval() (Interval, error) {
 	if s == nil {
-		return Range{}, fmt.Errorf("proceduralPQStream.Range: %w", ErrNilReceiver)
+		return Interval{}, fmt.Errorf("proceduralPQStream.CurrentInterval: %w", ErrNilReceiver)
 	}
 	return cloneRange(s.step.Range), nil
+}
+
+func (s *proceduralPQStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func (s *invalidPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
@@ -71,8 +73,12 @@ func (s *invalidPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	}, s, s.status, nil
 }
 
-func (s *invalidPQStream) Range() (Range, error) {
-	return Range{}, fmt.Errorf("invalidPQStream.Range: %w", ErrUndefinedRangeOnBadStream)
+func (s *invalidPQStream) CurrentInterval() (Interval, error) {
+	return Interval{}, fmt.Errorf("invalidPQStream.CurrentInterval: %w", ErrUndefinedRangeOnBadStream)
 }
 
-// core/proceduralpqstream.go v2
+func (s *invalidPQStream) Range() (Range, error) {
+	return s.CurrentInterval()
+}
+
+// core/proceduralpqstream.go v3

@@ -1,4 +1,4 @@
-// core/feedbackrcf.go v2
+// core/feedbackrcf.go v3
 package core
 
 import "fmt"
@@ -108,17 +108,21 @@ func (c *feedbackRCFCursor) NextRCF() (RCFTerm, Status, error) {
 	return NewRCFTerm(term.A()), StatusOK, nil
 }
 
-func (c *feedbackRCFCursor) Range() (Range, error) {
+func (c *feedbackRCFCursor) CurrentInterval() (Interval, error) {
 	if c == nil || c.owner == nil {
-		return Range{}, fmt.Errorf("feedbackRCFCursor.Range: %w", ErrNilReceiver)
+		return Interval{}, fmt.Errorf("feedbackRCFCursor.CurrentInterval: %w", ErrNilReceiver)
 	}
 	if err := c.owner.ensureRange(c.next); err != nil {
-		return Range{}, err
+		return Interval{}, err
 	}
 	if c.next >= len(c.owner.ranges) {
-		return Range{}, fmt.Errorf("feedbackRCFCursor.Range: %w", ErrUndefinedRangeOnEOFStream)
+		return Interval{}, fmt.Errorf("feedbackRCFCursor.CurrentInterval: %w", ErrUndefinedRangeOnEOFStream)
 	}
 	return cloneRange(c.owner.ranges[c.next]), nil
 }
 
-// core/feedbackrcf.go v2
+func (c *feedbackRCFCursor) Range() (Range, error) {
+	return c.CurrentInterval()
+}
+
+// core/feedbackrcf.go v3

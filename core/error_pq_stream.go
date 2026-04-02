@@ -1,4 +1,4 @@
-// core/error_pq_stream.go v1
+// core/error_pq_stream.go v2
 package core
 
 import "math/big"
@@ -18,8 +18,12 @@ func (s *errorPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	}, s, StatusEOF, s.err
 }
 
-func (s *errorPQStream) Range() (Range, error) {
-	return Range{}, s.err
+func (s *errorPQStream) CurrentInterval() (Interval, error) {
+	return Interval{}, s.err
 }
 
-// core/error_pq_stream.go v1
+func (s *errorPQStream) Range() (Range, error) {
+	return s.CurrentInterval()
+}
+
+// core/error_pq_stream.go v2

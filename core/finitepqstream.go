@@ -1,4 +1,4 @@
-// core/finitepqstream.go v2
+// core/finitepqstream.go v3
 package core
 
 import (
@@ -22,7 +22,6 @@ var finitePQEOF PQStream = &eofPQStream{}
 
 func NewFinitePQStream(steps []FinitePQStep) (PQStream, Status) {
 	tail := finitePQEOF
-
 	for i := len(steps) - 1; i >= 0; i-- {
 		if !isValidFinitePQTerm(steps[i].Term, i == 0) {
 			return nil, StatusInvalidInput
@@ -32,7 +31,6 @@ func NewFinitePQStream(steps []FinitePQStep) (PQStream, Status) {
 			tail: tail,
 		}
 	}
-
 	return tail, StatusOK
 }
 
@@ -43,11 +41,15 @@ func (s *finitePQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	return clonePQTerm(s.step.Term), s.tail, StatusOK, nil
 }
 
-func (s *finitePQStream) Range() (Range, error) {
+func (s *finitePQStream) CurrentInterval() (Interval, error) {
 	if s == nil {
-		return Range{}, fmt.Errorf("finitePQStream.Range: %w", ErrNilReceiver)
+		return Interval{}, fmt.Errorf("finitePQStream.CurrentInterval: %w", ErrNilReceiver)
 	}
 	return cloneRange(s.step.Range), nil
+}
+
+func (s *finitePQStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func (s *eofPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
@@ -57,8 +59,12 @@ func (s *eofPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	}, finitePQEOF, StatusEOF, nil
 }
 
+func (s *eofPQStream) CurrentInterval() (Interval, error) {
+	return Interval{}, fmt.Errorf("eofPQStream.CurrentInterval: %w", ErrUndefinedRangeOnEOFStream)
+}
+
 func (s *eofPQStream) Range() (Range, error) {
-	return Range{}, fmt.Errorf("eofPQStream.Range: %w", ErrUndefinedRangeOnEOFStream)
+	return s.CurrentInterval()
 }
 
 func isValidFinitePQTerm(term PQTerm, isFirst bool) bool {
@@ -90,10 +96,17 @@ func clonePQTerm(term PQTerm) PQTerm {
 
 func cloneRange(r Range) Range {
 	return Range{
-		Lo:     Endpoint{Value: NewRational(r.Lo.Value.Num(), r.Lo.Value.Den()), Open: r.Lo.Open},
-		Hi:     Endpoint{Value: NewRational(r.Hi.Value.Num(), r.Hi.Value.Den()), Open: r.Hi.Open},
+		Lo: Endpoint{
+			Value: NewRational(r.Lo.Value.Num(), r.Lo.Value.Den()),
+			Open:  r.Lo.Open,
+		},
+		Hi: Endpoint{
+			Value: NewRational(r.Hi.Value.Num(), r.Hi.Value.Den()),
+			Open:  r.Hi.Open,
+		},
 		Inside: r.Inside,
+		Kind_:  r.Kind_,
 	}
 }
 
-// core/finitepqstream.go v2
+// core/finitepqstream.go v3

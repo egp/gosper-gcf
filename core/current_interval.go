@@ -1,4 +1,4 @@
-// core/current_interval.go v1
+// core/current_interval.go v2
 package core
 
 import "fmt"
@@ -11,14 +11,14 @@ func CurrentIntervalOfPQ(src PQStream) (Interval, error) {
 	if src == nil {
 		return Interval{}, fmt.Errorf("CurrentIntervalOfPQ: %w", ErrNilReceiver)
 	}
-	return src.Range()
+	return src.CurrentInterval()
 }
 
 func CurrentIntervalOfRCF(src RCFStream) (Interval, error) {
 	if src == nil {
 		return Interval{}, fmt.Errorf("CurrentIntervalOfRCF: %w", ErrNilReceiver)
 	}
-	return src.Range()
+	return src.CurrentInterval()
 }
 
-// core/current_interval.go v1
+// core/current_interval.go v2

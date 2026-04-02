@@ -1,4 +1,4 @@
-// trig/replay_rcf.go v4
+// trig/replay_rcf.go v5
 package trig
 
 import (
@@ -25,6 +25,10 @@ type staticRangePQReplay struct {
 	rng core.Range
 }
 
+type errorRCFReplay struct {
+	err error
+}
+
 type errorPQReplay struct {
 	err error
 }
@@ -37,9 +41,10 @@ func newReplayRCF(src core.RCFStream) *replayRCF {
 	}
 
 	r := &replayRCF{src: src}
-	initial, err := src.Range()
+
+	initial, err := src.CurrentInterval()
 	if err != nil {
-		r.err = fmt.Errorf("newReplayRCF: source range: %w", err)
+		r.err = fmt.Errorf("newReplayRCF: source interval: %w", err)
 		return r
 	}
 	r.ranges = []core.Range{cloneRangeReplay(initial)}
@@ -76,7 +81,7 @@ func (r *replayRCF) ensureCached(index int) error {
 			current := r.ranges[len(r.terms)]
 			next, nextErr := suffixRangeAfterRCFTermReplay(current, term)
 			if nextErr != nil {
-				r.err = fmt.Errorf("(*replayRCF).ensureCached: next suffix range: %w", nextErr)
+				r.err = fmt.Errorf("(*replayRCF).ensureCached: next suffix interval: %w", nextErr)
 				break
 			}
 			r.terms = append(r.terms, core.NewRCFTerm(term.A()))
@@ -97,32 +102,33 @@ func (f *replayRCFFork) NextRCF() (core.RCFTerm, core.Status, error) {
 	if f == nil || f.root == nil {
 		return core.NewRCFTerm(nil), core.StatusEOF, fmt.Errorf("(*replayRCFFork).NextRCF: %w", core.ErrNilReceiver)
 	}
-
 	if err := f.root.ensureCached(f.index); err != nil {
 		return core.NewRCFTerm(nil), core.StatusEOF, err
 	}
 	if f.index >= len(f.root.terms) {
 		return core.NewRCFTerm(nil), core.StatusEOF, nil
 	}
-
 	term := f.root.terms[f.index]
 	f.index++
 	return core.NewRCFTerm(term.A()), core.StatusOK, nil
 }
 
-func (f *replayRCFFork) Range() (core.Range, error) {
+func (f *replayRCFFork) CurrentInterval() (core.Interval, error) {
 	if f == nil || f.root == nil {
-		return core.Range{}, fmt.Errorf("(*replayRCFFork).Range: %w", core.ErrNilReceiver)
+		return core.Interval{}, fmt.Errorf("(*replayRCFFork).CurrentInterval: %w", core.ErrNilReceiver)
 	}
-
 	err := f.root.ensureCached(f.index)
 	if f.index < len(f.root.ranges) {
 		return cloneRangeReplay(f.root.ranges[f.index]), nil
 	}
 	if err != nil {
-		return core.Range{}, err
+		return core.Interval{}, err
 	}
-	return core.Range{}, fmt.Errorf("(*replayRCFFork).Range: %w", core.ErrUndefinedRangeOnEOFStream)
+	return core.Interval{}, fmt.Errorf("(*replayRCFFork).CurrentInterval: %w", core.ErrUndefinedRangeOnEOFStream)
+}
+
+func (f *replayRCFFork) Range() (core.Range, error) {
+	return f.CurrentInterval()
 }
 
 func (s *staticRangePQReplay) NextPQ() (core.PQTerm, core.PQStream, core.Status, error) {
@@ -132,11 +138,33 @@ func (s *staticRangePQReplay) NextPQ() (core.PQTerm, core.PQStream, core.Status,
 	return core.PQTerm{}, s, core.StatusEOF, nil
 }
 
-func (s *staticRangePQReplay) Range() (core.Range, error) {
+func (s *staticRangePQReplay) CurrentInterval() (core.Interval, error) {
 	if s == nil {
-		return core.Range{}, fmt.Errorf("(*staticRangePQReplay).Range: %w", core.ErrNilReceiver)
+		return core.Interval{}, fmt.Errorf("(*staticRangePQReplay).CurrentInterval: %w", core.ErrNilReceiver)
 	}
 	return cloneRangeReplay(s.rng), nil
+}
+
+func (s *staticRangePQReplay) Range() (core.Range, error) {
+	return s.CurrentInterval()
+}
+
+func (s *errorRCFReplay) NextRCF() (core.RCFTerm, core.Status, error) {
+	if s == nil {
+		return core.NewRCFTerm(nil), core.StatusEOF, fmt.Errorf("(*errorRCFReplay).NextRCF: %w", core.ErrNilReceiver)
+	}
+	return core.NewRCFTerm(nil), core.StatusEOF, s.err
+}
+
+func (s *errorRCFReplay) CurrentInterval() (core.Interval, error) {
+	if s == nil {
+		return core.Interval{}, fmt.Errorf("(*errorRCFReplay).CurrentInterval: %w", core.ErrNilReceiver)
+	}
+	return core.Interval{}, s.err
+}
+
+func (s *errorRCFReplay) Range() (core.Range, error) {
+	return s.CurrentInterval()
 }
 
 func (s *errorPQReplay) NextPQ() (core.PQTerm, core.PQStream, core.Status, error) {
@@ -146,11 +174,15 @@ func (s *errorPQReplay) NextPQ() (core.PQTerm, core.PQStream, core.Status, error
 	return core.PQTerm{}, s, core.StatusEOF, s.err
 }
 
-func (s *errorPQReplay) Range() (core.Range, error) {
+func (s *errorPQReplay) CurrentInterval() (core.Interval, error) {
 	if s == nil {
-		return core.Range{}, fmt.Errorf("(*errorPQReplay).Range: %w", core.ErrNilReceiver)
+		return core.Interval{}, fmt.Errorf("(*errorPQReplay).CurrentInterval: %w", core.ErrNilReceiver)
 	}
-	return core.Range{}, s.err
+	return core.Interval{}, s.err
+}
+
+func (s *errorPQReplay) Range() (core.Range, error) {
+	return s.CurrentInterval()
 }
 
 func suffixRangeAfterRCFTermReplay(current core.Range, term core.RCFTerm) (core.Range, error) {
@@ -183,8 +215,7 @@ func suffixRangeViaUnaryRangeReplay(current core.Range, a *big.Int) (core.Range,
 		},
 		&staticRangePQReplay{rng: current},
 	)
-
-	rng, err := g.Range()
+	rng, err := g.CurrentInterval()
 	if err != nil {
 		return core.Range{}, err
 	}
@@ -243,4 +274,4 @@ func cloneRationalReplay(r core.Rational) core.Rational {
 	return core.NewRational(r.Num(), r.Den())
 }
 
-// trig/replay_rcf.go v4
+// trig/replay_rcf.go v5

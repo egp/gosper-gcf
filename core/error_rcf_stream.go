@@ -1,4 +1,4 @@
-// core/error_rcf_stream.go v1
+// core/error_rcf_stream.go v2
 package core
 
 type errorRCFStream struct {
@@ -13,8 +13,12 @@ func (s *errorRCFStream) NextRCF() (RCFTerm, Status, error) {
 	return NewRCFTerm(nil), StatusEOF, s.err
 }
 
-func (s *errorRCFStream) Range() (Range, error) {
-	return Range{}, s.err
+func (s *errorRCFStream) CurrentInterval() (Interval, error) {
+	return Interval{}, s.err
 }
 
-// core/error_rcf_stream.go v1
+func (s *errorRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
+}
+
+// core/error_rcf_stream.go v2

@@ -1,4 +1,4 @@
-// named/pi.go v8
+// named/pi.go v9
 package named
 
 import (
@@ -26,7 +26,6 @@ func piGaussTermAt(index int) (core.PQTerm, error) {
 			Q: big.NewInt(4),
 		}, nil
 	}
-
 	n := int64(index)
 	return core.PQTerm{
 		P: big.NewInt(2*n - 1),
@@ -77,20 +76,22 @@ func (s *piGaussStream) NextPQ() (core.PQTerm, core.PQStream, core.Status, error
 	if s == nil {
 		return core.PQTerm{}, s, core.StatusEOF, fmt.Errorf("piGaussStream.NextPQ: %w", core.ErrNilReceiver)
 	}
-
 	term, err := piGaussTermAt(s.index)
 	if err != nil {
 		return core.PQTerm{}, s, core.StatusEOF, err
 	}
-
 	return term, &piGaussStream{index: s.index + 1}, core.StatusOK, nil
 }
 
-func (s *piGaussStream) Range() (core.Range, error) {
+func (s *piGaussStream) CurrentInterval() (core.Interval, error) {
 	if s == nil {
-		return core.Range{}, fmt.Errorf("piGaussStream.Range: %w", core.ErrNilReceiver)
+		return core.Interval{}, fmt.Errorf("piGaussStream.CurrentInterval: %w", core.ErrNilReceiver)
 	}
 	return piGaussLookaheadRange(s.index)
 }
 
-// named/pi.go v8
+func (s *piGaussStream) Range() (core.Range, error) {
+	return s.CurrentInterval()
+}
+
+// named/pi.go v9
