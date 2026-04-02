@@ -1,4 +1,4 @@
-// core/gcf_binary.go v1
+// core/gcf_binary.go v2
 package core
 
 import "fmt"
@@ -7,8 +7,12 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 	for {
 		if isEOFPQStream(g.binary.x) && isEOFPQStream(g.binary.y) {
 			collapsed := g.binary.engine.CollapseBinaryBothEOF()
+			terms, err := rcfTermsFromRationalChecked(collapsed)
+			if err != nil {
+				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse both EOF terms: %w", err)
+			}
 			g.terminal = &exactTerminalState{
-				terms: cloneRCFTerms(rcfTermsFromRational(collapsed)),
+				terms: cloneRCFTerms(terms),
 				rng:   exactRangeFromRational(collapsed),
 				next:  0,
 			}
@@ -21,8 +25,12 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 			if err != nil {
 				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse X EOF: %w", err)
 			}
+			terms, err := rcfTermsFromRationalChecked(final)
+			if err != nil {
+				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse X EOF terms: %w", err)
+			}
 			g.terminal = &exactTerminalState{
-				terms: cloneRCFTerms(rcfTermsFromRational(final)),
+				terms: cloneRCFTerms(terms),
 				rng:   exactRangeFromRational(final),
 				next:  0,
 			}
@@ -35,8 +43,12 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 			if err != nil {
 				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse Y EOF: %w", err)
 			}
+			terms, err := rcfTermsFromRationalChecked(final)
+			if err != nil {
+				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse Y EOF terms: %w", err)
+			}
 			g.terminal = &exactTerminalState{
-				terms: cloneRCFTerms(rcfTermsFromRational(final)),
+				terms: cloneRCFTerms(terms),
 				rng:   exactRangeFromRational(final),
 				next:  0,
 			}
@@ -140,4 +152,4 @@ func (g *GCF) binaryRange() (Range, error) {
 	}
 }
 
-// core/gcf_binary.go v1
+// core/gcf_binary.go v2

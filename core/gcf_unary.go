@@ -1,4 +1,4 @@
-// core/gcf_unary.go v1
+// core/gcf_unary.go v2
 package core
 
 import "fmt"
@@ -7,8 +7,12 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status, error) {
 	for {
 		if isEOFPQStream(g.unary.x) {
 			collapsed := g.unary.engine.CollapseUnaryEOF()
+			terms, err := rcfTermsFromRationalChecked(collapsed)
+			if err != nil {
+				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextUnaryRCF: collapse EOF terms: %w", err)
+			}
 			g.terminal = &exactTerminalState{
-				terms: cloneRCFTerms(rcfTermsFromRational(collapsed)),
+				terms: cloneRCFTerms(terms),
 				rng:   exactRangeFromRational(collapsed),
 				next:  0,
 			}
@@ -79,4 +83,4 @@ func exactRationalFromUnaryEngine(engine unaryEngine, stream PQStream) (Rational
 	}
 }
 
-// core/gcf_unary.go v1
+// core/gcf_unary.go v2

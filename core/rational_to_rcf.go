@@ -1,24 +1,35 @@
-// core/rational_to_rcf.go v2
+// core/rational_to_rcf.go v3
 package core
 
 import "math/big"
 
 func rcfTermsFromRational(r Rational) []RCFTerm {
+	terms, err := rcfTermsFromRationalChecked(r)
+	if err != nil {
+		return nil
+	}
+	return terms
+}
+
+func rcfTermsFromRationalChecked(r Rational) ([]RCFTerm, error) {
 	n := r.Num()
 	d := r.Den()
 
 	if d.Sign() == 0 {
-		panic("rcfTermsFromRational: zero denominator")
+		return nil, ErrZeroRationalDenominator
 	}
 
 	terms := make([]RCFTerm, 0, 8)
 
 	for {
-		q, rem := floorQuoRem(n, d)
+		q, rem, err := floorQuoRemChecked(n, d)
+		if err != nil {
+			return nil, err
+		}
 		terms = append(terms, NewRCFTerm(q))
 
 		if rem.Sign() == 0 {
-			return terms
+			return terms, nil
 		}
 
 		n, d = d, rem
@@ -26,8 +37,16 @@ func rcfTermsFromRational(r Rational) []RCFTerm {
 }
 
 func floorQuoRem(n, d *big.Int) (*big.Int, *big.Int) {
-	if d.Sign() <= 0 {
-		panic("floorQuoRem: denominator must be positive")
+	q, rem, err := floorQuoRemChecked(n, d)
+	if err != nil {
+		return big.NewInt(0), big.NewInt(0)
+	}
+	return q, rem
+}
+
+func floorQuoRemChecked(n, d *big.Int) (*big.Int, *big.Int, error) {
+	if d == nil || d.Sign() <= 0 {
+		return nil, nil, ErrNonPositiveQuoDenominator
 	}
 
 	q := new(big.Int).Quo(n, d)
@@ -38,7 +57,7 @@ func floorQuoRem(n, d *big.Int) (*big.Int, *big.Int) {
 		rem.Add(rem, d)
 	}
 
-	return q, rem
+	return q, rem, nil
 }
 
-// core/rational_to_rcf.go v2
+// core/rational_to_rcf.go v3

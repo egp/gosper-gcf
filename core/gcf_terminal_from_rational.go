@@ -1,9 +1,19 @@
-// core/gcf_terminal_from_rational.go v2
+// core/gcf_terminal_from_rational.go v3
 package core
 
+import "fmt"
+
 func newExactTerminalGCFFromRational(r Rational) *GCF {
+	terms, err := rcfTermsFromRationalChecked(r)
+	if err != nil {
+		return &GCF{
+			cfg:    DefaultConfig(),
+			stream: newErrorRCFStream(fmt.Errorf("newExactTerminalGCFFromRational: %w", err)),
+		}
+	}
+
 	return NewExactTerminalGCF(
-		rcfTermsFromRational(r),
+		terms,
 		Range{
 			Lo: Endpoint{
 				Value: r,
@@ -18,4 +28,4 @@ func newExactTerminalGCFFromRational(r Rational) *GCF {
 	)
 }
 
-// core/gcf_terminal_from_rational.go v2
+// core/gcf_terminal_from_rational.go v3

@@ -1,4 +1,4 @@
-// core/gcf_types.go v1
+// core/gcf_types.go v2
 package core
 
 import "fmt"
@@ -136,8 +136,15 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of Y: %w", err)),
 			}
 		}
+		terms, err := rcfTermsFromRationalChecked(final)
+		if err != nil {
+			return &GCF{
+				cfg:    cfg,
+				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of Y terms: %w", err)),
+			}
+		}
 		return newExactTerminalGCFWithResolvedConfig(
-			rcfTermsFromRational(final),
+			terms,
 			exactRangeFromRational(final),
 			cfg,
 		)
@@ -150,8 +157,15 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of X: %w", err)),
 			}
 		}
+		terms, err := rcfTermsFromRationalChecked(final)
+		if err != nil {
+			return &GCF{
+				cfg:    cfg,
+				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of X terms: %w", err)),
+			}
+		}
 		return newExactTerminalGCFWithResolvedConfig(
-			rcfTermsFromRational(final),
+			terms,
 			exactRangeFromRational(final),
 			cfg,
 		)
@@ -233,4 +247,4 @@ func (g *GCF) Config() Config {
 	return g.cfg
 }
 
-// core/gcf_types.go v1
+// core/gcf_types.go v2

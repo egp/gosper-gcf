@@ -1,4 +1,4 @@
-// core/dlft.go v5
+// core/dlft.go v6
 package core
 
 import (
@@ -56,12 +56,16 @@ func (s dlftState) CandidateRange(xRange Range) (Range, error) {
 		xRange.Hi.Value,
 	}
 
-	points = append(points, rationalRootsQuadratic(
+	denRoots, err := rationalRootsQuadraticChecked(
 		cloneBigIntOrZero(s.D),
 		cloneBigIntOrZero(s.E),
 		cloneBigIntOrZero(s.F),
 		xRange,
-	)...)
+	)
+	if err != nil {
+		return Range{}, fmt.Errorf("dlftState.CandidateRange: denominator roots: %w", err)
+	}
+	points = append(points, denRoots...)
 
 	critA := new(big.Int).Sub(
 		mul(s.A, s.E),
@@ -79,12 +83,16 @@ func (s dlftState) CandidateRange(xRange Range) (Range, error) {
 		mul(s.C, s.E),
 	)
 
-	points = append(points, rationalRootsQuadratic(
+	critRoots, err := rationalRootsQuadraticChecked(
 		critA,
 		critB,
 		critC,
 		xRange,
-	)...)
+	)
+	if err != nil {
+		return Range{}, fmt.Errorf("dlftState.CandidateRange: critical roots: %w", err)
+	}
+	points = append(points, critRoots...)
 
 	values := make([]Rational, 0, len(points))
 	sawZeroDen := false
@@ -102,7 +110,12 @@ func (s dlftState) CandidateRange(xRange Range) (Range, error) {
 		case -1:
 			sawNegDen = true
 		}
-		values = append(values, NewRational(num, den))
+
+		value, err := NewRationalChecked(num, den)
+		if err != nil {
+			return Range{}, fmt.Errorf("dlftState.CandidateRange: image value: %w", err)
+		}
+		values = append(values, value)
 	}
 
 	if sawZeroDen || (sawPosDen && sawNegDen) {
@@ -221,8 +234,16 @@ func scaledDLFTConstant(coeff, xden2 *big.Int) *big.Int {
 }
 
 func rationalRootsQuadratic(a, b, c *big.Int, xRange Range) []Rational {
+	out, err := rationalRootsQuadraticChecked(a, b, c, xRange)
+	if err != nil {
+		return nil
+	}
+	return out
+}
+
+func rationalRootsQuadraticChecked(a, b, c *big.Int, xRange Range) ([]Rational, error) {
 	if a.Sign() == 0 {
-		return rationalRootsLinear(b, c, xRange)
+		return rationalRootsLinearChecked(b, c, xRange)
 	}
 
 	disc := new(big.Int).Sub(
@@ -230,19 +251,25 @@ func rationalRootsQuadratic(a, b, c *big.Int, xRange Range) []Rational {
 		mul(big.NewInt(4), mul(a, c)),
 	)
 	if disc.Sign() < 0 {
-		return nil
+		return nil, nil
 	}
 
 	sqrtDisc, ok := perfectSquareRoot(disc)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	twoA := mul(big.NewInt(2), a)
 	negB := new(big.Int).Neg(cloneBigIntOrZero(b))
 
-	r1 := NewRational(new(big.Int).Sub(cloneBigIntOrZero(negB), sqrtDisc), twoA)
-	r2 := NewRational(new(big.Int).Add(cloneBigIntOrZero(negB), sqrtDisc), twoA)
+	r1, err := NewRationalChecked(new(big.Int).Sub(cloneBigIntOrZero(negB), sqrtDisc), twoA)
+	if err != nil {
+		return nil, err
+	}
+	r2, err := NewRationalChecked(new(big.Int).Add(cloneBigIntOrZero(negB), sqrtDisc), twoA)
+	if err != nil {
+		return nil, err
+	}
 
 	out := make([]Rational, 0, 2)
 	if rationalInClosedInsideRange(r1, xRange) {
@@ -251,19 +278,30 @@ func rationalRootsQuadratic(a, b, c *big.Int, xRange Range) []Rational {
 	if r2.Cmp(r1) != 0 && rationalInClosedInsideRange(r2, xRange) {
 		out = append(out, r2)
 	}
-	return out
+	return out, nil
 }
 
 func rationalRootsLinear(a, b *big.Int, xRange Range) []Rational {
-	if a.Sign() == 0 {
+	out, err := rationalRootsLinearChecked(a, b, xRange)
+	if err != nil {
 		return nil
 	}
+	return out
+}
 
-	root := NewRational(new(big.Int).Neg(cloneBigIntOrZero(b)), a)
-	if rationalInClosedInsideRange(root, xRange) {
-		return []Rational{root}
+func rationalRootsLinearChecked(a, b *big.Int, xRange Range) ([]Rational, error) {
+	if a.Sign() == 0 {
+		return nil, nil
 	}
-	return nil
+
+	root, err := NewRationalChecked(new(big.Int).Neg(cloneBigIntOrZero(b)), a)
+	if err != nil {
+		return nil, err
+	}
+	if rationalInClosedInsideRange(root, xRange) {
+		return []Rational{root}, nil
+	}
+	return nil, nil
 }
 
 func rationalInClosedInsideRange(x Rational, r Range) bool {
@@ -323,4 +361,4 @@ func perfectSquareRoot(n *big.Int) (*big.Int, bool) {
 	return nil, false
 }
 
-// core/dlft.go v5
+// core/dlft.go v6
