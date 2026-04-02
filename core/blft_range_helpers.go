@@ -1,4 +1,4 @@
-// core/blft_range_helpers.go v3
+// core/blft_range_helpers.go v4
 package core
 
 import (
@@ -92,18 +92,6 @@ func rangeIncludesRational(r Range, q Rational) bool {
 	return leftIncluded || rightIncluded
 }
 
-func collectRationalsFromEndpointsAndValue(lo Endpoint, loOK bool, hi Endpoint, hiOK bool, extra Rational) []Rational {
-	values := make([]Rational, 0, 3)
-	if loOK {
-		values = append(values, lo.Value)
-	}
-	if hiOK {
-		values = append(values, hi.Value)
-	}
-	values = append(values, extra)
-	return values
-}
-
 func outsideRangeFromEndpointValues(lo Endpoint, loOK bool, hi Endpoint, hiOK bool) Range {
 	values := make([]Rational, 0, 2)
 	if loOK {
@@ -113,34 +101,6 @@ func outsideRangeFromEndpointValues(lo Endpoint, loOK bool, hi Endpoint, hiOK bo
 		values = append(values, hi.Value)
 	}
 	return outsideRangeFromValues(values)
-}
-
-func insideHullRangeFromValues(values []Rational) Range {
-	if len(values) == 0 {
-		zero := RationalFromInt64(0)
-		return Range{
-			Lo:     Endpoint{Value: zero, Open: false},
-			Hi:     Endpoint{Value: zero, Open: false},
-			Inside: true,
-		}
-	}
-
-	lo := values[0]
-	hi := values[0]
-	for _, v := range values[1:] {
-		if v.Cmp(lo) < 0 {
-			lo = v
-		}
-		if v.Cmp(hi) > 0 {
-			hi = v
-		}
-	}
-
-	return Range{
-		Lo:     Endpoint{Value: lo, Open: false},
-		Hi:     Endpoint{Value: hi, Open: false},
-		Inside: true,
-	}
 }
 
 func evalBLFTNumDenAt(s blftState, x, y Rational) (*big.Int, *big.Int) {
@@ -278,4 +238,4 @@ func formatBigIntDebug(x *big.Int) string {
 	return x.String()
 }
 
-// core/blft_range_helpers.go v3
+// core/blft_range_helpers.go v4
