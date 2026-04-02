@@ -7,7 +7,8 @@ func (s blftState) affineXRange(xr Range) (Range, bool) {
 	if !xr.Inside {
 		return Range{}, false
 	}
-	if !isZeroCoeff(s.A) || !isZeroCoeff(s.C) || !isZeroCoeff(s.E) || !isZeroCoeff(s.F) || !isZeroCoeff(s.G) {
+	if !isZeroCoeff(s.A) || !isZeroCoeff(s.C) || !isZeroCoeff(s.E) ||
+		!isZeroCoeff(s.F) || !isZeroCoeff(s.G) {
 		return Range{}, false
 	}
 	if isZeroCoeff(s.H) {
@@ -26,7 +27,8 @@ func (s blftState) affineYRange(yr Range) (Range, bool) {
 	if !yr.Inside {
 		return Range{}, false
 	}
-	if !isZeroCoeff(s.A) || !isZeroCoeff(s.B) || !isZeroCoeff(s.E) || !isZeroCoeff(s.F) || !isZeroCoeff(s.G) {
+	if !isZeroCoeff(s.A) || !isZeroCoeff(s.B) || !isZeroCoeff(s.E) ||
+		!isZeroCoeff(s.F) || !isZeroCoeff(s.G) {
 		return Range{}, false
 	}
 	if isZeroCoeff(s.H) {
