@@ -1,4 +1,4 @@
-// trig/replay_rcf_wb_test.go v1
+// trig/replay_rcf_wb_test.go v2
 package trig
 
 import (
@@ -20,10 +20,9 @@ func TestWB_SuffixRangeAfterRCFTermReplay_MatchesCoreUnaryRange_WhenIntervalTouc
 		},
 		Inside: true,
 	}
-
 	term := core.NewRCFTerm(big.NewInt(3))
 
-	want := core.NewGCF1(
+	want, err := core.NewGCF1(
 		core.BLFTCoefficients{
 			A: big.NewInt(0),
 			B: big.NewInt(0),
@@ -36,8 +35,14 @@ func TestWB_SuffixRangeAfterRCFTermReplay_MatchesCoreUnaryRange_WhenIntervalTouc
 		},
 		&staticRangePQReplay{rng: current},
 	).Range()
+	if err != nil {
+		t.Fatalf("want Range error = %v", err)
+	}
 
-	got := suffixRangeAfterRCFTermReplay(current, term)
+	got, err := suffixRangeAfterRCFTermReplay(current, term)
+	if err != nil {
+		t.Fatalf("suffixRangeAfterRCFTermReplay error = %v", err)
+	}
 
 	assertSameRangeReplayWB(t, got, want)
 }
@@ -70,4 +75,4 @@ func assertSameRangeReplayWB(t *testing.T, got, want core.Range) {
 	}
 }
 
-// trig/replay_rcf_wb_test.go v1
+// trig/replay_rcf_wb_test.go v2

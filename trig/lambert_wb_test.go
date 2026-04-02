@@ -12,49 +12,6 @@ import (
 
 const pendingTestLambertKernel = true
 
-func TestWB_LambertMode_StageOddSequence(t *testing.T) {
-	mode := lambertModeCircular
-	want := []int64{1, 3, 5, 7, 9}
-
-	for stage, w := range want {
-		got := mode.stageOdd(stage)
-		if got.Cmp(big.NewInt(w)) != 0 {
-			t.Fatalf("stageOdd(%d) = %v, want %d", stage, got, w)
-		}
-	}
-}
-
-func TestWB_LambertMode_XYSignByMode(t *testing.T) {
-	if got := lambertModeCircular.xySign(); got != -1 {
-		t.Fatalf("circular xySign = %d, want -1", got)
-	}
-	if got := lambertModeHyperbolic.xySign(); got != 1 {
-		t.Fatalf("hyperbolic xySign = %d, want 1", got)
-	}
-}
-
-func TestWB_LambertMode_CircularStageCoefficients(t *testing.T) {
-	got := lambertModeCircular.stageCoefficients(big.NewInt(3))
-
-	assertBLFTCoefficientsLambert(
-		t,
-		got,
-		0, 1, 0, 0,
-		-1, 0, 0, 3,
-	)
-}
-
-func TestWB_LambertMode_HyperbolicStageCoefficients(t *testing.T) {
-	got := lambertModeHyperbolic.stageCoefficients(big.NewInt(5))
-
-	assertBLFTCoefficientsLambert(
-		t,
-		got,
-		0, 1, 0, 0,
-		1, 0, 0, 5,
-	)
-}
-
 func TestWB_LambertStageGCF_CircularWithZeroTailIsXOverOdd(t *testing.T) {
 	g := lambertStageGCF(
 		lambertModeCircular,
@@ -277,11 +234,72 @@ func assertBigIntEqualLambert(t *testing.T, name string, got *big.Int, want int6
 	}
 }
 
+func TestWB_LambertMode_StageOddSequence(t *testing.T) {
+	mode := lambertModeCircular
+	want := []int64{1, 3, 5, 7, 9}
+	for stage, w := range want {
+		got, err := mode.stageOdd(stage)
+		if err != nil {
+			t.Fatalf("stageOdd(%d) error = %v", stage, err)
+		}
+		if got.Cmp(big.NewInt(w)) != 0 {
+			t.Fatalf("stageOdd(%d) = %v, want %d", stage, got, w)
+		}
+	}
+}
+
+func TestWB_LambertMode_XYSignByMode(t *testing.T) {
+	gotCircular, err := lambertModeCircular.xySign()
+	if err != nil {
+		t.Fatalf("circular xySign error = %v", err)
+	}
+	if gotCircular != -1 {
+		t.Fatalf("circular xySign = %d, want -1", gotCircular)
+	}
+
+	gotHyperbolic, err := lambertModeHyperbolic.xySign()
+	if err != nil {
+		t.Fatalf("hyperbolic xySign error = %v", err)
+	}
+	if gotHyperbolic != 1 {
+		t.Fatalf("hyperbolic xySign = %d, want 1", gotHyperbolic)
+	}
+}
+
+func TestWB_LambertMode_CircularStageCoefficients(t *testing.T) {
+	got, err := lambertModeCircular.stageCoefficients(big.NewInt(3))
+	if err != nil {
+		t.Fatalf("circular stageCoefficients error = %v", err)
+	}
+	assertBLFTCoefficientsLambert(
+		t,
+		got,
+		0, 1, 0, 0,
+		-1, 0, 0, 3,
+	)
+}
+
+func TestWB_LambertMode_HyperbolicStageCoefficients(t *testing.T) {
+	got, err := lambertModeHyperbolic.stageCoefficients(big.NewInt(5))
+	if err != nil {
+		t.Fatalf("hyperbolic stageCoefficients error = %v", err)
+	}
+	assertBLFTCoefficientsLambert(
+		t,
+		got,
+		0, 1, 0, 0,
+		1, 0, 0, 5,
+	)
+}
+
 func assertExactRCFSequenceLambert(t *testing.T, g *core.GCF, want []int64) {
 	t.Helper()
 
 	for i, w := range want {
-		term, status := nextRCFWithTimeoutLambert(t, g, time.Second)
+		term, status, err := nextRCFWithTimeoutLambert(t, g, time.Second)
+		if err != nil {
+			t.Fatalf("term %d NextRCF error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -290,7 +308,10 @@ func assertExactRCFSequenceLambert(t *testing.T, g *core.GCF, want []int64) {
 		}
 	}
 
-	_, eofStatus := nextRCFWithTimeoutLambert(t, g, time.Second)
+	_, eofStatus, err := nextRCFWithTimeoutLambert(t, g, time.Second)
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
@@ -300,7 +321,10 @@ func assertRCFPrefixLambert(t *testing.T, g *core.GCF, want []int64) {
 	t.Helper()
 
 	for i, w := range want {
-		term, status := nextRCFWithTimeoutLambert(t, g, time.Second)
+		term, status, err := nextRCFWithTimeoutLambert(t, g, time.Second)
+		if err != nil {
+			t.Fatalf("term %d NextRCF error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -310,26 +334,28 @@ func assertRCFPrefixLambert(t *testing.T, g *core.GCF, want []int64) {
 	}
 }
 
-func nextRCFWithTimeoutLambert(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status) {
+func nextRCFWithTimeoutLambert(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status, error) {
 	t.Helper()
 
 	type result struct {
 		term   core.RCFTerm
 		status core.Status
+		err    error
 	}
 
 	ch := make(chan result, 1)
+
 	go func() {
-		term, status := g.NextRCF()
-		ch <- result{term: term, status: status}
+		term, status, err := g.NextRCF()
+		ch <- result{term: term, status: status, err: err}
 	}()
 
 	select {
 	case got := <-ch:
-		return got.term, got.status
+		return got.term, got.status, got.err
 	case <-time.After(timeout):
 		t.Fatalf("NextRCF() did not complete within %v", timeout)
-		return core.NewRCFTerm(nil), core.StatusInvalidInput
+		return core.NewRCFTerm(nil), core.StatusInvalidInput, nil
 	}
 }
 
