@@ -1,4 +1,4 @@
-// core/gcf_bb_test.go v2
+// core/gcf_bb_test.go v3
 package core_test
 
 import (
@@ -19,7 +19,10 @@ func TestBB_GCF_ReadFiniteRegularTermsThenEOF(t *testing.T) {
 		exactRange(19, 6),
 	)
 
-	term1, status1 := g.NextRCF()
+	term1, status1, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
 	if status1 != core.StatusOK {
 		t.Fatalf("first status = %v, want %v", status1, core.StatusOK)
 	}
@@ -27,7 +30,10 @@ func TestBB_GCF_ReadFiniteRegularTermsThenEOF(t *testing.T) {
 		t.Fatalf("first term = %v, want 3", term1.A())
 	}
 
-	term2, status2 := g.NextRCF()
+	term2, status2, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("second NextRCF error = %v", err)
+	}
 	if status2 != core.StatusOK {
 		t.Fatalf("second status = %v, want %v", status2, core.StatusOK)
 	}
@@ -35,7 +41,10 @@ func TestBB_GCF_ReadFiniteRegularTermsThenEOF(t *testing.T) {
 		t.Fatalf("second term = %v, want 1", term2.A())
 	}
 
-	term3, status3 := g.NextRCF()
+	term3, status3, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("third NextRCF error = %v", err)
+	}
 	if status3 != core.StatusOK {
 		t.Fatalf("third status = %v, want %v", status3, core.StatusOK)
 	}
@@ -43,7 +52,10 @@ func TestBB_GCF_ReadFiniteRegularTermsThenEOF(t *testing.T) {
 		t.Fatalf("third term = %v, want 4", term3.A())
 	}
 
-	_, status4 := g.NextRCF()
+	_, status4, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("fourth NextRCF error = %v", err)
+	}
 	if status4 != core.StatusEOF {
 		t.Fatalf("fourth status = %v, want %v", status4, core.StatusEOF)
 	}
@@ -58,9 +70,11 @@ func TestBB_GCF_RangeAvailableWhileLive(t *testing.T) {
 		exactRange(19, 8),
 	)
 
-	r1 := g.Range()
+	r1, err := g.Range()
+	if err != nil {
+		t.Fatalf("initial Range error = %v", err)
+	}
 	want := core.NewRational(big.NewInt(19), big.NewInt(8))
-
 	if !r1.Inside {
 		t.Fatal("initial range Inside = false, want true")
 	}
@@ -71,12 +85,18 @@ func TestBB_GCF_RangeAvailableWhileLive(t *testing.T) {
 		)
 	}
 
-	_, status := g.NextRCF()
+	_, status, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("NextRCF error = %v", err)
+	}
 	if status != core.StatusOK {
 		t.Fatalf("NextRCF status = %v, want %v", status, core.StatusOK)
 	}
 
-	r2 := g.Range()
+	r2, err := g.Range()
+	if err != nil {
+		t.Fatalf("live Range error = %v", err)
+	}
 	if !r2.Inside {
 		t.Fatal("live range Inside = false, want true")
 	}
@@ -100,8 +120,14 @@ func TestBB_GCF_ExactStateProducesDeterministicTerms(t *testing.T) {
 	g2 := core.NewExactTerminalGCF(terms, rng)
 
 	for i, want := range []*big.Int{big.NewInt(-1), big.NewInt(2), big.NewInt(3)} {
-		term1, status1 := g1.NextRCF()
-		term2, status2 := g2.NextRCF()
+		term1, status1, err := g1.NextRCF()
+		if err != nil {
+			t.Fatalf("g1 term %d NextRCF error = %v", i+1, err)
+		}
+		term2, status2, err := g2.NextRCF()
+		if err != nil {
+			t.Fatalf("g2 term %d NextRCF error = %v", i+1, err)
+		}
 
 		if status1 != core.StatusOK {
 			t.Fatalf("g1 term %d status = %v, want %v", i+1, status1, core.StatusOK)
@@ -117,8 +143,14 @@ func TestBB_GCF_ExactStateProducesDeterministicTerms(t *testing.T) {
 		}
 	}
 
-	_, status1 := g1.NextRCF()
-	_, status2 := g2.NextRCF()
+	_, status1, err := g1.NextRCF()
+	if err != nil {
+		t.Fatalf("g1 EOF NextRCF error = %v", err)
+	}
+	_, status2, err := g2.NextRCF()
+	if err != nil {
+		t.Fatalf("g2 EOF NextRCF error = %v", err)
+	}
 	if status1 != core.StatusEOF {
 		t.Fatalf("g1 EOF status = %v, want %v", status1, core.StatusEOF)
 	}
@@ -177,6 +209,47 @@ func TestBB_GCF_ConfigOptionalAtCreation(t *testing.T) {
 	}
 }
 
+// new regression coverage for the error-channel migration.
+func TestBB_GCF_ExactTerminalRangeStaysAvailableAfterEOF(t *testing.T) {
+	g := core.NewExactTerminalGCF(
+		[]core.RCFTerm{
+			core.NewRCFTerm(big.NewInt(9)),
+		},
+		exactRange(9, 1),
+	)
+
+	_, status, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
+	if status != core.StatusOK {
+		t.Fatalf("first status = %v, want %v", status, core.StatusOK)
+	}
+
+	_, eofStatus, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
+	if eofStatus != core.StatusEOF {
+		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
+	}
+
+	r, err := g.Range()
+	if err != nil {
+		t.Fatalf("Range after EOF error = %v", err)
+	}
+	want := core.RationalFromInt64(9)
+	if !r.Inside {
+		t.Fatal("Inside = false, want true")
+	}
+	if r.Lo.Value.Cmp(want) != 0 || r.Hi.Value.Cmp(want) != 0 {
+		t.Fatalf("Range after EOF = [%v/%v,%v/%v], want exact 9/1",
+			r.Lo.Value.Num(), r.Lo.Value.Den(),
+			r.Hi.Value.Num(), r.Hi.Value.Den(),
+		)
+	}
+}
+
 func exactRange(num, den int64) core.Range {
 	value := core.NewRational(big.NewInt(num), big.NewInt(den))
 	return core.Range{
@@ -186,6 +259,20 @@ func exactRange(num, den int64) core.Range {
 		},
 		Hi: core.Endpoint{
 			Value: value,
+			Open:  false,
+		},
+		Inside: true,
+	}
+}
+
+func insideRange(lo, hi int64) core.Range {
+	return core.Range{
+		Lo: core.Endpoint{
+			Value: core.RationalFromInt64(lo),
+			Open:  false,
+		},
+		Hi: core.Endpoint{
+			Value: core.RationalFromInt64(hi),
 			Open:  false,
 		},
 		Inside: true,
@@ -205,4 +292,4 @@ func identityCoefficients() core.BLFTCoefficients {
 	}
 }
 
-// core/gcf_bb_test.go v2
+// core/gcf_bb_test.go v3
