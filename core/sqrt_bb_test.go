@@ -152,9 +152,12 @@ func TestBB_GCF_SqrtRejectsNegativeFiniteInput(t *testing.T) {
 		t.Fatalf("NewFinitePQStream status = %v, want %v", status, core.StatusOK)
 	}
 
-	expectPanicSqrt(t, func() {
-		_ = core.Sqrt(stream)
-	})
+	g := core.Sqrt(stream)
+
+	_, _, err := nextRCFWithTimeoutSqrt(t, g, time.Second)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
 }
 
 func shouldSkipPendingSqrt() bool {
@@ -200,17 +203,6 @@ func nextRCFWithTimeoutSqrt(t *testing.T, g *core.GCF, timeout time.Duration) (c
 		t.Fatalf("NextRCF() did not complete within %v", timeout)
 		return core.NewRCFTerm(nil), core.StatusInvalidInput, nil
 	}
-}
-
-func expectPanicSqrt(t *testing.T, fn func()) {
-	t.Helper()
-
-	defer func() {
-		if recover() == nil {
-			t.Fatal("expected panic, got none")
-		}
-	}()
-	fn()
 }
 
 func sqrtExactRange(num, den int64) core.Range {
