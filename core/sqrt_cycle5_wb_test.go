@@ -61,7 +61,7 @@ func TestWB_SqrtObservedRefinementStream_BuildsInnerFromApproximationProxy(t *te
 	if !ok {
 		t.Fatalf("right adapter src type = %T, want *GCF div node", rightAdapter.src)
 	}
-	if divNode.x != x {
+	if divNode.x != PQStream(x) {
 		t.Fatalf("div left operand != x radicand")
 	}
 	if _, ok := divNode.y.(*sqrtApproximationPQStream); !ok {

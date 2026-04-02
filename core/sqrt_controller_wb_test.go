@@ -20,9 +20,13 @@ func (s *sqrtControllerCountingPQStream) NextPQ() (PQTerm, PQStream, Status, err
 	}, s, StatusOK, nil
 }
 
-func (s *sqrtControllerCountingPQStream) Range() (Range, error) {
+func (s *sqrtControllerCountingPQStream) CurrentInterval() (Interval, error) {
 	s.rangeCalls++
 	return s.rng, nil
+}
+
+func (s *sqrtControllerCountingPQStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func TestWB_SqrtController_BuildRefinementGraph_UsesNewtonStructure(t *testing.T) {
@@ -33,6 +37,7 @@ func TestWB_SqrtController_BuildRefinementGraph_UsesNewtonStructure(t *testing.T
 	c := newSqrtController(x)
 	y := c.ourorobosApproximation()
 	got := c.buildRefinement(y)
+
 	if got == nil {
 		t.Fatalf("refinement = nil, want *GCF")
 	}
@@ -60,7 +65,7 @@ func TestWB_SqrtController_BuildRefinementGraph_UsesNewtonStructure(t *testing.T
 	if !ok {
 		t.Fatalf("right adapter src type = %T, want *GCF div node", rightAdapter.src)
 	}
-	if divNode.x != x {
+	if divNode.x != PQStream(x) {
 		t.Fatalf("div left operand != x radicand")
 	}
 	if divNode.y != y {
@@ -78,7 +83,6 @@ func TestWB_SqrtController_HalfSource_IsExactOneHalf(t *testing.T) {
 	if err != nil {
 		t.Fatalf("halfSource Range error = %v", err)
 	}
-
 	want := exactRangeFromRational(NewRational(big.NewInt(1), big.NewInt(2)))
 	assertSqrtControllerExactRange(t, got, want)
 }
@@ -90,6 +94,7 @@ func TestWB_SqrtController_SeedApproximation_DoesNotPrereadX(t *testing.T) {
 
 	c := newSqrtController(x)
 	seed := c.seedApproximation()
+
 	_, _, _, _ = seed.NextPQ()
 
 	if x.nextCalls != 0 {
@@ -99,6 +104,7 @@ func TestWB_SqrtController_SeedApproximation_DoesNotPrereadX(t *testing.T) {
 
 func assertSqrtControllerExactRange(t *testing.T, got Range, want Range) {
 	t.Helper()
+
 	if got.Inside != want.Inside {
 		t.Fatalf("Inside = %v, want %v", got.Inside, want.Inside)
 	}
