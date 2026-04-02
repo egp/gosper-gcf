@@ -1,4 +1,4 @@
-// trig/lambert.go v13
+// trig/lambert.go v14
 package trig
 
 import (
@@ -196,11 +196,15 @@ func (p *pqFromRCFReplay) NextPQ() (core.PQTerm, core.PQStream, core.Status, err
 	}
 }
 
-func (p *pqFromRCFReplay) Range() (core.Range, error) {
+func (p *pqFromRCFReplay) CurrentInterval() (core.Interval, error) {
 	if p == nil || p.fork == nil {
-		return core.Range{}, fmt.Errorf("(*pqFromRCFReplay).Range: %w", core.ErrNilReceiver)
+		return core.Interval{}, fmt.Errorf("(*pqFromRCFReplay).CurrentInterval: %w", core.ErrNilReceiver)
 	}
-	return p.fork.Range()
+	return p.fork.CurrentInterval()
+}
+
+func (p *pqFromRCFReplay) Range() (core.Range, error) {
+	return p.CurrentInterval()
 }
 
 func errorGCF(err error) *core.GCF {
@@ -219,4 +223,4 @@ func errorGCF(err error) *core.GCF {
 	)
 }
 
-// trig/lambert.go v13
+// trig/lambert.go v14

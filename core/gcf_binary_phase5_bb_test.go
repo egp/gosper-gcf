@@ -16,9 +16,9 @@ type binaryPhase5CountingStream struct {
 
 func (s *binaryPhase5CountingStream) NextPQ() (core.PQTerm, core.PQStream, core.Status, error) {
 	if s.calls == nil {
-		panic("binaryPhase5CountingStream calls counter is nil")
+		return core.PQTerm{}, s, core.StatusEOF, fmt.Errorf("binaryPhase5CountingStream.NextPQ: nil calls counter")
 	}
-	(*s.calls)++
+	*s.calls++
 
 	if len(s.steps) == 0 {
 		return core.PQTerm{
@@ -36,11 +36,15 @@ func (s *binaryPhase5CountingStream) NextPQ() (core.PQTerm, core.PQStream, core.
 	return head.Term, tail, core.StatusOK, nil
 }
 
-func (s *binaryPhase5CountingStream) Range() (core.Range, error) {
+func (s *binaryPhase5CountingStream) CurrentInterval() (core.Interval, error) {
 	if len(s.steps) == 0 {
-		return core.Range{}, fmt.Errorf("binaryPhase5CountingStream.Range: undefined on EOF PQStream")
+		return core.Interval{}, fmt.Errorf("binaryPhase5CountingStream.CurrentInterval: undefined on EOF PQStream")
 	}
 	return s.steps[0].Range, nil
+}
+
+func (s *binaryPhase5CountingStream) Range() (core.Range, error) {
+	return s.CurrentInterval()
 }
 
 func TestBB_GCF_BinaryProjectXPassesThroughLeftInput(t *testing.T) {
