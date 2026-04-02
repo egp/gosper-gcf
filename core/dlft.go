@@ -233,14 +233,6 @@ func scaledDLFTConstant(coeff, xden2 *big.Int) *big.Int {
 	return new(big.Int).Mul(coeff, xden2)
 }
 
-func rationalRootsQuadratic(a, b, c *big.Int, xRange Range) []Rational {
-	out, err := rationalRootsQuadraticChecked(a, b, c, xRange)
-	if err != nil {
-		return nil
-	}
-	return out
-}
-
 func rationalRootsQuadraticChecked(a, b, c *big.Int, xRange Range) ([]Rational, error) {
 	if a.Sign() == 0 {
 		return rationalRootsLinearChecked(b, c, xRange)
@@ -279,14 +271,6 @@ func rationalRootsQuadraticChecked(a, b, c *big.Int, xRange Range) ([]Rational, 
 		out = append(out, r2)
 	}
 	return out, nil
-}
-
-func rationalRootsLinear(a, b *big.Int, xRange Range) []Rational {
-	out, err := rationalRootsLinearChecked(a, b, xRange)
-	if err != nil {
-		return nil
-	}
-	return out
 }
 
 func rationalRootsLinearChecked(a, b *big.Int, xRange Range) ([]Rational, error) {

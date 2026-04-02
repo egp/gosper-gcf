@@ -25,9 +25,8 @@ func RationalFromInt64(n int64) Rational {
 	}
 }
 
-// NewRational is kept for compatibility during the phase-1 cleanup.
-// New core runtime paths should prefer NewRationalChecked so they can
-// propagate an explicit error instead of silently normalizing invalid input.
+// NewRational is kept compatible for phase 1 so core, named, and trig still compile.
+// New code inside core should prefer NewRationalChecked.
 func NewRational(num, den *big.Int) Rational {
 	r, err := NewRationalChecked(num, den)
 	if err != nil {

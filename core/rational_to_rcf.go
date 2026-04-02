@@ -36,14 +36,6 @@ func rcfTermsFromRationalChecked(r Rational) ([]RCFTerm, error) {
 	}
 }
 
-func floorQuoRem(n, d *big.Int) (*big.Int, *big.Int) {
-	q, rem, err := floorQuoRemChecked(n, d)
-	if err != nil {
-		return big.NewInt(0), big.NewInt(0)
-	}
-	return q, rem
-}
-
 func floorQuoRemChecked(n, d *big.Int) (*big.Int, *big.Int, error) {
 	if d == nil || d.Sign() <= 0 {
 		return nil, nil, ErrNonPositiveQuoDenominator

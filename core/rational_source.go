@@ -43,14 +43,6 @@ func PQStreamFromRationalChecked(r Rational) (PQStream, error) {
 	return stream, nil
 }
 
-func finiteRCFTermsFromRational(r Rational) []int64 {
-	terms, err := finiteRCFTermsFromRationalChecked(r)
-	if err != nil {
-		return nil
-	}
-	return terms
-}
-
 func finiteRCFTermsFromRationalChecked(r Rational) ([]int64, error) {
 	n := r.Num()
 	d := r.Den()
@@ -77,14 +69,6 @@ func finiteRCFTermsFromRationalChecked(r Rational) ([]int64, error) {
 
 		n, d = d, rem
 	}
-}
-
-func suffixRationalsFromRCFTerms(terms []int64) []Rational {
-	out, err := suffixRationalsFromRCFTermsChecked(terms)
-	if err != nil {
-		return nil
-	}
-	return out
 }
 
 func suffixRationalsFromRCFTermsChecked(terms []int64) ([]Rational, error) {

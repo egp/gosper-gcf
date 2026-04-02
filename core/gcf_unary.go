@@ -1,7 +1,10 @@
 // core/gcf_unary.go v2
 package core
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 func (g *GCF) nextUnaryRCF() (RCFTerm, Status, error) {
 	for {
@@ -27,6 +30,22 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status, error) {
 
 		currentRange, err := g.unary.engine.UnaryRange(xRange)
 		if err != nil {
+			if errors.Is(err, ErrUnsupportedRangeCase) && canAdvancePastUnsupportedUnaryRange(g.unary.x) {
+				term, tail, status, nextErr := g.unary.x.NextPQ()
+				if nextErr != nil {
+					return NewRCFTerm(nil), status, fmt.Errorf("nextUnaryRCF: advance past unsupported range NextPQ: %w", nextErr)
+				}
+				switch status {
+				case StatusOK:
+					g.unary.engine = g.unary.engine.IngestUnaryX(term)
+					g.unary.x = tail
+					continue
+				case StatusEOF:
+					g.unary.x = tail
+				default:
+					return NewRCFTerm(nil), status, fmt.Errorf("nextUnaryRCF: %w: status=%v", ErrInvalidUnaryInputStatus, status)
+				}
+			}
 			return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextUnaryRCF: unary range: %w", err)
 		}
 
@@ -81,6 +100,11 @@ func exactRationalFromUnaryEngine(engine unaryEngine, stream PQStream) (Rational
 			return Rational{}, fmt.Errorf("exactRationalFromUnaryEngine: %w: status=%v", ErrInvalidUnaryInputStatus, status)
 		}
 	}
+}
+
+func canAdvancePastUnsupportedUnaryRange(x PQStream) bool {
+	_, ok := x.(*rcfAsPQStream)
+	return ok
 }
 
 // core/gcf_unary.go v2

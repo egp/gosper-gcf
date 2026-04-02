@@ -1,8 +1,7 @@
-// core/gcf_unary_pqstreamfromrcf_outside_wb_test.go v4
+// core/gcf_unary_pqstreamfromrcf_outside_wb_test.go v5
 package core
 
 import (
-	"errors"
 	"math/big"
 	"testing"
 	"time"
@@ -33,7 +32,7 @@ func (s *advancingOutsideRCFStream) Range() (Range, error) {
 	return s.ranges[s.index], nil
 }
 
-func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRangeReturnsError(t *testing.T) {
+func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithAdvancingTailAfterOutsideRange_EmitsThree(t *testing.T) {
 	src := &advancingOutsideRCFStream{
 		terms: []RCFTerm{
 			NewRCFTerm(big.NewInt(3)),
@@ -64,12 +63,15 @@ func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRangeReturnsError(t
 		PQStreamFromRCF(src),
 	)
 
-	_, status, err := nextRCFWithTimeoutUnaryOutside(t, g, time.Second)
-	if !errors.Is(err, ErrUnsupportedRangeCase) {
-		t.Fatalf("NextRCF error = %v, want ErrUnsupportedRangeCase", err)
+	term, status, err := nextRCFWithTimeoutUnaryOutside(t, g, time.Second)
+	if err != nil {
+		t.Fatalf("NextRCF error = %v", err)
 	}
-	if status != StatusEOF {
-		t.Fatalf("status = %v, want %v when error short-circuits", status, StatusEOF)
+	if status != StatusOK {
+		t.Fatalf("status = %v, want %v", status, StatusOK)
+	}
+	if term.A().Cmp(big.NewInt(3)) != 0 {
+		t.Fatalf("first term = %v, want 3", term.A())
 	}
 }
 
@@ -97,4 +99,4 @@ func nextRCFWithTimeoutUnaryOutside(t *testing.T, g *GCF, timeout time.Duration)
 	}
 }
 
-// core/gcf_unary_pqstreamfromrcf_outside_wb_test.go v4
+// core/gcf_unary_pqstreamfromrcf_outside_wb_test.go v5
