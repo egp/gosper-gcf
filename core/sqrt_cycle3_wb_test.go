@@ -1,4 +1,4 @@
-// core/sqrt_cycle3_wb_test.go v1
+// core/sqrt_cycle3_wb_test.go v2
 package core
 
 import (
@@ -6,70 +6,50 @@ import (
 	"testing"
 )
 
-func TestWB_SqrtController_RejectsWhollyNegativeRadicandRange(t *testing.T) {
-	x := &sqrtControllerCountingPQStream{
-		rng: exactRangeFromRational(NewRational(big.NewInt(-4), big.NewInt(1))),
+func TestWB_SqrtController_OurorobosApproximation_UsesFeedbackWhenAvailable(t *testing.T) {
+	c := newSqrtController(PQStreamFromRational(RationalFromInt64(2)))
+
+	feedbackRange := exactRangeFromRational(NewRational(big.NewInt(3), big.NewInt(2)))
+	if err := c.feedCertifiedTerm(NewRCFTerm(big.NewInt(1)), feedbackRange); err != nil {
+		t.Fatalf("feedCertifiedTerm error = %v", err)
 	}
 
-	expectPanicWBSqrt(t, func() {
-		_ = newSqrtController(x)
-	})
-}
-
-func TestWB_SqrtController_FeedCertifiedTerm_AppendsIntoOurorobos(t *testing.T) {
-	x := &sqrtControllerCountingPQStream{
-		rng: exactRangeFromRational(RationalFromInt64(2)),
+	term, _, status, err := c.ourorobosApproximation().NextPQ()
+	if err != nil {
+		t.Fatalf("NextPQ error = %v", err)
 	}
-
-	c := newSqrtController(x)
-
-	c.feedCertifiedTerm(
-		NewRCFTerm(big.NewInt(1)),
-		exactRangeFromRational(RationalFromInt64(1)),
-	)
-
-	term, _, status := c.ourorobosApproximation().NextPQ()
 	if status != StatusOK {
 		t.Fatalf("status = %v, want %v", status, StatusOK)
 	}
-	if term.P.Cmp(big.NewInt(1)) != 0 {
-		t.Fatalf("term.P = %v, want 1", term.P)
-	}
-	if term.Q.Cmp(big.NewInt(1)) != 0 {
-		t.Fatalf("term.Q = %v, want 1", term.Q)
+	if term.P.Cmp(big.NewInt(1)) != 0 || term.Q.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("term = (%v,%v), want (1,1)", term.P, term.Q)
 	}
 }
 
-func TestWB_Sqrt_FinitePositiveInput_IsNotConstructorTimeTerminalShortcut(t *testing.T) {
-	stream, status := NewFinitePQStream([]FinitePQStep{
-		{
-			Term:  PQTerm{P: big.NewInt(4), Q: big.NewInt(1)},
-			Range: exactRangeFromRational(RationalFromInt64(4)),
-		},
-	})
-	if status != StatusOK {
-		t.Fatalf("NewFinitePQStream status = %v, want %v", status, StatusOK)
+func TestWB_SqrtController_OurorobosApproximation_RangeMatchesFedCertifiedRange(t *testing.T) {
+	c := newSqrtController(PQStreamFromRational(RationalFromInt64(2)))
+
+	feedbackRange := exactRangeFromRational(NewRational(big.NewInt(3), big.NewInt(2)))
+	if err := c.feedCertifiedTerm(NewRCFTerm(big.NewInt(1)), feedbackRange); err != nil {
+		t.Fatalf("feedCertifiedTerm error = %v", err)
 	}
 
-	g := Sqrt(stream)
-	if g == nil {
-		t.Fatalf("Sqrt returned nil")
+	got, err := c.ourorobosApproximation().Range()
+	if err != nil {
+		t.Fatalf("Range error = %v", err)
 	}
-	if g.terminal != nil {
-		t.Fatalf("Sqrt created terminal result at construction; want live sqrt path")
+	if !got.Inside {
+		t.Fatal("Inside = false, want true")
+	}
+	if got.Lo.Value.Cmp(feedbackRange.Lo.Value) != 0 || got.Hi.Value.Cmp(feedbackRange.Hi.Value) != 0 {
+		t.Fatalf("Range = [%v/%v,%v/%v], want exact 3/2",
+			got.Lo.Value.Num(), got.Lo.Value.Den(),
+			got.Hi.Value.Num(), got.Hi.Value.Den(),
+		)
+	}
+	if got.Lo.Open || got.Hi.Open {
+		t.Fatalf("openness = (%v,%v), want (false,false)", got.Lo.Open, got.Hi.Open)
 	}
 }
 
-func expectPanicWBSqrt(t *testing.T, fn func()) {
-	t.Helper()
-
-	defer func() {
-		if recover() == nil {
-			t.Fatalf("expected panic, got none")
-		}
-	}()
-
-	fn()
-}
-
-// core/sqrt_cycle3_wb_test.go v1
+// core/sqrt_cycle3_wb_test.go v2

@@ -1,7 +1,8 @@
-// core/gcf_take_wb_test.go v1
+// core/gcf_take_wb_test.go v2
 package core
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 )
@@ -12,8 +13,10 @@ func TestWB_GCF_TakeRCFTermsUpTo_CollectsFinitePrefix(t *testing.T) {
 		PQStreamFromRational(NewRational(big.NewInt(8), big.NewInt(3))),
 	)
 
-	got := g.takeRCFTermsUpTo(10)
-
+	got, err := g.takeRCFTermsUpTo(10)
+	if err != nil {
+		t.Fatalf("takeRCFTermsUpTo error = %v", err)
+	}
 	if len(got) != 3 {
 		t.Fatalf("len(got) = %d, want 3", len(got))
 	}
@@ -26,6 +29,18 @@ func TestWB_GCF_TakeRCFTermsUpTo_CollectsFinitePrefix(t *testing.T) {
 	}
 }
 
+func TestWB_GCF_TakeRCFTermsUpTo_PropagatesStreamError(t *testing.T) {
+	g := newObservedRCFGCF(newErrorRCFStream(ErrNilObservedSource))
+
+	got, err := g.takeRCFTermsUpTo(1)
+	if !errors.Is(err, ErrNilObservedSource) {
+		t.Fatalf("takeRCFTermsUpTo error = %v, want ErrNilObservedSource", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("len(got) = %d, want 0", len(got))
+	}
+}
+
 func TestWB_FinitePQStepsFromRCFTerms_BuildsExactSuffixRanges(t *testing.T) {
 	terms := []RCFTerm{
 		NewRCFTerm(big.NewInt(2)),
@@ -34,7 +49,6 @@ func TestWB_FinitePQStepsFromRCFTerms_BuildsExactSuffixRanges(t *testing.T) {
 	}
 
 	got := finitePQStepsFromRCFTerms(terms)
-
 	if len(got) != 3 {
 		t.Fatalf("len(got) = %d, want 3", len(got))
 	}
@@ -100,4 +114,4 @@ func assertTakeStep(t *testing.T, got FinitePQStep, wantP, wantQ int64, wantRang
 	}
 }
 
-// core/gcf_take_wb_test.go v1
+// core/gcf_take_wb_test.go v2

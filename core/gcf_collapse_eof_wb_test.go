@@ -1,4 +1,4 @@
-// core/gcf_collapse_eof_wb_test.go v1
+// core/gcf_collapse_eof_wb_test.go v2
 package core
 
 import (
@@ -18,12 +18,15 @@ func TestWB_CollapseBinaryXEOF_IndependentOfX_ProjectY_PreservesY(t *testing.T) 
 		H: big.NewInt(1),
 	})
 
-	got := exactRationalFromUnaryEngine(
+	got, err := exactRationalFromUnaryEngine(
 		s.CollapseBinaryXEOF(),
 		PQStreamFromRational(NewRational(big.NewInt(22), big.NewInt(7))),
 	)
-	want := NewRational(big.NewInt(22), big.NewInt(7))
+	if err != nil {
+		t.Fatalf("exactRationalFromUnaryEngine error = %v", err)
+	}
 
+	want := NewRational(big.NewInt(22), big.NewInt(7))
 	if got.Cmp(want) != 0 {
 		t.Fatalf(
 			"collapsed result = %v/%v, want %v/%v",
@@ -50,12 +53,15 @@ func TestWB_CollapseBinaryXEOF_RuntimeAfterIngest_DegreesScale_BecomesIdentityOn
 		Q: big.NewInt(1),
 	})
 
-	got := exactRationalFromUnaryEngine(
+	got, err := exactRationalFromUnaryEngine(
 		s.CollapseBinaryXEOF(),
 		PQStreamFromRational(NewRational(big.NewInt(22), big.NewInt(7))),
 	)
-	want := NewRational(big.NewInt(22), big.NewInt(7))
+	if err != nil {
+		t.Fatalf("exactRationalFromUnaryEngine error = %v", err)
+	}
 
+	want := NewRational(big.NewInt(22), big.NewInt(7))
 	if got.Cmp(want) != 0 {
 		t.Fatalf(
 			"collapsed result = %v/%v, want %v/%v",
@@ -65,4 +71,4 @@ func TestWB_CollapseBinaryXEOF_RuntimeAfterIngest_DegreesScale_BecomesIdentityOn
 	}
 }
 
-// core/gcf_collapse_eof_wb_test.go v1
+// core/gcf_collapse_eof_wb_test.go v2

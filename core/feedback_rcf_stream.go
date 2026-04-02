@@ -75,6 +75,7 @@ func cloneFeedbackRCFRange(r Range) Range {
 		Lo:     cloneFeedbackRCFEndpoint(r.Lo),
 		Hi:     cloneFeedbackRCFEndpoint(r.Hi),
 		Inside: r.Inside,
+		Kind_:  r.Kind_,
 	}
 }
 

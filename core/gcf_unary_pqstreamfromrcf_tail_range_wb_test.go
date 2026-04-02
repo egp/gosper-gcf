@@ -1,4 +1,4 @@
-// core/gcf_unary_pqstreamfromrcf_tail_range_wb_test.go v1
+// core/gcf_unary_pqstreamfromrcf_tail_range_wb_test.go v2
 package core
 
 import (
@@ -13,23 +13,23 @@ type steppingRCFStream struct {
 	index  int
 }
 
-func (s *steppingRCFStream) NextRCF() (RCFTerm, Status) {
+func (s *steppingRCFStream) NextRCF() (RCFTerm, Status, error) {
 	if s.index >= len(s.terms) {
-		return NewRCFTerm(nil), StatusEOF
+		return NewRCFTerm(nil), StatusEOF, nil
 	}
 	term := s.terms[s.index]
 	s.index++
-	return term, StatusOK
+	return term, StatusOK, nil
 }
 
-func (s *steppingRCFStream) Range() Range {
+func (s *steppingRCFStream) Range() (Range, error) {
 	if len(s.ranges) == 0 {
-		return exactRangeFromRational(RationalFromInt64(0))
+		return exactRangeFromRational(RationalFromInt64(0)), nil
 	}
 	if s.index >= len(s.ranges) {
-		return s.ranges[len(s.ranges)-1]
+		return s.ranges[len(s.ranges)-1], nil
 	}
-	return s.ranges[s.index]
+	return s.ranges[s.index], nil
 }
 
 func TestWB_BLFT_UnaryRange_IdentityAfterOneIngest_WithExactTailRange_IsExact22Over7(t *testing.T) {
@@ -43,13 +43,15 @@ func TestWB_BLFT_UnaryRange_IdentityAfterOneIngest_WithExactTailRange_IsExact22O
 		G: big.NewInt(0),
 		H: big.NewInt(1),
 	})
-
 	engine = engine.IngestUnaryX(PQTerm{
 		P: big.NewInt(3),
 		Q: big.NewInt(1),
 	}).(blftState)
 
-	got := engine.UnaryRange(exactRangeFromRational(RationalFromInt64(7)))
+	got, err := engine.UnaryRange(exactRangeFromRational(RationalFromInt64(7)))
+	if err != nil {
+		t.Fatalf("UnaryRange error = %v", err)
+	}
 	want := exactRangeFromRational(NewRational(big.NewInt(22), big.NewInt(7)))
 	assertExactSameRangeTailWB(t, got, want)
 }
@@ -62,8 +64,8 @@ func TestWB_PQStreamFromRCF_RangeTracksUpdatedUnderlyingTailRange(t *testing.T) 
 		},
 		ranges: []Range{
 			{
-				Lo:     Endpoint{Value: RationalFromInt64(3), Open: false},
-				Hi:     Endpoint{Value: RationalFromInt64(4), Open: true},
+				Lo:     Endpoint{Value: RationalFromInt64(4), Open: true},
+				Hi:     Endpoint{Value: RationalFromInt64(3), Open: false},
 				Inside: false,
 			},
 			exactRangeFromRational(RationalFromInt64(7)),
@@ -73,17 +75,26 @@ func TestWB_PQStreamFromRCF_RangeTracksUpdatedUnderlyingTailRange(t *testing.T) 
 
 	pq := PQStreamFromRCF(src)
 
-	got0 := pq.Range()
+	got0, err := pq.Range()
+	if err != nil {
+		t.Fatalf("initial Range error = %v", err)
+	}
 	if got0.Inside {
 		t.Fatal("initial Range().Inside = true, want false")
 	}
 
-	_, tail, status := pq.NextPQ()
+	_, tail, status, err := pq.NextPQ()
+	if err != nil {
+		t.Fatalf("first NextPQ error = %v", err)
+	}
 	if status != StatusOK {
 		t.Fatalf("first status = %v, want %v", status, StatusOK)
 	}
 
-	got1 := tail.Range()
+	got1, err := tail.Range()
+	if err != nil {
+		t.Fatalf("tail Range error = %v", err)
+	}
 	want1 := exactRangeFromRational(RationalFromInt64(7))
 	assertExactSameRangeTailWB(t, got1, want1)
 }
@@ -96,8 +107,8 @@ func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithUpdatingTailRange_EmitsThr
 		},
 		ranges: []Range{
 			{
-				Lo:     Endpoint{Value: RationalFromInt64(3), Open: false},
-				Hi:     Endpoint{Value: RationalFromInt64(4), Open: true},
+				Lo:     Endpoint{Value: RationalFromInt64(4), Open: true},
+				Hi:     Endpoint{Value: RationalFromInt64(3), Open: false},
 				Inside: false,
 			},
 			exactRangeFromRational(RationalFromInt64(7)),
@@ -119,7 +130,10 @@ func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithUpdatingTailRange_EmitsThr
 		PQStreamFromRCF(src),
 	)
 
-	term, status := nextRCFWithTimeoutUnaryTailWB(t, g, time.Second)
+	term, status, err := nextRCFWithTimeoutUnaryTailWB(t, g, time.Second)
+	if err != nil {
+		t.Fatalf("NextRCF error = %v", err)
+	}
 	if status != StatusOK {
 		t.Fatalf("first status = %v, want %v", status, StatusOK)
 	}
@@ -128,26 +142,27 @@ func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithUpdatingTailRange_EmitsThr
 	}
 }
 
-func nextRCFWithTimeoutUnaryTailWB(t *testing.T, g *GCF, timeout time.Duration) (RCFTerm, Status) {
+func nextRCFWithTimeoutUnaryTailWB(t *testing.T, g *GCF, timeout time.Duration) (RCFTerm, Status, error) {
 	t.Helper()
 
 	type result struct {
 		term   RCFTerm
 		status Status
+		err    error
 	}
 
 	ch := make(chan result, 1)
 	go func() {
-		term, status := g.NextRCF()
-		ch <- result{term: term, status: status}
+		term, status, err := g.NextRCF()
+		ch <- result{term: term, status: status, err: err}
 	}()
 
 	select {
 	case got := <-ch:
-		return got.term, got.status
+		return got.term, got.status, got.err
 	case <-time.After(timeout):
 		t.Fatalf("NextRCF() did not complete within %v", timeout)
-		return NewRCFTerm(nil), StatusInvalidInput
+		return NewRCFTerm(nil), StatusInvalidInput, nil
 	}
 }
 
@@ -179,4 +194,4 @@ func assertExactSameRangeTailWB(t *testing.T, got, want Range) {
 	}
 }
 
-// core/gcf_unary_pqstreamfromrcf_tail_range_wb_test.go v1
+// core/gcf_unary_pqstreamfromrcf_tail_range_wb_test.go v2

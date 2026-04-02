@@ -1,4 +1,4 @@
-// core/gcf_constructor_independent_x_wb_test.go v1
+// core/gcf_constructor_independent_x_wb_test.go v2
 package core
 
 import (
@@ -22,7 +22,10 @@ func TestWB_NewGCF2_IndependentOfX_ProjectY_FirstTermMatchesRightInput(t *testin
 		PQStreamFromRational(NewRational(big.NewInt(22), big.NewInt(7))),
 	)
 
-	term, status := g.NextRCF()
+	term, status, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("NextRCF error = %v", err)
+	}
 	if status != StatusOK {
 		t.Fatalf("first status = %v, want %v", status, StatusOK)
 	}
@@ -31,4 +34,4 @@ func TestWB_NewGCF2_IndependentOfX_ProjectY_FirstTermMatchesRightInput(t *testin
 	}
 }
 
-// core/gcf_constructor_independent_x_wb_test.go v1
+// core/gcf_constructor_independent_x_wb_test.go v2

@@ -1,7 +1,8 @@
-// core/gcf_unary_pqstreamfromrcf_outside_wb_test.go v3
+// core/gcf_unary_pqstreamfromrcf_outside_wb_test.go v4
 package core
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 	"time"
@@ -13,26 +14,26 @@ type advancingOutsideRCFStream struct {
 	index  int
 }
 
-func (s *advancingOutsideRCFStream) NextRCF() (RCFTerm, Status) {
+func (s *advancingOutsideRCFStream) NextRCF() (RCFTerm, Status, error) {
 	if s.index >= len(s.terms) {
-		return NewRCFTerm(nil), StatusEOF
+		return NewRCFTerm(nil), StatusEOF, nil
 	}
 	term := s.terms[s.index]
 	s.index++
-	return term, StatusOK
+	return term, StatusOK, nil
 }
 
-func (s *advancingOutsideRCFStream) Range() Range {
+func (s *advancingOutsideRCFStream) Range() (Range, error) {
 	if len(s.ranges) == 0 {
-		return exactRangeFromRational(RationalFromInt64(0))
+		return exactRangeFromRational(RationalFromInt64(0)), nil
 	}
 	if s.index >= len(s.ranges) {
-		return s.ranges[len(s.ranges)-1]
+		return s.ranges[len(s.ranges)-1], nil
 	}
-	return s.ranges[s.index]
+	return s.ranges[s.index], nil
 }
 
-func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRange_DoesNotPanic(t *testing.T) {
+func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRangeReturnsError(t *testing.T) {
 	src := &advancingOutsideRCFStream{
 		terms: []RCFTerm{
 			NewRCFTerm(big.NewInt(3)),
@@ -40,8 +41,8 @@ func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRange_DoesNotPanic(
 		},
 		ranges: []Range{
 			{
-				Lo:     Endpoint{Value: RationalFromInt64(3), Open: false},
-				Hi:     Endpoint{Value: RationalFromInt64(4), Open: true},
+				Lo:     Endpoint{Value: RationalFromInt64(4), Open: true},
+				Hi:     Endpoint{Value: RationalFromInt64(3), Open: false},
 				Inside: false,
 			},
 			exactRangeFromRational(RationalFromInt64(7)),
@@ -63,36 +64,37 @@ func TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRange_DoesNotPanic(
 		PQStreamFromRCF(src),
 	)
 
-	term, status := nextRCFWithTimeoutUnaryOutside(t, g, time.Second)
-	if status != StatusOK {
-		t.Fatalf("first status = %v, want %v", status, StatusOK)
+	_, status, err := nextRCFWithTimeoutUnaryOutside(t, g, time.Second)
+	if !errors.Is(err, ErrUnsupportedRangeCase) {
+		t.Fatalf("NextRCF error = %v, want ErrUnsupportedRangeCase", err)
 	}
-	if term.A().Cmp(big.NewInt(3)) != 0 {
-		t.Fatalf("first term = %v, want 3", term.A())
+	if status != StatusEOF {
+		t.Fatalf("status = %v, want %v when error short-circuits", status, StatusEOF)
 	}
 }
 
-func nextRCFWithTimeoutUnaryOutside(t *testing.T, g *GCF, timeout time.Duration) (RCFTerm, Status) {
+func nextRCFWithTimeoutUnaryOutside(t *testing.T, g *GCF, timeout time.Duration) (RCFTerm, Status, error) {
 	t.Helper()
 
 	type result struct {
 		term   RCFTerm
 		status Status
+		err    error
 	}
 
 	ch := make(chan result, 1)
 	go func() {
-		term, status := g.NextRCF()
-		ch <- result{term: term, status: status}
+		term, status, err := g.NextRCF()
+		ch <- result{term: term, status: status, err: err}
 	}()
 
 	select {
 	case got := <-ch:
-		return got.term, got.status
+		return got.term, got.status, got.err
 	case <-time.After(timeout):
 		t.Fatalf("NextRCF() did not complete within %v", timeout)
-		return NewRCFTerm(nil), StatusInvalidInput
+		return NewRCFTerm(nil), StatusInvalidInput, nil
 	}
 }
 
-// core/gcf_unary_pqstreamfromrcf_outside_wb_test.go v3
+// core/gcf_unary_pqstreamfromrcf_outside_wb_test.go v4

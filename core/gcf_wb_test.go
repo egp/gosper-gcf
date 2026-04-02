@@ -1,4 +1,4 @@
-// core/gcf_wb_test.go v1
+// core/gcf_wb_test.go v2
 package core
 
 import (
@@ -16,7 +16,10 @@ func TestWB_GCF_TerminalExactStateEmitsCorrectly(t *testing.T) {
 		testExactRange(7, 5),
 	)
 
-	term1, status1 := g.NextRCF()
+	term1, status1, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
 	if status1 != StatusOK {
 		t.Fatalf("first status = %v, want %v", status1, StatusOK)
 	}
@@ -33,10 +36,11 @@ func TestWB_GCF_TerminalExactStateHasExactRange(t *testing.T) {
 		testExactRange(7, 5),
 	)
 
-	r := g.Range()
-
+	r, err := g.Range()
+	if err != nil {
+		t.Fatalf("Range error = %v", err)
+	}
 	want := NewRational(big.NewInt(7), big.NewInt(5))
-
 	if !r.Inside {
 		t.Fatal("Inside = false, want true")
 	}
@@ -62,7 +66,10 @@ func TestWB_GCF_FirstEmittedRegularTermMayBeNegative(t *testing.T) {
 		testExactRange(-2, 1),
 	)
 
-	term, status := g.NextRCF()
+	term, status, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("NextRCF error = %v", err)
+	}
 	if status != StatusOK {
 		t.Fatalf("status = %v, want %v", status, StatusOK)
 	}
@@ -79,12 +86,18 @@ func TestWB_GCF_EOFUsesStatusEOF(t *testing.T) {
 		testExactRange(9, 1),
 	)
 
-	_, status1 := g.NextRCF()
+	_, status1, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
 	if status1 != StatusOK {
 		t.Fatalf("first status = %v, want %v", status1, StatusOK)
 	}
 
-	_, status2 := g.NextRCF()
+	_, status2, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("second NextRCF error = %v", err)
+	}
 	if status2 != StatusEOF {
 		t.Fatalf("second status = %v, want %v", status2, StatusEOF)
 	}
@@ -123,4 +136,4 @@ func testExactRange(num, den int64) Range {
 	}
 }
 
-// core/gcf_wb_test.go v1
+// core/gcf_wb_test.go v2
