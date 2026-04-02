@@ -1,4 +1,4 @@
-// named/pi_gauss_wb_test.go v1
+// named/pi_gauss_wb_test.go v2
 package named
 
 import (
@@ -9,14 +9,37 @@ import (
 )
 
 func TestWB_PiGaussTermAt_HeadAndEarlyTerms(t *testing.T) {
-	assertPiGaussTerm(t, piGaussTermAt(0), 0, 4, 0)
-	assertPiGaussTerm(t, piGaussTermAt(1), 1, 1, 1)
-	assertPiGaussTerm(t, piGaussTermAt(2), 3, 4, 2)
-	assertPiGaussTerm(t, piGaussTermAt(3), 5, 9, 3)
+	got0, err := piGaussTermAt(0)
+	if err != nil {
+		t.Fatalf("piGaussTermAt(0) error = %v", err)
+	}
+	assertPiGaussTerm(t, got0, 0, 4, 0)
+
+	got1, err := piGaussTermAt(1)
+	if err != nil {
+		t.Fatalf("piGaussTermAt(1) error = %v", err)
+	}
+	assertPiGaussTerm(t, got1, 1, 1, 1)
+
+	got2, err := piGaussTermAt(2)
+	if err != nil {
+		t.Fatalf("piGaussTermAt(2) error = %v", err)
+	}
+	assertPiGaussTerm(t, got2, 3, 4, 2)
+
+	got3, err := piGaussTermAt(3)
+	if err != nil {
+		t.Fatalf("piGaussTermAt(3) error = %v", err)
+	}
+	assertPiGaussTerm(t, got3, 5, 9, 3)
 }
 
 func TestWB_PiGaussLookaheadRange_HeadIsOpenOpenZeroToFour(t *testing.T) {
-	got := piGaussLookaheadRange(0)
+	got, err := piGaussLookaheadRange(0)
+	if err != nil {
+		t.Fatalf("piGaussLookaheadRange(0) error = %v", err)
+	}
+
 	want := core.Range{
 		Lo:     core.Endpoint{Value: core.RationalFromInt64(0), Open: true},
 		Hi:     core.Endpoint{Value: core.RationalFromInt64(4), Open: true},
@@ -26,10 +49,17 @@ func TestWB_PiGaussLookaheadRange_HeadIsOpenOpenZeroToFour(t *testing.T) {
 }
 
 func TestWB_PiGaussLookaheadRange_ThirdStageUsesNextOddBound(t *testing.T) {
-	got := piGaussLookaheadRange(2)
+	got, err := piGaussLookaheadRange(2)
+	if err != nil {
+		t.Fatalf("piGaussLookaheadRange(2) error = %v", err)
+	}
+
 	want := core.Range{
-		Lo:     core.Endpoint{Value: core.RationalFromInt64(3), Open: true},
-		Hi:     core.Endpoint{Value: core.NewRational(big.NewInt(19), big.NewInt(5)), Open: true},
+		Lo: core.Endpoint{Value: core.RationalFromInt64(3), Open: true},
+		Hi: core.Endpoint{
+			Value: core.NewRational(big.NewInt(19), big.NewInt(5)),
+			Open:  true,
+		},
 		Inside: true,
 	}
 	assertPiGaussRangeWB(t, got, want)
@@ -59,17 +89,19 @@ func assertPiGaussRangeWB(t *testing.T, got core.Range, want core.Range) {
 		t.Fatalf("Hi.Open = %v, want %v", got.Hi.Open, want.Hi.Open)
 	}
 	if got.Lo.Value.Cmp(want.Lo.Value) != 0 {
-		t.Fatalf("Lo = %v/%v, want %v/%v",
+		t.Fatalf(
+			"Lo = %v/%v, want %v/%v",
 			got.Lo.Value.Num(), got.Lo.Value.Den(),
 			want.Lo.Value.Num(), want.Lo.Value.Den(),
 		)
 	}
 	if got.Hi.Value.Cmp(want.Hi.Value) != 0 {
-		t.Fatalf("Hi = %v/%v, want %v/%v",
+		t.Fatalf(
+			"Hi = %v/%v, want %v/%v",
 			got.Hi.Value.Num(), got.Hi.Value.Den(),
 			want.Hi.Value.Num(), want.Hi.Value.Den(),
 		)
 	}
 }
 
-// named/pi_gauss_wb_test.go v1
+// named/pi_gauss_wb_test.go v2

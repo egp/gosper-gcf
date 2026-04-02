@@ -1,4 +1,4 @@
-// named/sin_degrees_wb_test.go v1
+// named/sin_degrees_wb_test.go v2
 package named
 
 import (
@@ -27,7 +27,6 @@ func observePQAsRCFSinDegrees(x core.PQStream) *core.GCF {
 	if x == nil {
 		panic("observePQAsRCFSinDegrees: nil input")
 	}
-
 	return core.NewGCF1(
 		core.BLFTCoefficients{
 			A: big.NewInt(0),
@@ -47,7 +46,10 @@ func assertExactRCFSequenceSinDegreesWB(t *testing.T, g *core.GCF, want []int64)
 	t.Helper()
 
 	for i, w := range want {
-		term, status := nextRCFWithTimeoutSinDegreesWB(t, g, time.Second)
+		term, status, err := nextRCFWithTimeoutSinDegreesWB(t, g, time.Second)
+		if err != nil {
+			t.Fatalf("term %d NextRCF error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -56,7 +58,10 @@ func assertExactRCFSequenceSinDegreesWB(t *testing.T, g *core.GCF, want []int64)
 		}
 	}
 
-	_, eofStatus := nextRCFWithTimeoutSinDegreesWB(t, g, time.Second)
+	_, eofStatus, err := nextRCFWithTimeoutSinDegreesWB(t, g, time.Second)
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
@@ -66,7 +71,10 @@ func assertRCFPrefixSinDegreesWB(t *testing.T, g *core.GCF, want []int64) {
 	t.Helper()
 
 	for i, w := range want {
-		term, status := nextRCFWithTimeoutSinDegreesWB(t, g, time.Second)
+		term, status, err := nextRCFWithTimeoutSinDegreesWB(t, g, time.Second)
+		if err != nil {
+			t.Fatalf("term %d NextRCF error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -76,27 +84,28 @@ func assertRCFPrefixSinDegreesWB(t *testing.T, g *core.GCF, want []int64) {
 	}
 }
 
-func nextRCFWithTimeoutSinDegreesWB(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status) {
+func nextRCFWithTimeoutSinDegreesWB(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status, error) {
 	t.Helper()
 
 	type result struct {
 		term   core.RCFTerm
 		status core.Status
+		err    error
 	}
 
 	ch := make(chan result, 1)
 	go func() {
-		term, status := g.NextRCF()
-		ch <- result{term: term, status: status}
+		term, status, err := g.NextRCF()
+		ch <- result{term: term, status: status, err: err}
 	}()
 
 	select {
 	case got := <-ch:
-		return got.term, got.status
+		return got.term, got.status, got.err
 	case <-time.After(timeout):
 		t.Fatalf("NextRCF() did not complete within %v", timeout)
-		return core.NewRCFTerm(nil), core.StatusInvalidInput
+		return core.NewRCFTerm(nil), core.StatusInvalidInput, nil
 	}
 }
 
-// named/sin_degrees_wb_test.go v1
+// named/sin_degrees_wb_test.go v2
