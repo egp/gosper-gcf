@@ -25,10 +25,6 @@ type staticRangePQReplay struct {
 	rng core.Range
 }
 
-type errorRCFReplay struct {
-	err error
-}
-
 type errorPQReplay struct {
 	err error
 }
@@ -141,20 +137,6 @@ func (s *staticRangePQReplay) Range() (core.Range, error) {
 		return core.Range{}, fmt.Errorf("(*staticRangePQReplay).Range: %w", core.ErrNilReceiver)
 	}
 	return cloneRangeReplay(s.rng), nil
-}
-
-func (s *errorRCFReplay) NextRCF() (core.RCFTerm, core.Status, error) {
-	if s == nil {
-		return core.NewRCFTerm(nil), core.StatusEOF, fmt.Errorf("(*errorRCFReplay).NextRCF: %w", core.ErrNilReceiver)
-	}
-	return core.NewRCFTerm(nil), core.StatusEOF, s.err
-}
-
-func (s *errorRCFReplay) Range() (core.Range, error) {
-	if s == nil {
-		return core.Range{}, fmt.Errorf("(*errorRCFReplay).Range: %w", core.ErrNilReceiver)
-	}
-	return core.Range{}, s.err
 }
 
 func (s *errorPQReplay) NextPQ() (core.PQTerm, core.PQStream, core.Status, error) {
