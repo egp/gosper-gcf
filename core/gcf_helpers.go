@@ -1,4 +1,4 @@
-// core/gcf_helpers.go v1
+// core/gcf_helpers.go v5
 package core
 
 import "math/big"
@@ -24,7 +24,41 @@ func collapseIndependentOfXToUnary(coeffs blftState) blftState {
 }
 
 func collapseIndependentOfYToUnary(coeffs blftState) blftState {
-	return blftState(coeffs.CollapseY()).Normalize()
+	return blftState{
+		A: big.NewInt(0),
+		B: cloneBigInt(coeffs.B),
+		C: big.NewInt(0),
+		D: cloneBigInt(coeffs.D),
+		E: big.NewInt(0),
+		F: cloneBigInt(coeffs.F),
+		G: big.NewInt(0),
+		H: cloneBigInt(coeffs.H),
+	}.Normalize()
+}
+
+func blftCoefficientsFromState(s blftState) BLFTCoefficients {
+	return BLFTCoefficients{
+		A: cloneBigInt(s.A),
+		B: cloneBigInt(s.B),
+		C: cloneBigInt(s.C),
+		D: cloneBigInt(s.D),
+		E: cloneBigInt(s.E),
+		F: cloneBigInt(s.F),
+		G: cloneBigInt(s.G),
+		H: cloneBigInt(s.H),
+	}
+}
+
+func isIndependentOfY(coeffs blftState) bool {
+	return coeffIsZero(coeffs.A) && coeffIsZero(coeffs.C) && coeffIsZero(coeffs.E) && coeffIsZero(coeffs.G)
+}
+
+func isIndependentOfX(coeffs blftState) bool {
+	return coeffIsZero(coeffs.A) && coeffIsZero(coeffs.B) && coeffIsZero(coeffs.E) && coeffIsZero(coeffs.F)
+}
+
+func coeffIsZero(x *big.Int) bool {
+	return x == nil || x.Sign() == 0
 }
 
 func collapseXEOFToUnary(coeffs blftState) blftState {
@@ -57,18 +91,6 @@ func collapseYEOFToUnary(coeffs blftState) blftState {
 		G: big.NewInt(0),
 		H: cloneBigInt(coeffs.G),
 	}.Normalize()
-}
-
-func isIndependentOfY(coeffs blftState) bool {
-	return coeffIsZero(coeffs.A) && coeffIsZero(coeffs.C) && coeffIsZero(coeffs.E) && coeffIsZero(coeffs.G)
-}
-
-func isIndependentOfX(coeffs blftState) bool {
-	return coeffIsZero(coeffs.A) && coeffIsZero(coeffs.B) && coeffIsZero(coeffs.E) && coeffIsZero(coeffs.F)
-}
-
-func coeffIsZero(x *big.Int) bool {
-	return x == nil || x.Sign() == 0
 }
 
 func isExactIntegerRangeWithTerm(r Range, term RCFTerm) bool {
@@ -114,4 +136,4 @@ func cloneRCFTerms(terms []RCFTerm) []RCFTerm {
 	return out
 }
 
-// core/gcf_helpers.go v1
+// core/gcf_helpers.go v5

@@ -1,4 +1,4 @@
-// core/gcf_types.go v3
+// core/gcf_types.go v4
 package core
 
 import "fmt"
@@ -129,46 +129,12 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 
 	switch {
 	case state.IndependentOfY():
-		final, err := exactRationalFromUnaryEngine(collapseIndependentOfYToUnary(state), x)
-		if err != nil {
-			return &GCF{
-				cfg:    cfg,
-				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of Y: %w", err)),
-			}
-		}
-		terms, err := rcfTermsFromRationalChecked(final)
-		if err != nil {
-			return &GCF{
-				cfg:    cfg,
-				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of Y terms: %w", err)),
-			}
-		}
-		return newExactTerminalGCFWithResolvedConfig(
-			terms,
-			exactRangeFromRational(final),
-			cfg,
-		)
+		unaryState := collapseIndependentOfYToUnary(state)
+		return newGCF1WithResolvedConfig(blftCoefficientsFromState(unaryState), x, cfg)
 
 	case state.IndependentOfX():
-		final, err := exactRationalFromUnaryEngine(collapseIndependentOfXToUnary(state), y)
-		if err != nil {
-			return &GCF{
-				cfg:    cfg,
-				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of X: %w", err)),
-			}
-		}
-		terms, err := rcfTermsFromRationalChecked(final)
-		if err != nil {
-			return &GCF{
-				cfg:    cfg,
-				stream: newErrorRCFStream(fmt.Errorf("newGCF2WithResolvedConfig: collapse independent of X terms: %w", err)),
-			}
-		}
-		return newExactTerminalGCFWithResolvedConfig(
-			terms,
-			exactRangeFromRational(final),
-			cfg,
-		)
+		unaryState := collapseIndependentOfXToUnary(state)
+		return newGCF1WithResolvedConfig(blftCoefficientsFromState(unaryState), y, cfg)
 
 	default:
 		g.binary = &binaryEvaluatorState{
@@ -209,6 +175,10 @@ func (g *GCF) NextRCF() (RCFTerm, Status, error) {
 	return NewRCFTerm(nil), StatusEOF, nil
 }
 
+func (g *GCF) CurrentInterval() (Interval, error) {
+	return g.Range()
+}
+
 func (g *GCF) Range() (Range, error) {
 	if g == nil {
 		return Range{}, fmt.Errorf("GCF.Range: %w", ErrNilReceiver)
@@ -240,10 +210,6 @@ func (g *GCF) Range() (Range, error) {
 	return exactRangeFromRational(RationalFromInt64(0)), nil
 }
 
-func (g *GCF) CurrentInterval() (Interval, error) {
-	return g.Range()
-}
-
 func (g *GCF) Config() Config {
 	if g == nil {
 		return DefaultConfig()
@@ -251,4 +217,4 @@ func (g *GCF) Config() Config {
 	return g.cfg
 }
 
-// core/gcf_types.go v3
+// core/gcf_types.go v4
