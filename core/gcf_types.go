@@ -1,4 +1,4 @@
-// core/gcf_types.go v5
+// core/gcf_types.go v6
 package core
 
 import "fmt"
@@ -21,10 +21,11 @@ type binaryEvaluatorState struct {
 }
 
 type GCF struct {
-	coeffs   BLFTCoefficients
-	cfg      Config
-	x        PQStream
-	y        PQStream
+	coeffs BLFTCoefficients
+	cfg    Config
+	x      PQStream
+	y      PQStream
+
 	stream   RCFStream
 	terminal *exactTerminalState
 	unary    *unaryEvaluatorState
@@ -70,11 +71,12 @@ func newObservedRCFGCF(src RCFStream) *GCF {
 func newObservedRCFGCFWithResolvedConfig(src RCFStream, cfg Config) *GCF {
 	if src == nil {
 		return &GCF{
-			cfg:    cfg,
-			stream: newErrorRCFStream(fmt.Errorf("newObservedRCFGCFWithResolvedConfig: %w", ErrNilObservedSource)),
+			cfg: cfg,
+			stream: newErrorRCFStream(
+				fmt.Errorf("newObservedRCFGCFWithResolvedConfig: %w", ErrNilObservedSource),
+			),
 		}
 	}
-
 	return &GCF{
 		cfg:    cfg,
 		stream: src,
@@ -121,46 +123,23 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 		x:      x,
 		y:      y,
 	}
-	if x == nil || y == nil {
-		return g
-	}
-
-	state := newBLFTState(coeffs)
-
-	switch {
-	case state.IndependentOfY():
-		unaryState := collapseIndependentOfYToUnary(state)
-		if isIdentityUnaryState(unaryState) {
-			return newObservedRCFGCFWithResolvedConfig(newObservedRCFFromPQ(x), cfg)
-		}
-		return newGCF1WithResolvedConfig(blftCoefficientsFromState(unaryState), x, cfg)
-
-	case state.IndependentOfX():
-		unaryState := collapseIndependentOfXToUnary(state)
-		if isIdentityUnaryState(unaryState) {
-			return newObservedRCFGCFWithResolvedConfig(newObservedRCFFromPQ(y), cfg)
-		}
-		return newGCF1WithResolvedConfig(blftCoefficientsFromState(unaryState), y, cfg)
-
-	default:
+	if x != nil && y != nil {
 		g.binary = &binaryEvaluatorState{
-			engine: state,
+			engine: newBLFTState(coeffs),
 			x:      x,
 			y:      y,
 		}
-		return g
 	}
+	return g
 }
 
 func (g *GCF) NextRCF() (RCFTerm, Status, error) {
 	if g == nil {
 		return NewRCFTerm(nil), StatusEOF, fmt.Errorf("GCF.NextRCF: %w", ErrNilReceiver)
 	}
-
 	if g.stream != nil {
 		return g.stream.NextRCF()
 	}
-
 	if g.terminal != nil {
 		if g.terminal.next >= len(g.terminal.terms) {
 			return NewRCFTerm(nil), StatusEOF, nil
@@ -169,15 +148,12 @@ func (g *GCF) NextRCF() (RCFTerm, Status, error) {
 		g.terminal.next++
 		return NewRCFTerm(term.A()), StatusOK, nil
 	}
-
 	if g.unary != nil {
 		return g.nextUnaryRCF()
 	}
-
 	if g.binary != nil {
 		return g.nextBinaryRCF()
 	}
-
 	return NewRCFTerm(nil), StatusEOF, nil
 }
 
@@ -189,15 +165,12 @@ func (g *GCF) Range() (Range, error) {
 	if g == nil {
 		return Range{}, fmt.Errorf("GCF.Range: %w", ErrNilReceiver)
 	}
-
 	if g.stream != nil {
 		return g.stream.Range()
 	}
-
 	if g.terminal != nil {
 		return cloneRange(g.terminal.rng), nil
 	}
-
 	if g.unary != nil {
 		if isEOFPQStream(g.unary.x) {
 			return exactRangeFromRational(g.unary.engine.CollapseUnaryEOF()), nil
@@ -208,11 +181,9 @@ func (g *GCF) Range() (Range, error) {
 		}
 		return g.unary.engine.UnaryRange(xRange)
 	}
-
 	if g.binary != nil {
 		return g.binaryRange()
 	}
-
 	return exactRangeFromRational(RationalFromInt64(0)), nil
 }
 
@@ -223,4 +194,4 @@ func (g *GCF) Config() Config {
 	return g.cfg
 }
 
-// core/gcf_types.go v5
+// core/gcf_types.go v6
