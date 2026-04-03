@@ -1,4 +1,4 @@
-// core/gcf_binary.go v2
+// core/gcf_binary.go v5
 package core
 
 import "fmt"
@@ -21,36 +21,18 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 		}
 
 		if isEOFPQStream(g.binary.x) {
-			final, err := exactRationalFromUnaryEngine(g.binary.engine.CollapseBinaryXEOF(), g.binary.y)
-			if err != nil {
-				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse X EOF: %w", err)
-			}
-			terms, err := rcfTermsFromRationalChecked(final)
-			if err != nil {
-				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse X EOF terms: %w", err)
-			}
-			g.terminal = &exactTerminalState{
-				terms: cloneRCFTerms(terms),
-				rng:   exactRangeFromRational(final),
-				next:  0,
+			g.unary = &unaryEvaluatorState{
+				engine: g.binary.engine.CollapseBinaryXEOF(),
+				x:      g.binary.y,
 			}
 			g.binary = nil
 			return g.NextRCF()
 		}
 
 		if isEOFPQStream(g.binary.y) {
-			final, err := exactRationalFromUnaryEngine(g.binary.engine.CollapseBinaryYEOF(), g.binary.x)
-			if err != nil {
-				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse Y EOF: %w", err)
-			}
-			terms, err := rcfTermsFromRationalChecked(final)
-			if err != nil {
-				return NewRCFTerm(nil), StatusEOF, fmt.Errorf("nextBinaryRCF: collapse Y EOF terms: %w", err)
-			}
-			g.terminal = &exactTerminalState{
-				terms: cloneRCFTerms(terms),
-				rng:   exactRangeFromRational(final),
-				next:  0,
+			g.unary = &unaryEvaluatorState{
+				engine: g.binary.engine.CollapseBinaryYEOF(),
+				x:      g.binary.x,
 			}
 			g.binary = nil
 			return g.NextRCF()
@@ -124,21 +106,18 @@ func (g *GCF) binaryRange() (Range, error) {
 	switch {
 	case isEOFPQStream(g.binary.x) && isEOFPQStream(g.binary.y):
 		return exactRangeFromRational(g.binary.engine.CollapseBinaryBothEOF()), nil
-
 	case isEOFPQStream(g.binary.x):
 		yRange, err := g.binary.y.Range()
 		if err != nil {
 			return Range{}, fmt.Errorf("binaryRange: right range: %w", err)
 		}
 		return g.binary.engine.CollapseBinaryXEOF().UnaryRange(yRange)
-
 	case isEOFPQStream(g.binary.y):
 		xRange, err := g.binary.x.Range()
 		if err != nil {
 			return Range{}, fmt.Errorf("binaryRange: left range: %w", err)
 		}
 		return g.binary.engine.CollapseBinaryYEOF().UnaryRange(xRange)
-
 	default:
 		xRange, err := g.binary.x.Range()
 		if err != nil {
@@ -152,4 +131,4 @@ func (g *GCF) binaryRange() (Range, error) {
 	}
 }
 
-// core/gcf_binary.go v2
+// core/gcf_binary.go v5
