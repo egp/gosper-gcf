@@ -1,7 +1,7 @@
 # SPEC-1-Gosper-Continued-Fraction-Arithmetic-Library
 
-**Version:** 4  
-**Timestamp:** 2026-03-31T00:00:00-04:00
+**Version:** 5
+**Timestamp:** 2026-04-03T00:00:00-04:00
 
 ## Background
 
@@ -19,12 +19,25 @@ Where the original HAKMEM text and a modern retelling disagree, the requirements
 
 The currently identified conflicts are:
 
-- **Internal representation conflict**: HAKMEM 101B is formulated for continued fractions whose terms are integer pairs `(p_i, q_i)`, with regular continued fractions as the special case `q_i = 1`. Many modern tutorials simplify the model to regular continued fractions only. For this library, the **internal model must use generalized `(p, q)` streams for all sources, transducers, and kernels**, while **only the final client-facing emission is regular continued fraction (RCF)**.
-- **Function-source conflict**: HAKMEM states that numbers like `pi` and `e`, and functions like `sin` and `tanh`, can be produced by short programs as continued-fraction terms. Many modern retellings instead start from floating-point values or from precomputed regular terms. For this library, **programmatic generators and transducers are mandatory** and must not be reduced to float-to-CF conversion.
+- **Internal representation conflict**: HAKMEM 101B is formulated for continued fractions whose terms are integer pairs `(p_i, q_i)`, with regular continued fractions as the special case `q_i = 1`. Many modern tutorials simplify the model to regular continued fractions only.
+
+  For this library, the **internal model must use generalized `(p, q)` streams for all sources, transducers, and kernels**, while **only the final client-facing emission is regular continued fraction (RCF)**.
+
+- **Function-source conflict**: HAKMEM states that numbers like `pi` and `e`, and functions like `sin` and `tanh`, can be produced by short programs as continued-fraction terms. Many modern retellings instead start from floating-point values or from precomputed regular terms.
+
+  For this library, **programmatic generators and transducers are mandatory** and must not be reduced to float-to-CF conversion.
+
 - **Numeric-type conflict**: HAKMEM suggests that interval endpoint evaluation may be accelerated with floating-point estimates. This specification rejects that optimization for MVP correctness. All transform coefficients, terms, interval numerators, and interval denominators must use **arbitrary-precision integers**, with exact rationals for bounds.
-- **Productivity conflict**: HAKMEM 101B gives a demand-driven output rule based on interval narrowing, but also acknowledges cases where an implementation can get stuck trying to emit the last term of a rational result when driven by irrational inputs. The MVP therefore preserves Gosper semantics for final RCF emission, but adopts a **Modern repair** stance operationally: the engine is required to keep refining exact intervals when the next term is not yet provable, and to fail explicitly when client-specified resource thresholds are exceeded rather than looping silently.
-- **Transcendental-on-irrational-input conflict**: HAKMEM explicitly says transcendental functions of irrational arguments are awkward and suggests symbolic term-producing subroutines. The MVP requires `tanh(sqrt(5))` and `sqrt(3/pi^2 + e)`, so the design must **generalize HAKMEM's procedural idea into first-class unary operator transducers**.
-- **Quadratic-kernel extension**: In addition to homographic and bihomographic kernels, the library requires a diagonal quadratic kernel for single-input forms `X' = (aX^2 + bX + c)/(dX^2 + eX + f)`. This is **Generalized beyond HAKMEM** and is driven by the MVP operator set and the priority of making `sqrt` practical.
+
+- **Productivity conflict**: HAKMEM 101B gives a demand-driven output rule based on interval narrowing, but also acknowledges cases where an implementation can get stuck trying to emit the last term of a rational result when driven by irrational inputs.
+
+  The MVP therefore preserves Gosper semantics for final RCF emission, but adopts a **Modern repair** stance operationally: the engine is required to keep refining exact intervals when the next term is not yet provable, and to fail explicitly when client-specified resource thresholds are exceeded rather than looping silently.
+
+- **Transcendental-on-irrational-input conflict**: HAKMEM explicitly says transcendental functions of irrational arguments are awkward and suggests symbolic term-producing subroutines.
+
+  The MVP requires `tanh(sqrt(5))` and `sqrt(3/pi^2 + e)`, so the design must **generalize HAKMEM's procedural idea into first-class unary operator transducers**.
+
+- **Quadratic-kernel extension**: In addition to the unified BLFT kernel, the library requires a diagonal quadratic kernel for single-input forms `X' = (aX^2 + bX + c)/(dX^2 + eX + f)`. This is **Generalized beyond HAKMEM** and is driven by the MVP operator set and the priority of making `sqrt` practical.
 
 For an implementable MVP, the library is assumed to be:
 
@@ -33,9 +46,11 @@ For an implementable MVP, the library is assumed to be:
 - centered on exact, lazy arithmetic over continued-fraction term sources;
 - capable of producing terms for the concrete expression:
 
-  `sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))`
+`sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))`
 
-This expression forces the MVP beyond a pure rational-only core. The resulting requirements therefore include both Gosper arithmetic and a minimal special-function term-source framework sufficient to support the expression above.
+This expression forces the MVP beyond a pure rational-only core.
+
+The resulting requirements therefore include both Gosper arithmetic and a minimal special-function term-source framework sufficient to support the expression above.
 
 ## Requirements
 
@@ -44,15 +59,16 @@ This expression forces the MVP beyond a pure rational-only core. The resulting r
 - Accept generalized continued-fraction (GCF) input streams whose terms are integer pairs `(p_i, q_i)`, with infinite streams as the normal case and `EOF` used to signal exact finite exhaustion when applicable.
 - Use GCF `(p, q)` streams for **all internal sources, adapters, generators, transducers, and kernels**.
 - Emit only **regular continued-fraction (RCF) output terms** to clients.
-- Use **arbitrary-precision integers** for all GCF terms, all homographic coefficients, all bihomographic coefficients, all diagonal-kernel coefficients, and all intermediate coefficient updates.
+- Use **arbitrary-precision integers** for all GCF terms, all BLFT coefficients, all diagonal-kernel coefficients, and all intermediate coefficient updates.
 - Use **exact rationals backed by arbitrary-precision integers** for interval endpoints, error bounds, and floor-stability checks.
 - Use **no binary floating point** and no fixed-width integer arithmetic in the core algorithm or in interval checking.
 - Implement comparison of continued fractions without conversion to floating point.
-- Implement **homographic transforms** `(ax + b) / (cx + d)` as a first-class primitive.
-- Implement **bihomographic transforms** `(axy + bx + cy + d) / (exy + fx + gy + h)` as the core primitive for binary arithmetic.
+- Implement a single **BLFT kernel** with bigint coefficients `(a, b, c, d, e, f, g, h)` as the core linear-fractional runtime primitive.
+- Support unary linear-fractional behavior as an **implicit / degenerate BLFT specialization**, rather than requiring a distinct runtime ULFT structure.
 - Implement a **diagonal quadratic kernel** for single-input transforms `X' = (aX^2 + bX + c)/(dX^2 + eX + f)`.
 - Implement Gosper-style binary arithmetic for `+`, `-`, `*`, and `/`, with output terms emitted incrementally and input terms requested only when necessary.
 - Define deterministic source-exhaustion semantics for exact finite operands, with `EOF` as the canonical end-of-stream signal and HAKMEM-style tail interpretation applied by the kernels.
+- When one BLFT input stream is exhausted, evaluation must continue in the same 8-coefficient BLFT representation, with the exhausted input folded into the coefficients using the exact HAKMEM limit rule (`x -> ∞` or `y -> ∞`, as appropriate).
 - When a computation yields a finite exact RCF output, the emitter must return the final term normally and then return `io.EOF` immediately on the next pull.
 - Define canonical normalization for finite RCF outputs, including deterministic treatment of the trailing-`1` equivalence.
 - Normalize kernel coefficient tuples by dividing by a nontrivial `gcd` when doing so preserves the represented transform.
@@ -117,28 +133,43 @@ The library is organized as a lazy exact-evaluation pipeline with a hard boundar
 
 #### Primary components
 
-1. **GCF Source Interface**  
+1. **GCF Source Interface**
+
    Pull-based source of `(p, q)` terms. Sources include literal generators, constant generators, operator transducers, adapters over finite exact values, and adapters over infinite RCF streams.
 
-2. **Homographic Kernel**  
-   Maintains bigint coefficients `(a, b, c, d)` for unary linear-fractional transforms such as reciprocal and affine-rational transforms.
+2. **Unified BLFT Kernel**
 
-3. **Bihomographic Kernel**  
-   Maintains bigint coefficients `(a, b, c, d, e, f, g, h)` for binary operations `+`, `-`, `*`, and `/`.
+   Maintains bigint coefficients `(a, b, c, d, e, f, g, h)` for linear-fractional continued-fraction evaluation.
 
-4. **Diagonal Quadratic Kernel**  
-   Maintains bigint coefficients `(a, b, c, d, e, f)` for single-input transforms `X' = (aX^2 + bX + c)/(dX^2 + eX + f)`. This kernel is internal and is free to operate as a GCF-producing transducer, an interval-refining kernel, or a hybrid, whichever best supports the `sqrt` implementation and other unary quadratic transforms.
+   Binary arithmetic uses the full bihomographic form.
 
-5. **Unary Operator Transducers**  
-   Lazy exact transducers for `sqrt`, `tanh`, `sin`, `square`, and `reciprocal`. These consume one GCF input source and expose a new GCF source or interval-refining internal state suitable for later RCF emission.
+   Unary linear-fractional evaluation is represented as a BLFT specialization reached either initially or after one input has been exhausted and folded into the coefficients by the HAKMEM tail rule.
 
-6. **Interval Engine**  
+   The specification does not require a separate runtime ULFT data structure.
+
+3. **Diagonal Quadratic Kernel**
+
+   Maintains bigint coefficients `(a, b, c, d, e, f)` for single-input transforms
+   `X' = (aX^2 + bX + c)/(dX^2 + eX + f)`.
+
+   This kernel is internal and is free to operate as a GCF-producing transducer, an interval-refining kernel, or a hybrid, whichever best supports the `sqrt` implementation and other unary quadratic transforms.
+
+4. **Unary Operator Transducers**
+
+   Lazy exact transducers for `sqrt`, `tanh`, `sin`, `square`, and `reciprocal`.
+
+   These consume one GCF input source and expose a new GCF source or interval-refining internal state suitable for later RCF emission.
+
+5. **Interval Engine**
+
    Represents bounds as exact rationals `(num, den)` with bigint numerator and denominator, plus inclusion polarity where needed. It determines whether the current image of a transform lies wholly inside a single floor bucket.
 
-7. **RCF Emitter**  
+6. **RCF Emitter**
+
    Emits the next regular term only when the exact floor is proven stable across the full current interval image.
 
-8. **Expression Planner**  
+7. **Expression Planner**
+
    Builds a lazy graph for composed expressions so subexpressions are consumed only when demanded by downstream kernels.
 
 ### 2. Fundamental Numeric Rules
@@ -147,7 +178,7 @@ The library is organized as a lazy exact-evaluation pipeline with a hard boundar
 - Every input term component `p` and `q` is bigint.
 - Every interval endpoint is a rational with bigint numerator and denominator.
 - No `float32`, `float64`, machine `int`, or `int64` may participate in correctness-critical logic.
-- A **Möbius transform** is another name for a homographic or linear-fractional transform of the form `(ax + b)/(cx + d)`.
+- A **Möbius transform** is another name for a homographic or linear-fractional transform. In this specification, such behavior is represented operationally inside the unified BLFT kernel rather than by a distinct runtime ULFT structure.
 - Coefficient tuples may be normalized by dividing all coefficients by their nontrivial `gcd` whenever that preserves the represented transform.
 - Any optional optimization must be observationally equivalent to the exact bigint/rational semantics.
 
@@ -161,15 +192,19 @@ For the bihomographic form
 
 `z(x,y) = (axy + bx + cy + d)/(exy + fx + gy + h)`
 
-exhausting `x` maps the state to the limiting form
+- exhausting `x` maps the same BLFT state to the limiting unary-in-`y` form
 
-`z(∞, y) = (0·xy + 0·x + ay + b)/(0·xy + 0·x + ey + f)`
+  `z(∞, y) = (0·xy + 0·x + ay + b)/(0·xy + 0·x + ey + f)`
 
-and exhausting `y` maps it to
+- exhausting `y` maps the same BLFT state to the limiting unary-in-`x` form
 
-`z(x, ∞) = (0·xy + ax + 0·y + c)/(0·xy + ex + 0·y + g)`.
+  `z(x, ∞) = (0·xy + ax + 0·y + c)/(0·xy + ex + 0·y + g)`
 
-Operationally, the public source still returns `io.EOF`; the kernel then applies this exact limit rule internally before deciding whether more output can be produced.
+Operationally, the public source still returns `io.EOF`; the kernel then applies this exact limit rule internally and continues evaluation in the same 8-coefficient BLFT representation.
+
+Only exhaustion causes this coefficient zeroing.
+
+No separate runtime ULFT representation is required.
 
 The public API must expose:
 
@@ -185,9 +220,11 @@ The output rule is:
 
 This is **Faithful to HAKMEM** in its final-emission semantics and **Modern repair** in its operational contract: the engine does not promise to always produce the next RCF term, but it must continue producing tighter exact enclosures until either a term becomes provable or configured resource limits are exceeded.
 
+Identity, project-X, and project-Y cases are not permission to bypass the GCF kernel by reinterpreting `(p, q)` terms as already-emitted RCF terms.
+
 ### 4. Ingest / Produce State Machines
 
-#### Bihomographic kernel
+#### Unified BLFT kernel
 
 State is the coefficient tuple `(a,b,c,d,e,f,g,h)`.
 
@@ -197,36 +234,25 @@ Operations:
 - **Ingest right term `(r,s)`**: update the eight coefficients by the HAKMEM substitution for `y = r + s/y'`.
 - **Produce output term `t`**: update the eight coefficients by the HAKMEM output substitution for `z = t + 1/z'`.
 - **Normalize**: reduce coefficients by a shared nontrivial `gcd` when valid.
+- **Collapse left exhaustion**: apply the HAKMEM `x -> ∞` limit rule inside the same BLFT representation.
+- **Collapse right exhaustion**: apply the HAKMEM `y -> ∞` limit rule inside the same BLFT representation.
 
 Initial states:
 
-- `x + y`  => `(0,1,1,0, 0,0,0,1)`
-- `x - y`  => `(0,1,-1,0, 0,0,0,1)`
-- `y - x`  => `(0,-1,1,0, 0,0,0,1)`
-- `x * y`  => `(1,0,0,0, 0,0,0,1)`
-- `x / y`  => `(0,1,0,0, 0,0,1,0)`
-- `y / x`  => `(0,0,1,0, 0,1,0,0)`
+- `x + y` => `(0,1,1,0, 0,0,0,1)`
+- `x - y` => `(0,1,-1,0, 0,0,0,1)`
+- `y - x` => `(0,-1,1,0, 0,0,0,1)`
+- `x * y` => `(1,0,0,0, 0,0,0,1)`
+- `x / y` => `(0,1,0,0, 0,0,1,0)`
+- `y / x` => `(0,0,1,0, 0,1,0,0)`
 
-#### Homographic kernel
-
-State is `(a,b,c,d)`.
-
-Operations:
-
-- ingest input term `(p,q)`;
-- emit an internal GCF term or contribute refined interval knowledge when the state makes that possible;
-- support final RCF emission only through the client-facing emitter;
-- normalize coefficients by `gcd` when valid.
-
-Primary uses in MVP:
-
-- reciprocal;
-- rational scaling and shifting;
-- substeps inside unary transducers.
+Unary linear-fractional transforms are represented by the same BLFT state, either as initial degenerate configurations or as the result of one-sided exhaustion.
 
 #### Diagonal quadratic kernel
 
-State is `(a,b,c,d,e,f)` and represents `X' = (aX^2 + bX + c)/(dX^2 + eX + f)`.
+State is `(a,b,c,d,e,f)` and represents
+
+`X' = (aX^2 + bX + c)/(dX^2 + eX + f)`.
 
 Operations:
 
@@ -240,219 +266,3 @@ Primary uses in MVP:
 - single-input quadratic forms;
 - `square` and related transforms;
 - support machinery for `sqrt`, including Newton-style internal strategies when exactness is preserved.
-
-### 5. Unary Operator Strategy
-
-#### Reciprocal
-
-Implemented as a homographic transform. This is **Faithful to HAKMEM**.
-
-#### Square
-
-Implemented as a dedicated single-source operator with source sharing, not by blindly wiring the same input stream into both sides of a binary multiply.
-
-This operator is semantically distinct because a single-variable quadratic form is operationally different from a generic bihomographic call with duplicated inputs.
-
-The diagonal quadratic kernel is the preferred primitive for this family of transforms.
-
-#### Sqrt
-
-Implemented as a dedicated unary transducer using exact rational bounds and exact floor tests. This is **Generalized beyond HAKMEM**.
-
-The diagonal quadratic kernel exists primarily to make `sqrt` practical. The implementation may use Newton-style internal refinement, diagonal-kernel interval refinement, or a hybrid strategy, provided that:
-
-- all correctness-critical arithmetic remains exact;
-- all internal observable numeric state remains GCF- or exact-interval-based;
-- final client-visible output is still RCF only.
-
-#### Sin and Tanh
-
-Implemented as symbolic unary transducers that consume an exact input source lazily and expose a continued-fraction-producing or interval-refining interface downstream.
-
-This follows HAKMEM's procedural model because HAKMEM explicitly recommends subroutines that produce symbolic terms on demand. It goes beyond the original text because the MVP requires those operators to work concretely on nontrivial irrational inputs such as `tanh(sqrt(5))` and `sqrt(3/pi^2 + e)`.
-
-### 6. Termination and Productivity
-
-The library must distinguish three behaviors:
-
-1. **Productive** — a next RCF term is proven and emitted.
-2. **Undecided but refining** — more source terms are required before emission is possible, but the exact interval is still being tightened.
-3. **Resource-exhausted** — the engine has not proven the next term before a client-specified time, memory, or other configured budget is exceeded.
-
-The MVP adopts the stronger rule that the engine does **not** promise next-term productivity.
-
-Instead, it promises:
-
-- exact interval refinement while computation remains within configured budgets;
-- final RCF emission whenever the next term becomes provable;
-- explicit failure when configured resource limits are exceeded.
-
-The modern repair path for ambiguous near-integer cases is therefore:
-
-- if the current exact enclosure crosses an integer boundary, the engine must not guess the next RCF term;
-- it must continue refining the enclosure using additional source terms or operator-specific exact refinement;
-- if the enclosure still does not isolate a unique floor before budgets are exhausted, the API must surface the current exact enclosure and return a resource-limit error rather than looping silently.
-
-### 7. Go-specific API Mapping
-
-The language-agnostic model should map cleanly to Go as follows:
-
-- bigint => `math/big.Int`
-- rational => `math/big.Rat`
-- term => struct `{ P *big.Int; Q *big.Int }`
-- RCF term => `*big.Int`
-- source => pull iterator interface, context-aware, using `io.EOF` as the exact graceful exhaustion signal for finite sources
-- kernels => mutable structs owning reusable scratch bigints to reduce allocation churn
-- time/resource budgets => constructor or evaluator options, with context deadline/cancellation used for wall-clock control
-
-Suggested Go interfaces:
-
-```go
-type GCFPair struct {
-    P *big.Int
-    Q *big.Int
-}
-
-type Interval struct {
-    Lo *big.Rat
-    Hi *big.Rat
-}
-
-type GCFSource interface {
-    Next(ctx context.Context) (GCFPair, error) // returns io.EOF unwrapped on graceful finite exhaustion
-}
-
-type RCFSource interface {
-    NextRCF(ctx context.Context) (*big.Int, error) // may also return io.EOF for finite exact outputs
-    CurrentInterval(ctx context.Context) (Interval, error)
-}
-```
-
-### 8. Component Diagram
-
-```plantuml
-@startuml
-component "GCF Source
-(bigint (p,q) stream)" as GCF
-component "Unary Transducer
-(sqrt/sin/tanh/square/reciprocal)" as U
-component "Bihomographic Kernel
-(a..h : bigint)" as B
-component "Diagonal Kernel
-(a..f : bigint)" as D
-component "Homographic Kernel
-(a..d : bigint)" as H
-component "Interval Engine
-(big.Rat bounds)" as I
-component "RCF Emitter
-(bigint a_i stream)" as R
-
-GCF --> U
-GCF --> B
-U --> H
-U --> D
-U --> B
-B --> I
-D --> I
-H --> I
-I --> R
-R --> H
-R --> D
-R --> B
-@enduml
-```
-
-## Implementation
-
-### Phase 1 — Numeric substrate
-
-- Implement bigint coefficient containers for homographic, bihomographic, and diagonal-kernel states.
-- Implement exact rational interval utilities using normalized bigint numerator/denominator pairs.
-- Implement exact floor/ceil and interval-image helpers for Möbius, bilinear, and diagonal quadratic transforms.
-- Implement coefficient-tuple `gcd` normalization.
-- Define error taxonomy: invalid term, zero denominator, division by exact zero, resource limit exceeded, context cancellation, and graceful `io.EOF`.
-
-### Phase 2 — Streaming contracts
-
-- Implement the GCF source contract and finite-source exhaustion semantics.
-- Implement the RCF emitter contract, including the rule that a finite exact result returns its last term and then `io.EOF` on the next call.
-- Implement adapters for infinite RCF streams, BigInt rationals, `int64` values, finite GCF fixtures, and test harness sources.
-- Add transcript logging hooks for consumed input terms, emitted RCF terms, coefficient transitions, gcd reductions, and interval snapshots.
-
-### Phase 3 — Core kernels
-
-- Implement homographic ingest and update transitions over bigint coefficients.
-- Implement bihomographic ingest-left, ingest-right, and output transitions over bigint coefficients.
-- Implement diagonal-kernel ingest and interval-update transitions over bigint coefficients.
-- Implement exact floor-stability checks on transformed tail intervals.
-- Implement exact exhausted-tail substitution rules after `io.EOF` from finite sources.
-- Implement resource accounting hooks for time, memory, and optional emitted-term limits.
-
-### Phase 4 — Constants and unary operators
-
-- Implement built-in generators for `pi` and `e` as GCF-producing sources.
-- Implement `reciprocal` as a homographic operator.
-- Implement `square` as a dedicated single-source operator with source sharing, preferably on top of the diagonal kernel.
-- Implement `sqrt` as a dedicated unary transducer using exact rational bounds and exact refinement, with the diagonal kernel available for Newton-style or hybrid internal strategies.
-- Implement `sin` and `tanh` as exact unary transducers over continued-fraction sources, with no float-based fallback.
-- Implement exact degree-to-radian conversion for `sin(69°)` before dispatch into the radian-domain `sin` path.
-
-### Phase 5 — Expression engine
-
-- Build a lazy expression planner that wires sources, unary transducers, binary kernels, and interval tracking into a demand-driven graph.
-- Ensure subexpressions are evaluated only when downstream consumers request more information.
-- Ensure shared unary inputs can be memoized where single-source semantics matter, especially for `square`.
-
-### Phase 6 — Verification
-
-- Add HAKMEM-derived golden tests for elementary operations, canonical trailing-`1` handling, and early term emission.
-- Add tests for finite exhaustion behavior, including last-term-then-`io.EOF`.
-- Add property-based tests for rational identities, reciprocal involution where defined, square monotonicity on nonnegative intervals, and convergent/interval refinement.
-- Add targeted tests for the MVP expression `sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))` to verify that terms begin streaming without eager whole-expression evaluation.
-- Add regression tests for historically non-productive edge cases and resource-limit behavior.
-
-### Phase 7 — Go packaging
-
-- Publish a minimal Go package surface centered on pull iterators, `math/big.Int`, `math/big.Rat`, `context.Context`, `io.EOF`, `NextRCF`, and `CurrentInterval`.
-- Reuse receiver-owned scratch objects to reduce allocation churn in hot coefficient-update paths.
-- Keep interfaces small and place resource budgets behind optional configuration structs.
-
-## Milestones
-
-1. **M1 — Exact numeric core**  
-   Bigint coefficient types, exact rational intervals, gcd normalization, floor-stability checks, and canonical error model complete.
-
-2. **M2 — Streaming kernels**  
-   Homographic, bihomographic, and diagonal kernels pass golden tests for `+`, `-`, `*`, `/`, reciprocal, finite exhaustion semantics, and interval refinement.
-
-3. **M3 — Unary MVP operators**  
-   `square`, `sqrt`, `sin`, and `tanh` integrated as lazy exact transducers; `pi` and `e` generators available.
-
-4. **M4 — MVP expression success**  
-   The library emits RCF terms for `sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))` through the public API and exposes exact intervals throughout evaluation.
-
-5. **M5 — Hardening**  
-   Property-based tests, regression suite for non-productive cases, resource-guard enforcement, tracing, and Go packaging polish complete.
-
-## Gathering Results
-
-The implementation will be considered successful if it demonstrates all of the following:
-
-- elementary arithmetic over GCF inputs emits correct RCF outputs matching HAKMEM-derived examples;
-- all correctness-critical paths use bigint and exact rational arithmetic only;
-- finite exact outputs return the final term and then `io.EOF` immediately on the next pull;
-- unary MVP operators compose lazily and correctly with the binary and diagonal kernels;
-- the MVP expression begins producing terms incrementally without eager global evaluation;
-- interval bounds narrow monotonically and remain sound for every emitted term;
-- known non-productive scenarios are surfaced as interval refinement followed by either provable emission or explicit resource-limit failure.
-
-Primary evaluation artifacts:
-
-- golden-term transcripts;
-- convergent and bound traces;
-- allocation and latency benchmarks per emitted term;
-- regression corpus for ambiguous or historically looping cases.
-
-## Unanswered Questions
-
-- Whether a maximum emitted-term count should be a required MVP guard or remain optional configuration.
