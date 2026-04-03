@@ -1,4 +1,4 @@
-// core/gcf_types.go v4
+// core/gcf_types.go v5
 package core
 
 import "fmt"
@@ -130,10 +130,16 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 	switch {
 	case state.IndependentOfY():
 		unaryState := collapseIndependentOfYToUnary(state)
+		if isIdentityUnaryState(unaryState) {
+			return newObservedRCFGCFWithResolvedConfig(newObservedRCFFromPQ(x), cfg)
+		}
 		return newGCF1WithResolvedConfig(blftCoefficientsFromState(unaryState), x, cfg)
 
 	case state.IndependentOfX():
 		unaryState := collapseIndependentOfXToUnary(state)
+		if isIdentityUnaryState(unaryState) {
+			return newObservedRCFGCFWithResolvedConfig(newObservedRCFFromPQ(y), cfg)
+		}
 		return newGCF1WithResolvedConfig(blftCoefficientsFromState(unaryState), y, cfg)
 
 	default:
@@ -217,4 +223,4 @@ func (g *GCF) Config() Config {
 	return g.cfg
 }
 
-// core/gcf_types.go v4
+// core/gcf_types.go v5

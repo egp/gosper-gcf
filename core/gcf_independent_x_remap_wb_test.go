@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestWB_CollapseIndependentOfXToUnary_MapsCDGHIntoUnarySlots(t *testing.T) {
+func TestWB_CollapseIndependentOfXToUnary_MapsCDGHIntoUnarySlots2(t *testing.T) {
 	got := collapseIndependentOfXToUnary(blftState{
 		A: big.NewInt(0),
 		B: big.NewInt(0),

@@ -1,4 +1,4 @@
-// core/gcf_helpers.go v5
+// core/gcf_helpers.go v9
 package core
 
 import "math/big"
@@ -10,6 +10,9 @@ func collapseUnaryXEOF(coeffs blftState) Rational {
 	return NewRational(coeffs.D, coeffs.H)
 }
 
+// Independent of X means the BLFT already has the unary-in-Y form
+// (C*y + D) / (G*y + H). In this codebase's unary slot layout, the active
+// unary variable lives in B,D,F,H, so we remap C,D,G,H into B,D,F,H.
 func collapseIndependentOfXToUnary(coeffs blftState) blftState {
 	return blftState{
 		A: big.NewInt(0),
@@ -23,6 +26,8 @@ func collapseIndependentOfXToUnary(coeffs blftState) blftState {
 	}.Normalize()
 }
 
+// Independent of Y means the BLFT already has the unary-in-X form
+// (B*x + D) / (F*x + H). In unary slot layout that stays in B,D,F,H.
 func collapseIndependentOfYToUnary(coeffs blftState) blftState {
 	return blftState{
 		A: big.NewInt(0),
@@ -36,6 +41,8 @@ func collapseIndependentOfYToUnary(coeffs blftState) blftState {
 	}.Normalize()
 }
 
+// Required by gcf_types.go for the lazy independent-of-X/Y constructor path.
+// Do not remove without also updating that path and its WB tests.
 func blftCoefficientsFromState(s blftState) BLFTCoefficients {
 	return BLFTCoefficients{
 		A: cloneBigInt(s.A),
@@ -61,6 +68,7 @@ func coeffIsZero(x *big.Int) bool {
 	return x == nil || x.Sign() == 0
 }
 
+// Gosper/HAKMEM-style X exhaustion leaves a unary transform in Y using A,B,E,F.
 func collapseXEOFToUnary(coeffs blftState) blftState {
 	if isIndependentOfX(coeffs) {
 		return collapseIndependentOfXToUnary(coeffs)
@@ -77,6 +85,7 @@ func collapseXEOFToUnary(coeffs blftState) blftState {
 	}.Normalize()
 }
 
+// Gosper/HAKMEM-style Y exhaustion leaves a unary transform in X using A,C,E,G.
 func collapseYEOFToUnary(coeffs blftState) blftState {
 	if isIndependentOfY(coeffs) {
 		return collapseIndependentOfYToUnary(coeffs)
@@ -136,4 +145,4 @@ func cloneRCFTerms(terms []RCFTerm) []RCFTerm {
 	return out
 }
 
-// core/gcf_helpers.go v5
+// core/gcf_helpers.go v9
