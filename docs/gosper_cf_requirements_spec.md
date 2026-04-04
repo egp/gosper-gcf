@@ -417,3 +417,68 @@ The implementation should be judged conformant to this specification when it sat
 - Interval exactness is part of the semantic contract, not merely a debugging aid.
 - The toroidal/projective interpretation is central to outside-interval reasoning and denominator-crossing behavior.
 - The project deliberately chooses stronger public-output correctness guarantees than Gosper’s permissive self-correction model.
+
+## Addendum: Further Enhancements for Full Fidelity to Gosper’s HAKMEM 101A/B/C (Proposed for Version 7)
+
+**Status:** Proposed for immediate incorporation after Version 6.  
+**Date:** 2026-04-03  
+**Purpose:** This addendum closes the minor gaps identified in the independent evaluation of Version 6. It brings the specification to 100 % alignment with both the letter and the spirit of Gosper’s original vision while preserving:
+
+* the exact MVP target expression  
+  `sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))`  
+  (with the project’s deliberate degree-to-radian wrapper),  
+* the `remove-trig-from-core` architecture (core kernels remain pure BLFT/quadratic; trig generators are extensions), and  
+* all existing “Faithful / Project restriction / Project generalization” labels.
+
+No breaking changes to Must-Have items or the streaming/exact/arbitrary-precision contract are required.
+
+### 1. Hurwitz Numbers and Natural Periodicity (New Should-Have Requirement)
+
+**Rationale (direct from HAKMEM 101B):**  
+Gosper highlights that many important constants and functions (e, certain hyperbolic functions, ratios of Bessel functions, etc.) are “Hurwitz numbers” whose terms are low-degree polynomials in consecutive integers. Homographic transformations (including the bihomographic and quadratic kernels) preserve this property, leading to naturally periodic or bounded coefficients and elegant irrationality proofs (e.g., for combinations of e and π).
+
+**Requirement (add under Should-Have):**  
+- The bihomographic, homographic, and diagonal quadratic kernels **must** preserve Hurwitz form whenever all active input streams are Hurwitz.  
+- The implementation **should** provide optional runtime detection of emerging periodicity in the coefficient sequences (for diagnostics, early termination of coefficient growth, and performance reporting).  
+- This is a **Faithful to HAKMEM** extension; no change to the emission or interval rules is needed.
+
+### 2. Piecewise Transmission of Large Terms (Clarification to GCF Term-Source Abstraction)
+
+**Rationale (direct from HAKMEM 101B):**  
+Gosper explicitly shows that a single large term (e.g., 20776) can be transmitted as the piecewise GCF `[2 0 0 0 0 0; 7 0 0 0 0 70 0 6]`, describing it as “thinly disguised multiprecision.” This is presented as a practical advantage of the streaming model.
+
+**Requirement (add as a parenthetical note to the GCF term-source abstraction section):**  
+GCF sources **may** emit arbitrarily large `(p, q)` terms by splitting them into equivalent piecewise generalized continued-fraction segments. All kernels, adapters, and the emitter **must** handle such piecewise streams transparently and without unnecessary coefficient explosion.  
+**Disposition:** Faithful to HAKMEM.
+
+### 3. Approximate Input Sources (New Could-Have)
+
+**Rationale (direct from HAKMEM 101B):**  
+Gosper discusses inputs that are known only approximately and the resulting exact error-bound propagation, including identification of the limiting quantity when precision is exhausted.
+
+**Requirement (add under Could-Have):**  
+- Provide a standard adapter for approximate GCF sources whose exact interval may widen over time (or be finite-precision).  
+- The pipeline **must** propagate the resulting bounds exactly, exactly as Gosper describes for “inputs known only approximately.”  
+**Disposition:** Project generalization (fully compatible with the existing exact-interval model).
+
+### 4. Explicit 101A “Best Approximation” Properties (New Informative Note)
+
+**Rationale:**  
+Item 101A is Gosper’s “propaganda session” that sells continued fractions by emphasizing best rational approximations, automatic lowest-terms convergents, and error bounds smaller than 1/(Q²·a_{n+1}).
+
+**Requirement (add as a new subsection under Background or immediately after the convergent-conversion bullet in Must-Have):**  
+Although not required as first-class client APIs, the library’s RCF-to-convergents conversion and exact interval exposure implicitly deliver **all** of the “best rational approximation” and error-bound properties described in HAKMEM 101A. Test suites and documentation **should** demonstrate these properties explicitly for truncated CF prefixes.  
+**Disposition:** Faithful to HAKMEM 101A (background reinforcement).
+
+### 5. Trig Unary Labeling Consistency (Minor Clarification)
+
+Given the active `remove-trig-from-core` branch:  
+- The unary transcendental operators (`sqrt`, `tanh`, `sinRadians`, `sinDegrees`, `square`, `reciprocal`, …) remain **Must Have**.  
+- Their label is updated to **Project generalization** (core kernels stay pure BLFT/quadratic; trig, hyperbolic, and algebraic function generators are provided as optional procedural adapters/extensions).  
+
+This matches the existing conflict-resolution entry for angle-unit choice and keeps the MVP target expression fully supported.
+
+---
+
+**End of Addendum.**  
+Appending this section completes the specification. The library built to Version 7 (or later) will be rigorously faithful to Gosper’s intent while meeting all modern engineering goals.
