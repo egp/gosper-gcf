@@ -1,4 +1,4 @@
-// core/gcf_collapse_eof_wb_test.go v3
+// core/gcf_collapse_eof_wb_test.go v4
 package core
 
 import (
@@ -130,4 +130,61 @@ func TestWB_GCF_BinaryCollapseYEOF_ProjectX_PreservesRemainingXTermsLazily(t *te
 	assert.Zero(t, term3.A().Cmp(big.NewInt(4)))
 }
 
-// core/gcf_collapse_eof_wb_test.go v3
+func TestWB_GCF_BinaryProjectX_RuntimeIndependenceTransitionsToUnary(t *testing.T) {
+	x, xStatus := NewFinitePQStream([]FinitePQStep{
+		{
+			Term: PQTerm{P: big.NewInt(3), Q: big.NewInt(1)},
+			Range: Range{
+				Lo:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(6)), Open: false},
+				Hi:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(6)), Open: false},
+				Inside: true,
+			},
+		},
+		{
+			Term: PQTerm{P: big.NewInt(1), Q: big.NewInt(1)},
+			Range: Range{
+				Lo:     Endpoint{Value: NewRational(big.NewInt(5), big.NewInt(4)), Open: false},
+				Hi:     Endpoint{Value: NewRational(big.NewInt(5), big.NewInt(4)), Open: false},
+				Inside: true,
+			},
+		},
+	})
+	require.Equal(t, StatusOK, xStatus)
+
+	y, yStatus := NewFinitePQStream([]FinitePQStep{
+		{
+			Term: PQTerm{P: big.NewInt(2), Q: big.NewInt(1)},
+			Range: Range{
+				Lo:     Endpoint{Value: RationalFromInt64(2), Open: false},
+				Hi:     Endpoint{Value: RationalFromInt64(2), Open: false},
+				Inside: true,
+			},
+		},
+	})
+	require.Equal(t, StatusOK, yStatus)
+
+	g := NewGCF2(
+		BLFTCoefficients{
+			A: big.NewInt(0),
+			B: big.NewInt(1),
+			C: big.NewInt(0),
+			D: big.NewInt(0),
+			E: big.NewInt(0),
+			F: big.NewInt(0),
+			G: big.NewInt(0),
+			H: big.NewInt(1),
+		},
+		x,
+		y,
+	)
+
+	term1, status1, err1 := g.NextRCF()
+	require.NoError(t, err1)
+	require.Equal(t, StatusOK, status1)
+	assert.Zero(t, term1.A().Cmp(big.NewInt(3)))
+
+	assert.Nil(t, g.binary)
+	require.NotNil(t, g.unary)
+}
+
+// core/gcf_collapse_eof_wb_test.go v4

@@ -1,4 +1,4 @@
-// core/gcf_binary.go v5
+// core/gcf_binary.go v3
 package core
 
 import "fmt"
@@ -131,4 +131,4 @@ func (g *GCF) binaryRange() (Range, error) {
 	}
 }
 
-// core/gcf_binary.go v5
+// core/gcf_binary.go v3

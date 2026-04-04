@@ -1,4 +1,4 @@
-// core/blft_collapse.go v4
+// core/blft_collapse.go v5
 package core
 
 import "math/big"
@@ -33,4 +33,4 @@ func (s blftState) CollapseToRational() Rational {
 	return NewRational(s.D, s.H)
 }
 
-// core/blft_collapse.go v4
+// core/blft_collapse.go v5
