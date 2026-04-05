@@ -10,14 +10,16 @@ type exactTerminalState struct {
 }
 
 type unaryEvaluatorState struct {
-	engine unaryEngine
-	x      PQStream
+	engine    unaryEngine
+	rectifier *Rectifier // final-tier homographic LFT
+	x         PQStream
 }
 
 type binaryEvaluatorState struct {
-	engine binaryEngine
-	x      PQStream
-	y      PQStream
+	engine    binaryEngine
+	rectifier *Rectifier // final-tier homographic LFT
+	x         PQStream
+	y         PQStream
 }
 
 type GCF struct {

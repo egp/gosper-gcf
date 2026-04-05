@@ -1,7 +1,10 @@
-// core/gcf_binary.go v3
+// core/gcf_binary.go V6
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 	for {
@@ -22,8 +25,9 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 
 		if isEOFPQStream(g.binary.x) {
 			g.unary = &unaryEvaluatorState{
-				engine: g.binary.engine.CollapseBinaryXEOF(),
-				x:      g.binary.y,
+				engine:    g.binary.engine.CollapseBinaryXEOF(),
+				rectifier: NewRectifier(big.NewInt(0), big.NewInt(1), big.NewInt(1), big.NewInt(0)),
+				x:         g.binary.y,
 			}
 			g.binary = nil
 			return g.NextRCF()
@@ -31,8 +35,9 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 
 		if isEOFPQStream(g.binary.y) {
 			g.unary = &unaryEvaluatorState{
-				engine: g.binary.engine.CollapseBinaryYEOF(),
-				x:      g.binary.x,
+				engine:    g.binary.engine.CollapseBinaryYEOF(),
+				rectifier: NewRectifier(big.NewInt(0), big.NewInt(1), big.NewInt(1), big.NewInt(0)),
+				x:         g.binary.x,
 			}
 			g.binary = nil
 			return g.NextRCF()
@@ -62,7 +67,15 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 				g.binary = nil
 				return term, StatusOK, nil
 			}
+
+			// TWO-TIER (this iteration): always follow internal emission so term sequence / collapse timing is unchanged
+			pq := PQTerm{
+				P: cloneBigIntOrZero(term.A()),
+				Q: big.NewInt(1),
+			}
+			g.binary.rectifier = g.binary.rectifier.Absorb(pq)
 			g.binary.engine = g.binary.engine.EmitBinary(term)
+			g.binary.rectifier = g.binary.rectifier.Emit(term)
 			return term, StatusOK, nil
 		}
 
@@ -131,4 +144,4 @@ func (g *GCF) binaryRange() (Range, error) {
 	}
 }
 
-// core/gcf_binary.go v3
+// core/gcf_binary.go V6

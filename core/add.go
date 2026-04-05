@@ -1,4 +1,4 @@
-// core/add.go v2
+// core/add.go v2 (unchanged — speculator tier only)
 package core
 
 import "math/big"
@@ -15,9 +15,6 @@ func Add(x, y PQStream) *GCF {
 			G: big.NewInt(0),
 			H: big.NewInt(1),
 		},
-		x,
-		y,
+		x, y,
 	)
 }
-
-// core/add.go v2

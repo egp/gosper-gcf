@@ -1,9 +1,10 @@
-// core/gcf_unary.go v4
+// core/gcf_unary.go V6
 package core
 
 import (
 	"errors"
 	"fmt"
+	"math/big"
 )
 
 func (g *GCF) nextUnaryRCF() (RCFTerm, Status, error) {
@@ -59,7 +60,15 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status, error) {
 				g.unary = nil
 				return term, StatusOK, nil
 			}
+
+			// TWO-TIER (this iteration): always follow internal emission so term sequence / collapse timing is unchanged
+			pq := PQTerm{
+				P: cloneBigIntOrZero(term.A()),
+				Q: big.NewInt(1),
+			}
+			g.unary.rectifier = g.unary.rectifier.Absorb(pq)
 			g.unary.engine = g.unary.engine.EmitUnary(term)
+			g.unary.rectifier = g.unary.rectifier.Emit(term)
 			return term, StatusOK, nil
 		}
 
@@ -107,4 +116,4 @@ func canAdvancePastUnsupportedUnaryRange(x PQStream) bool {
 	return ok
 }
 
-// core/gcf_unary.go v4
+// core/gcf_unary.go V6
