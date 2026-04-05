@@ -1,8 +1,10 @@
-// core/rectifier.go V5
+// core/rectifier.go V2
 
 package core
 
-import "math/big"
+import (
+	"math/big"
+)
 
 // Rectifier implements the Version 7 "Rectification Tier".
 // It is a Unary LFT [a, b; c, d] that certifies internal noisy terms.
@@ -10,16 +12,20 @@ type Rectifier struct {
 	a, b, c, d *big.Int
 }
 
-func NewRectifier() *Rectifier {
+// NewRectifier matches your existing signature: NewRectifier(a, b, c, d)
+func NewRectifier(a, b, c, d *big.Int) *Rectifier {
 	return &Rectifier{
-		a: big.NewInt(1), b: big.NewInt(0),
-		c: big.NewInt(0), d: big.NewInt(1),
+		a: new(big.Int).Set(a),
+		b: new(big.Int).Set(b),
+		c: new(big.Int).Set(c),
+		d: new(big.Int).Set(d),
 	}
 }
 
-// Absorb takes a generalized term (p, q) and folds it into the state.
-// This is the "State-driven buffer" from the spec.
-func (r *Rectifier) Absorb(p, q *big.Int) {
+// Absorb matches your existing signature: Absorb(PQTerm)
+func (r *Rectifier) Absorb(pq PQTerm) {
+	p, q := pq.P, pq.Q
+
 	// a' = a*p + b*q, b' = a
 	// c' = c*p + d*q, d' = c
 	newA := new(big.Int).Mul(r.a, p)
@@ -36,19 +42,20 @@ func (r *Rectifier) Absorb(p, q *big.Int) {
 	r.Normalize()
 }
 
-// CanEmit checks if floor(z(1)) == floor(z(inf))
+// CanEmit replaces the "Emit" check. It returns (true, term) if the floor is stable.
 func (r *Rectifier) CanEmit() (bool, *big.Int) {
+	// If denominators are zero, we are at infinity or undefined
 	if r.c.Sign() == 0 && r.d.Sign() == 0 {
 		return false, nil
 	}
 
-	// Case 1: z(inf) = a/c
+	// Bound 1: z(inf) = a/c
 	if r.c.Sign() == 0 {
 		return false, nil
-	} // Infinite
+	}
 	fInf := new(big.Int).Div(r.a, r.c)
 
-	// Case 2: z(1) = (a+b)/(c+d)
+	// Bound 2: z(1) = (a+b)/(c+d)
 	num1 := new(big.Int).Add(r.a, r.b)
 	den1 := new(big.Int).Add(r.c, r.d)
 	if den1.Sign() == 0 {
@@ -62,8 +69,10 @@ func (r *Rectifier) CanEmit() (bool, *big.Int) {
 	return false, nil
 }
 
-// Produce updates state after an RCF term t is emitted: z = t + 1/z' => z' = 1/(z-t)
-func (r *Rectifier) Produce(t *big.Int) {
+// Emit is a convenience method that combines the state transition logic.
+// In your loops, if CanEmit returns true, you call this to update the matrix.
+func (r *Rectifier) Emit(t *big.Int) {
+	// Production: z = t + 1/z'  => z' = 1/(z-t)
 	// a'' = c, b'' = d
 	// c'' = a - tc, d'' = b - td
 	tc := new(big.Int).Mul(t, r.c)
@@ -81,7 +90,7 @@ func (r *Rectifier) Produce(t *big.Int) {
 
 func (r *Rectifier) Normalize() {
 	g := gcd4(r.a, r.b, r.c, r.d)
-	if g.Cmp(big.NewInt(1)) > 0 {
+	if g.Cmp(big.NewInt(1)) > 1 {
 		r.a.Div(r.a, g)
 		r.b.Div(r.b, g)
 		r.c.Div(r.c, g)
@@ -89,4 +98,12 @@ func (r *Rectifier) Normalize() {
 	}
 }
 
-// core/rectifier.go V
+// gcd4 is a helper for normalization
+func gcd4(a, b, c, d *big.Int) *big.Int {
+	res := new(big.Int).GCD(nil, nil, a, b)
+	res.GCD(nil, nil, res, c)
+	res.GCD(nil, nil, res, d)
+	return res
+}
+
+// core/rectifier.go V2
