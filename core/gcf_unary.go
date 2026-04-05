@@ -1,4 +1,4 @@
-// core/gcf_unary.go V11
+// core/gcf_unary.go V12
 package core
 
 import (
@@ -116,4 +116,4 @@ func canAdvancePastUnsupportedUnaryRange(x PQStream) bool {
 	return ok
 }
 
-// core/gcf_unary.go V11
+// core/gcf_unary.go V12

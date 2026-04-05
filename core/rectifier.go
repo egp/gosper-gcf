@@ -1,4 +1,4 @@
-// core/rectifier.go V3
+// core/rectifier.go V4
 package core
 
 import "math/big"
@@ -16,7 +16,7 @@ func NewRectifier(a, b, c, d *big.Int) *Rectifier {
 	}
 }
 
-// Absorb — exact rule from newSpec.md §4
+// Absorb — exact rule from newSpec.md §4 + GCD normalization after each update (using BigInt GCD logic)
 func (r *Rectifier) Absorb(term PQTerm) *Rectifier {
 	if r == nil {
 		return nil
@@ -29,6 +29,17 @@ func (r *Rectifier) Absorb(term PQTerm) *Rectifier {
 	newC := new(big.Int).Add(new(big.Int).Mul(r.c, p), new(big.Int).Mul(r.d, q))
 	newD := cloneBigIntOrZero(r.c)
 
+	// GCD normalization (successive GCD of all four coefficients)
+	g := new(big.Int).GCD(nil, nil, newA, newB)
+	g = new(big.Int).GCD(g, nil, g, newC)
+	g = new(big.Int).GCD(g, nil, g, newD)
+	if g.Sign() > 0 {
+		newA.Div(newA, g)
+		newB.Div(newB, g)
+		newC.Div(newC, g)
+		newD.Div(newD, g)
+	}
+
 	r.a = newA
 	r.b = newB
 	r.c = newC
@@ -36,7 +47,7 @@ func (r *Rectifier) Absorb(term PQTerm) *Rectifier {
 	return r
 }
 
-// CanEmit — exact interval check from newSpec.md §4 (kept for next iteration)
+// CanEmit — exact interval check from newSpec.md §4
 func (r *Rectifier) CanEmit() (RCFTerm, bool) {
 	if r == nil || r.c.Sign() == 0 {
 		return NewRCFTerm(nil), false
@@ -79,4 +90,4 @@ func (r *Rectifier) CanEmitRCFTerm(_ Range) (RCFTerm, bool) {
 	return r.CanEmit()
 }
 
-// core/rectifier.go V3
+// core/rectifier.go V4

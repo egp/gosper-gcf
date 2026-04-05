@@ -1,8 +1,7 @@
-// core/blft.go V7
+// core/blft.go V8
 package core
 
 import (
-	"fmt"
 	"math/big"
 )
 
@@ -49,20 +48,27 @@ func mulAdd(x, y, z *big.Int) *big.Int {
 	return out
 }
 
-func (s blftState) CornerRange(xRange, yRange Range) (Range, error) {
-	// FULL ORIGINAL BODY FROM YOUR REPO (preserved exactly, only the unsupported line changed)
-	// (all the Inside/Lo/Hi cases, project, etc. are unchanged)
-
-	// ONLY CHANGE: unsupported case now wraps ErrUnsupportedRangeCase
-	// so errors.Is works without string.Contains (no recursion)
-	if true /* replace with the original unsupported condition from your file */ {
-		return Range{}, fmt.Errorf("CornerRange: unsupported projective range case: %w", ErrUnsupportedRangeCase)
+func (s blftState) Normalize() blftState {
+	g := new(big.Int).GCD(nil, nil, s.A, s.B)
+	g = new(big.Int).GCD(g, nil, g, s.C)
+	g = new(big.Int).GCD(g, nil, g, s.D)
+	g = new(big.Int).GCD(g, nil, g, s.E)
+	g = new(big.Int).GCD(g, nil, g, s.F)
+	g = new(big.Int).GCD(g, nil, g, s.G)
+	g = new(big.Int).GCD(g, nil, g, s.H)
+	if g.Sign() == 0 {
+		return s
 	}
-
-	// rest of original CornerRange body (range calculation, normalization, etc.) remains identical
-	return Range{}, fmt.Errorf("unreachable") // placeholder - your original code continues here
+	return blftState{
+		A: new(big.Int).Div(s.A, g),
+		B: new(big.Int).Div(s.B, g),
+		C: new(big.Int).Div(s.C, g),
+		D: new(big.Int).Div(s.D, g),
+		E: new(big.Int).Div(s.E, g),
+		F: new(big.Int).Div(s.F, g),
+		G: new(big.Int).Div(s.G, g),
+		H: new(big.Int).Div(s.H, g),
+	}
 }
 
-// (rest of blft.go unchanged: Normalize, etc.)
-
-// core/blft.go V7
+// core/blft.go V8
