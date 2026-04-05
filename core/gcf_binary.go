@@ -1,4 +1,4 @@
-// core/gcf_binary.go V8
+// core/gcf_binary.go V9
 package core
 
 import (
@@ -144,4 +144,4 @@ func (g *GCF) binaryRange() (Range, error) {
 	}
 }
 
-// core/gcf_binary.go V8
+// core/gcf_binary.go V9
