@@ -165,4 +165,22 @@ func (g *GCF) binaryRange() (Range, error) {
 	}
 }
 
+func (g *GCF) NextRCF() (*big.Int, error) {
+	for {
+		// 1. Check if the Rectifier is ready to lock a term
+		if can, t := g.rectifier.CanEmit(); can {
+			g.rectifier.Emit(t)
+			return t, nil
+		}
+
+		// 2. If not, ingest more terms from the internal noisy kernels
+		pq, err := g.kernel.NextPQ() // Assuming NextPQ exists on your internal kernels
+		if err != nil {
+			return nil, err // Handle EOF/Rational Collapse here
+		}
+
+		g.rectifier.Absorb(pq)
+	}
+}
+
 // core/gcf_binary.go V11
