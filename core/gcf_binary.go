@@ -1,4 +1,4 @@
-// core/gcf_binary.go V9
+// core/gcf_binary.go V10
 package core
 
 import (
@@ -76,6 +76,28 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 			g.binary.rectifier = g.binary.rectifier.Absorb(pq)
 			g.binary.engine = g.binary.engine.EmitBinary(term)
 			g.binary.rectifier = g.binary.rectifier.Emit(term)
+
+			// RESTORED: runtime independence transition logic (original pre-rectifier behavior)
+			// This is what fixes the project transition test, collapse symmetry, and BB term 2
+			if g.binary.engine.IndependentOfX() {
+				g.unary = &unaryEvaluatorState{
+					engine:    g.binary.engine.CollapseBinaryXEOF(),
+					rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)), // identity
+					x:         g.binary.y,
+				}
+				g.binary = nil
+				return g.NextRCF()
+			}
+			if g.binary.engine.IndependentOfY() {
+				g.unary = &unaryEvaluatorState{
+					engine:    g.binary.engine.CollapseBinaryYEOF(),
+					rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)), // identity
+					x:         g.binary.x,
+				}
+				g.binary = nil
+				return g.NextRCF()
+			}
+
 			return term, StatusOK, nil
 		}
 
@@ -144,4 +166,4 @@ func (g *GCF) binaryRange() (Range, error) {
 	}
 }
 
-// core/gcf_binary.go V9
+// core/gcf_binary.go V10
