@@ -1,4 +1,4 @@
-// core/gcf_binary.go V6
+// core/gcf_binary.go V8
 package core
 
 import (
@@ -26,7 +26,7 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 		if isEOFPQStream(g.binary.x) {
 			g.unary = &unaryEvaluatorState{
 				engine:    g.binary.engine.CollapseBinaryXEOF(),
-				rectifier: NewRectifier(big.NewInt(0), big.NewInt(1), big.NewInt(1), big.NewInt(0)),
+				rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)), // identity transform per newSpec.md §4
 				x:         g.binary.y,
 			}
 			g.binary = nil
@@ -36,7 +36,7 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 		if isEOFPQStream(g.binary.y) {
 			g.unary = &unaryEvaluatorState{
 				engine:    g.binary.engine.CollapseBinaryYEOF(),
-				rectifier: NewRectifier(big.NewInt(0), big.NewInt(1), big.NewInt(1), big.NewInt(0)),
+				rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)), // identity transform per newSpec.md §4
 				x:         g.binary.x,
 			}
 			g.binary = nil
@@ -144,4 +144,4 @@ func (g *GCF) binaryRange() (Range, error) {
 	}
 }
 
-// core/gcf_binary.go V6
+// core/gcf_binary.go V8

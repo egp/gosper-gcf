@@ -1,10 +1,11 @@
-// core/gcf_unary.go V6
+// core/gcf_unary.go V9
 package core
 
 import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 func (g *GCF) nextUnaryRCF() (RCFTerm, Status, error) {
@@ -31,7 +32,7 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status, error) {
 
 		currentRange, err := g.unary.engine.UnaryRange(xRange)
 		if err != nil {
-			if errors.Is(err, ErrUnsupportedRangeCase) && canAdvancePastUnsupportedUnaryRange(g.unary.x) {
+			if (errors.Is(err, ErrUnsupportedRangeCase) || strings.Contains(err.Error(), "unsupported projective range case")) && canAdvancePastUnsupportedUnaryRange(g.unary.x) {
 				term, tail, status, nextErr := g.unary.x.NextPQ()
 				if nextErr != nil {
 					return NewRCFTerm(nil), status, fmt.Errorf("nextUnaryRCF: advance past unsupported range NextPQ: %w", nextErr)
@@ -116,4 +117,4 @@ func canAdvancePastUnsupportedUnaryRange(x PQStream) bool {
 	return ok
 }
 
-// core/gcf_unary.go V6
+// core/gcf_unary.go V9

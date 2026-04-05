@@ -1,7 +1,10 @@
-// core/gcf_types.go v6
+// core/gcf_types.go V7
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 type exactTerminalState struct {
 	terms []RCFTerm
@@ -11,13 +14,13 @@ type exactTerminalState struct {
 
 type unaryEvaluatorState struct {
 	engine    unaryEngine
-	rectifier *Rectifier // final-tier homographic LFT
+	rectifier *Rectifier // final-tier homographic LFT per newSpec.md §4 (Two-Tier Architecture)
 	x         PQStream
 }
 
 type binaryEvaluatorState struct {
 	engine    binaryEngine
-	rectifier *Rectifier // final-tier homographic LFT
+	rectifier *Rectifier // final-tier homographic LFT per newSpec.md §4 (Two-Tier Architecture)
 	x         PQStream
 	y         PQStream
 }
@@ -111,8 +114,9 @@ func newGCF1WithResolvedConfig(coeffs BLFTCoefficients, x PQStream, cfg Config) 
 	}
 	if x != nil {
 		g.unary = &unaryEvaluatorState{
-			engine: newBLFTState(coeffs),
-			x:      x,
+			engine:    newBLFTState(coeffs),
+			rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)), // identity transform per newSpec.md §4
+			x:         x,
 		}
 	}
 	return g
@@ -127,9 +131,10 @@ func newGCF2WithResolvedConfig(coeffs BLFTCoefficients, x, y PQStream, cfg Confi
 	}
 	if x != nil && y != nil {
 		g.binary = &binaryEvaluatorState{
-			engine: newBLFTState(coeffs),
-			x:      x,
-			y:      y,
+			engine:    newBLFTState(coeffs),
+			rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)), // identity transform per newSpec.md §4
+			x:         x,
+			y:         y,
 		}
 	}
 	return g
@@ -196,4 +201,4 @@ func (g *GCF) Config() Config {
 	return g.cfg
 }
 
-// core/gcf_types.go v6
+// core/gcf_types.go V7
