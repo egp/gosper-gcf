@@ -1,93 +1,92 @@
-// core/rectifier.go V4
+// core/rectifier.go V5
+
 package core
 
 import "math/big"
 
+// Rectifier implements the Version 7 "Rectification Tier".
+// It is a Unary LFT [a, b; c, d] that certifies internal noisy terms.
 type Rectifier struct {
 	a, b, c, d *big.Int
 }
 
-func NewRectifier(a, b, c, d *big.Int) *Rectifier {
+func NewRectifier() *Rectifier {
 	return &Rectifier{
-		a: cloneBigIntOrZero(a),
-		b: cloneBigIntOrZero(b),
-		c: cloneBigIntOrZero(c),
-		d: cloneBigIntOrZero(d),
+		a: big.NewInt(1), b: big.NewInt(0),
+		c: big.NewInt(0), d: big.NewInt(1),
 	}
 }
 
-// Absorb — exact rule from newSpec.md §4 + GCD normalization after each update
-func (r *Rectifier) Absorb(term PQTerm) *Rectifier {
-	if r == nil {
-		return nil
-	}
-	p := term.P
-	q := term.Q
+// Absorb takes a generalized term (p, q) and folds it into the state.
+// This is the "State-driven buffer" from the spec.
+func (r *Rectifier) Absorb(p, q *big.Int) {
+	// a' = a*p + b*q, b' = a
+	// c' = c*p + d*q, d' = c
+	newA := new(big.Int).Mul(r.a, p)
+	newA.Add(newA, new(big.Int).Mul(r.b, q))
 
-	newA := new(big.Int).Add(new(big.Int).Mul(r.a, p), new(big.Int).Mul(r.c, q))
-	newB := cloneBigIntOrZero(r.a)
-	newC := new(big.Int).Add(new(big.Int).Mul(r.c, p), new(big.Int).Mul(r.d, q))
-	newD := cloneBigIntOrZero(r.c)
+	newC := new(big.Int).Mul(r.c, p)
+	newC.Add(newC, new(big.Int).Mul(r.d, q))
 
-	// GCD normalization (chained exactly like blft_normalize.go)
-	g := new(big.Int).GCD(nil, nil, newA, newB)
-	g = new(big.Int).GCD(g, nil, g, newC)
-	g = new(big.Int).GCD(g, nil, g, newD)
-	if g.Sign() > 0 {
-		newA.Div(newA, g)
-		newB.Div(newB, g)
-		newC.Div(newC, g)
-		newD.Div(newD, g)
-	}
+	r.b.Set(r.a)
+	r.a.Set(newA)
+	r.d.Set(r.c)
+	r.c.Set(newC)
 
-	r.a = newA
-	r.b = newB
-	r.c = newC
-	r.d = newD
-	return r
+	r.Normalize()
 }
 
-// CanEmit — exact interval check from newSpec.md §4
-func (r *Rectifier) CanEmit() (RCFTerm, bool) {
-	if r == nil || r.c.Sign() == 0 {
-		return NewRCFTerm(nil), false
+// CanEmit checks if floor(z(1)) == floor(z(inf))
+func (r *Rectifier) CanEmit() (bool, *big.Int) {
+	if r.c.Sign() == 0 && r.d.Sign() == 0 {
+		return false, nil
 	}
 
-	zInf := NewRational(cloneBigIntOrZero(r.a), cloneBigIntOrZero(r.c))
-	z1Num := new(big.Int).Add(cloneBigIntOrZero(r.a), cloneBigIntOrZero(r.b))
-	z1Den := new(big.Int).Add(cloneBigIntOrZero(r.c), cloneBigIntOrZero(r.d))
-	z1 := NewRational(z1Num, z1Den)
+	// Case 1: z(inf) = a/c
+	if r.c.Sign() == 0 {
+		return false, nil
+	} // Infinite
+	fInf := new(big.Int).Div(r.a, r.c)
 
-	rng := Range{
-		Lo:     Endpoint{Value: zInf, Open: false},
-		Hi:     Endpoint{Value: z1, Open: false},
-		Inside: true,
+	// Case 2: z(1) = (a+b)/(c+d)
+	num1 := new(big.Int).Add(r.a, r.b)
+	den1 := new(big.Int).Add(r.c, r.d)
+	if den1.Sign() == 0 {
+		return false, nil
 	}
+	fOne := new(big.Int).Div(num1, den1)
 
-	return canEmitRCFTermFromRange(rng)
-}
-
-// Emit — production substitution (z = t + 1/z') after emit
-func (r *Rectifier) Emit(term RCFTerm) *Rectifier {
-	if r == nil {
-		return nil
+	if fInf.Cmp(fOne) == 0 {
+		return true, fInf
 	}
-	n := term.A()
-
-	newA := cloneBigIntOrZero(r.c)
-	newB := cloneBigIntOrZero(r.d)
-	newC := new(big.Int).Sub(cloneBigIntOrZero(r.a), new(big.Int).Mul(n, r.c))
-	newD := new(big.Int).Sub(cloneBigIntOrZero(r.b), new(big.Int).Mul(n, r.d))
-
-	r.a = newA
-	r.b = newB
-	r.c = newC
-	r.d = newD
-	return r
+	return false, nil
 }
 
-func (r *Rectifier) CanEmitRCFTerm(_ Range) (RCFTerm, bool) {
-	return r.CanEmit()
+// Produce updates state after an RCF term t is emitted: z = t + 1/z' => z' = 1/(z-t)
+func (r *Rectifier) Produce(t *big.Int) {
+	// a'' = c, b'' = d
+	// c'' = a - tc, d'' = b - td
+	tc := new(big.Int).Mul(t, r.c)
+	td := new(big.Int).Mul(t, r.d)
+
+	newC := new(big.Int).Sub(r.a, tc)
+	newD := new(big.Int).Sub(r.b, td)
+
+	r.a.Set(r.c)
+	r.b.Set(r.d)
+	r.c.Set(newC)
+	r.d.Set(newD)
+	r.Normalize()
 }
 
-// core/rectifier.go V4
+func (r *Rectifier) Normalize() {
+	g := gcd4(r.a, r.b, r.c, r.d)
+	if g.Cmp(big.NewInt(1)) > 0 {
+		r.a.Div(r.a, g)
+		r.b.Div(r.b, g)
+		r.c.Div(r.c, g)
+		r.d.Div(r.d, g)
+	}
+}
+
+// core/rectifier.go V
