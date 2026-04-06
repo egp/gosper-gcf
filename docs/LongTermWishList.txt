@@ -7,7 +7,7 @@ Check test code coverage and improve it.
 
 Add a unary operator for decimal output such as .NextDecimalDigit(X)
 
-Create a main.go file that implements the MVP 'target formula' that outputs an infinite stream of terms.
+Create a main.go file that implements the MVP 'target formula' and outputs an infinite stream of terms.
 
 I eventually want to provide a framework for procedural named sources.
 Some like E() have straight forward algorithms, but some like sqrt(2) have
