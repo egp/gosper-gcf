@@ -1,0 +1,26 @@
+Wish List:
+
+Add property based testing; fuzzing tests.
+Example for all X, X==square(sqrt(X)) and X==sqrt(square(X))
+
+Check test code coverage and improve it.
+
+Add a unary operator for decimal output such as .NextDecimalDigit(X)
+
+Create a main.go file that implements the MVP 'target formula' that outputs an infinite stream of terms.
+
+I eventually want to provide a framework for procedural named sources.
+Some like E() have straight forward algorithms, but some like sqrt(2) have
+a repeating sequence, so I propose a helper method for all repeating sequences,
+where the prod code supplies initial terms and a sequence of additional terms to be repeated.
+Then adding new named sources that have a repeating sequence become trivial.
+
+OEIS https://oeis.org/A001203/list for Pi, and has many finite CFs for testing against generators.
+
+Create user API_doc.txt with separate sections for ./core and ./named and ./trig packages
+
+Maybe add some example code and associated documentation.
+
+
+
+
