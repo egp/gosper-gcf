@@ -63,8 +63,8 @@ func TestWB_GCF_BinaryCollapseYEOF_ProjectX_PreservesRemainingXTermsLazily(t *te
 		{
 			Term: PQTerm{P: big.NewInt(3), Q: big.NewInt(1)},
 			Range: Range{
-				Lo:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(6)), Open: false},
-				Hi:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(6)), Open: false},
+				Lo:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(5)), Open: false},
+				Hi:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(5)), Open: false},
 				Inside: true,
 			},
 		},
@@ -135,8 +135,8 @@ func TestWB_GCF_BinaryProjectX_RuntimeIndependenceTransitionsToUnary(t *testing.
 		{
 			Term: PQTerm{P: big.NewInt(3), Q: big.NewInt(1)},
 			Range: Range{
-				Lo:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(6)), Open: false},
-				Hi:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(6)), Open: false},
+				Lo:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(5)), Open: false},
+				Hi:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(5)), Open: false},
 				Inside: true,
 			},
 		},

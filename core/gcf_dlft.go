@@ -1,6 +1,8 @@
 // core/gcf_dlft.go v4
 package core
 
+import "math/big"
+
 func NewDLFT1(coeffs DLFTCoefficients, x PQStream) *GCF {
 	return newDLFT1WithResolvedConfig(coeffs, x, DefaultConfig())
 }
@@ -16,8 +18,9 @@ func newDLFT1WithResolvedConfig(coeffs DLFTCoefficients, x PQStream, cfg Config)
 	}
 	if x != nil {
 		g.unary = &unaryEvaluatorState{
-			engine: newDLFTState(coeffs),
-			x:      x,
+			engine:    newDLFTState(coeffs),
+			rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)),
+			x:         x,
 		}
 	}
 	return g

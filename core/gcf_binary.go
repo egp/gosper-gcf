@@ -8,6 +8,28 @@ import (
 
 func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 	for {
+		// Detect runtime independence before any emission or ingest attempt.
+		// This catches both initial independence and post-emit independence
+		// on the following iteration, so we never lose an already-emitted term.
+		if g.binary.engine.IndependentOfX() {
+			g.unary = &unaryEvaluatorState{
+				engine:    g.binary.engine.CollapseBinaryXEOF(),
+				rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)),
+				x:         g.binary.y,
+			}
+			g.binary = nil
+			return g.NextRCF()
+		}
+		if g.binary.engine.IndependentOfY() {
+			g.unary = &unaryEvaluatorState{
+				engine:    g.binary.engine.CollapseBinaryYEOF(),
+				rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)),
+				x:         g.binary.x,
+			}
+			g.binary = nil
+			return g.NextRCF()
+		}
+
 		if isEOFPQStream(g.binary.x) && isEOFPQStream(g.binary.y) {
 			collapsed := g.binary.engine.CollapseBinaryBothEOF()
 			terms, err := rcfTermsFromRationalChecked(collapsed)
@@ -73,29 +95,9 @@ func (g *GCF) nextBinaryRCF() (RCFTerm, Status, error) {
 				P: cloneBigIntOrZero(term.A()),
 				Q: big.NewInt(1),
 			}
-			g.binary.rectifier = g.binary.rectifier.Absorb(pq)
+			g.binary.rectifier.Absorb(pq)
 			g.binary.engine = g.binary.engine.EmitBinary(term)
-			g.binary.rectifier = g.binary.rectifier.Emit(term)
-
-			// FULL RUNTIME INDEPENDENCE TRANSITION (restored exactly as pre-rectifier)
-			if g.binary.engine.IndependentOfX() {
-				g.unary = &unaryEvaluatorState{
-					engine:    g.binary.engine.CollapseBinaryXEOF(),
-					rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)), // identity
-					x:         g.binary.y,
-				}
-				g.binary = nil
-				return g.NextRCF()
-			}
-			if g.binary.engine.IndependentOfY() {
-				g.unary = &unaryEvaluatorState{
-					engine:    g.binary.engine.CollapseBinaryYEOF(),
-					rectifier: NewRectifier(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)), // identity
-					x:         g.binary.x,
-				}
-				g.binary = nil
-				return g.NextRCF()
-			}
+			g.binary.rectifier.Emit(term.A())
 
 			return term, StatusOK, nil
 		}
@@ -162,24 +164,6 @@ func (g *GCF) binaryRange() (Range, error) {
 			return Range{}, fmt.Errorf("binaryRange: right range: %w", err)
 		}
 		return g.binary.engine.BinaryRange(xRange, yRange)
-	}
-}
-
-func (g *GCF) NextRCF() (*big.Int, error) {
-	for {
-		// 1. Check if the Rectifier is ready to lock a term
-		if can, t := g.rectifier.CanEmit(); can {
-			g.rectifier.Emit(t)
-			return t, nil
-		}
-
-		// 2. If not, ingest more terms from the internal noisy kernels
-		pq, err := g.kernel.NextPQ() // Assuming NextPQ exists on your internal kernels
-		if err != nil {
-			return nil, err // Handle EOF/Rational Collapse here
-		}
-
-		g.rectifier.Absorb(pq)
 	}
 }
 

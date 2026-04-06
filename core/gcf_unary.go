@@ -66,9 +66,9 @@ func (g *GCF) nextUnaryRCF() (RCFTerm, Status, error) {
 				P: cloneBigIntOrZero(term.A()),
 				Q: big.NewInt(1),
 			}
-			g.unary.rectifier = g.unary.rectifier.Absorb(pq)
+			g.unary.rectifier.Absorb(pq)
 			g.unary.engine = g.unary.engine.EmitUnary(term)
-			g.unary.rectifier = g.unary.rectifier.Emit(term)
+			g.unary.rectifier.Emit(term.A())
 			return term, StatusOK, nil
 		}
 

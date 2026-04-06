@@ -51,7 +51,7 @@ func TestBB_GCF_BinaryProjectXPassesThroughLeftInput(t *testing.T) {
 	x, xStatus := core.NewFinitePQStream([]core.FinitePQStep{
 		{
 			Term:  core.PQTerm{P: big.NewInt(3), Q: big.NewInt(1)},
-			Range: binaryPhase5ExactRange(19, 6),
+			Range: binaryPhase5ExactRange(19, 5),
 		},
 		{
 			Term:  core.PQTerm{P: big.NewInt(1), Q: big.NewInt(1)},

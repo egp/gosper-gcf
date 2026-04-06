@@ -26,8 +26,8 @@ func TestWB_GCF_BinaryCollapseXEOF_ProjectY_PreservesRemainingYTermsLazily(t *te
 		{
 			Term: PQTerm{P: big.NewInt(3), Q: big.NewInt(1)},
 			Range: Range{
-				Lo:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(6)), Open: false},
-				Hi:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(6)), Open: false},
+				Lo:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(5)), Open: false},
+				Hi:     Endpoint{Value: NewRational(big.NewInt(19), big.NewInt(5)), Open: false},
 				Inside: true,
 			},
 		},
