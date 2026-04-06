@@ -73,3 +73,16 @@ func newPQPairFromRCFReplay(src core.RCFStream) (core.PQStream, core.PQStream) {
 }
 
 // trig/sin.go v5
+
+// --- appended from trig/api.go ---
+// trig/api.go v4
+
+func Sin(x core.PQStream) *core.GCF {
+	return sinRadians(x)
+}
+
+func Tanh(x core.PQStream) *core.GCF {
+	return tanhRadians(x)
+}
+
+// trig/api.go v4

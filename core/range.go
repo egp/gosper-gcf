@@ -46,3 +46,13 @@ func (r Range) Cmp(_ Range) int {
 }
 
 // core/range.go v5
+
+// --- appended from core/endpoint.go ---
+// core/endpoint.go v2
+
+type Endpoint struct {
+	Value Rational
+	Open  bool
+}
+
+// core/endpoint.go v2
