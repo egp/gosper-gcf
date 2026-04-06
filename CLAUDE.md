@@ -29,15 +29,24 @@ staticcheck ./core ./named ./trig
 
 The "all green" bar includes `RUN_PENDING_TESTS=1` on `./core ./named`.
 
-Never push while tests are red.
+Never push while normal tests are red (OK for `PENDING` to be red).
+
+## Requirements Specification
+
+- `docs/gosper_cf_requirements_spec.md` - Primary specs
+- `docs/newSpec.md` - clarification specs
+
+These specs are derived from Gosper's work, especially HAKMEM 101A-101C.
+There are a few deliberate deviations from Gosper that should be well marked in the specs.
+
 
 ## Architecture
 
-GoGCF is a Go library for exact arithmetic on generalized continued fractions (GCF) in the style of Gosper (HAKMEM Items 101A–101C). It uses `*big.Int` throughout. The early milestone expression is `sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))`.
+GoGCF is a Go library for exact arithmetic on generalized continued fractions (GCF) in the style of Gosper. It uses `*big.Int` for all data, including GCF input, RCF output, Rational, and Range(Interval). Only things like counters and loop indexes are excluded. The early milestone (MVP) expression is `sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))`.
 
 ### Packages
 
-- **`core/`** — all evaluation machinery; zero external clients
+- **`core/`** — all evaluation machinery; zero external clients, so public API may be changed if necessary.
 - **`named/`** — named procedural sources (`E`, `Pi`, `Sqrt2`, `SinDegrees`); consumes `core` and `trig`
 - **`trig/`** — trigonometric/hyperbolic kernels (`Sin`, `Tanh`, Lambert-family); consumes `core`
 
