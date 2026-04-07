@@ -1,7 +1,8 @@
-// named/sin_degrees_wb_test.go v2
+// named/sin_degrees_wb_test.go v3
 package named
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -108,4 +109,33 @@ func nextRCFWithTimeoutSinDegreesWB(t *testing.T, g *core.GCF, timeout time.Dura
 	}
 }
 
-// named/sin_degrees_wb_test.go v2
+// TestWB_SinDegrees_RationalValuedAngles verifies the property:
+// SinDegrees(d°) = exact rational RCF for all angles where sin is rational.
+// Cases run individually so each can be activated as the implementation progresses.
+func TestWB_SinDegrees_RationalValuedAngles(t *testing.T) {
+	cases := []struct {
+		degrees int64
+		want    []int64 // exact RCF (finite)
+	}{
+		{0, []int64{0}},        // sin 0° = 0 — passes today
+		{30, []int64{0, 2}},    // sin 30° = 1/2
+		{90, []int64{1}},       // sin 90° = 1
+		{150, []int64{0, 2}},   // sin 150° = 1/2
+		{180, []int64{0}},      // sin 180° = 0
+		{-30, []int64{-1, 2}},  // sin -30° = -1/2
+		{-90, []int64{-1}},     // sin -90° = -1
+		{-150, []int64{-1, 2}}, // sin -150° = -1/2
+	}
+
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("%d°", tc.degrees), func(t *testing.T) {
+			if tc.degrees != 0 {
+				skipIfPending(t, "SinDegrees rational-valued angles")
+			}
+			g := SinDegrees(core.PQStreamFromRational(core.RationalFromInt64(tc.degrees)))
+			assertExactRCFSequenceSinDegreesWB(t, g, tc.want)
+		})
+	}
+}
+
+// named/sin_degrees_wb_test.go v3

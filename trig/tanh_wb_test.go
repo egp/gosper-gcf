@@ -1,7 +1,8 @@
-// trig/tanh_wb_test.go v3
+// trig/tanh_wb_test.go v4
 package trig
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -231,4 +232,49 @@ func TestWB_DoubleAngleFromHalfQuotient_OneIsExactlyOne(t *testing.T) {
 	assertExactRCFSequenceTanhWB(t, g, []int64{1})
 }
 
-// trig/tanh_wb_test.go v3
+// TestWB_Tanh_FirstTermSignForPositiveInputs verifies the property:
+// tanh(x) ∈ (0,1) for x > 0  → first RCF term = 0
+// tanh(-x) ∈ (-1,0) for x > 0 → first RCF term = -1
+func TestWB_Tanh_FirstTermSignForPositiveInputs(t *testing.T) {
+	inputs := []core.Rational{
+		core.NewRational(big.NewInt(1), big.NewInt(4)),
+		core.NewRational(big.NewInt(1), big.NewInt(2)),
+		core.RationalFromInt64(1),
+		core.RationalFromInt64(2),
+		core.RationalFromInt64(3),
+	}
+
+	for _, x := range inputs {
+		name := fmt.Sprintf("%v/%v", x.Num(), x.Den())
+		t.Run(name, func(t *testing.T) {
+			// positive: tanh(x) ∈ (0,1), floor = 0
+			pos := Tanh(core.PQStreamFromRational(x))
+			term, status, err := nextRCFWithTimeoutTanhWB(t, pos, time.Second)
+			if err != nil {
+				t.Fatalf("tanh(%v) NextRCF error = %v", x, err)
+			}
+			if status != core.StatusOK {
+				t.Fatalf("tanh(%v) status = %v, want %v", x, status, core.StatusOK)
+			}
+			if term.A().Sign() != 0 {
+				t.Fatalf("tanh(%v) first term = %v, want 0", x, term.A())
+			}
+
+			// negative: tanh(-x) ∈ (-1,0), floor = -1
+			negX := core.NewRational(new(big.Int).Neg(x.Num()), x.Den())
+			neg := Tanh(core.PQStreamFromRational(negX))
+			term2, status2, err2 := nextRCFWithTimeoutTanhWB(t, neg, time.Second)
+			if err2 != nil {
+				t.Fatalf("tanh(%v) NextRCF error = %v", negX, err2)
+			}
+			if status2 != core.StatusOK {
+				t.Fatalf("tanh(%v) status = %v, want %v", negX, status2, core.StatusOK)
+			}
+			if term2.A().Cmp(big.NewInt(-1)) != 0 {
+				t.Fatalf("tanh(%v) first term = %v, want -1", negX, term2.A())
+			}
+		})
+	}
+}
+
+// trig/tanh_wb_test.go v4

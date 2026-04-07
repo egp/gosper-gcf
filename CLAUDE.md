@@ -33,11 +33,7 @@ Never push while normal tests are red (OK for `PENDING` to be red).
 
 ## Requirements Specification
 
-- `docs/gosper_cf_requirements_spec.md` - Primary specs
-- `docs/newSpec.md` - clarification specs
-
-These specs are derived from Gosper's work, especially HAKMEM 101A-101C.
-There are a few deliberate deviations from Gosper that should be well marked in the specs.
+See `docs/STATUS.md` for specs, stage plan, and current PENDING inventory.
 
 
 ## Architecture
@@ -98,6 +94,7 @@ Tests guarded by `RUN_PENDING_TESTS=1` are intentionally red and represent the c
 
 - `TestBB_GCF_SqrtOfTwoMatchesKnownPrefix` — parked sqrt(2) signoff; keep red until addressed
 - `TestBB_SquareOfSqrt2IsExactlyTwo` — deferred; blocked by DLFT infinite algebraic-source limitation
+- `TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_OfDegreesScaleOutsideCase_DoesNotPanic` — deferred; unary BLFT outside-range (projective wrap-around) case; needed for full SinDegrees signoff
 
 ### Feature-start workflow
 

@@ -1,9 +1,8 @@
-// trig/trig_bb_test.go v4
+// trig/trig_bb_test.go v5
 package trig_test
 
 import (
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -11,17 +10,13 @@ import (
 	"github.com/egp/gosper-gcf/trig"
 )
 
-const pendingTestTrigSin = true
-
 func TestBB_Trig_Sin_ZeroIsExactlyZero(t *testing.T) {
 	g := trig.Sin(core.PQStreamFromRational(core.RationalFromInt64(0)))
 	assertExactRCFSequenceTrig(t, g, []int64{0})
 }
 
 func TestBB_Trig_Sin_OneHalfMatchesKnownPrefix(t *testing.T) {
-	if shouldSkipPendingTrigSin() {
-		t.Skip("pending trig.Sin implementation; set RUN_PENDING_TESTS=1 to run anyway")
-	}
+	skipIfPending(t, "trig.Sin")
 
 	g := trig.Sin(core.PQStreamFromRational(
 		core.NewRational(big.NewInt(1), big.NewInt(2)),
@@ -56,10 +51,6 @@ func TestBB_Trig_Tanh_MinusOneHalfMatchesKnownPrefix(t *testing.T) {
 func TestBB_Trig_Tanh_TwoMatchesKnownPrefix(t *testing.T) {
 	g := trig.Tanh(core.PQStreamFromRational(core.RationalFromInt64(2)))
 	assertRCFPrefixTrig(t, g, []int64{0, 1, 26, 1, 3, 1, 42, 2})
-}
-
-func shouldSkipPendingTrigSin() bool {
-	return pendingTestTrigSin && os.Getenv("RUN_PENDING_TESTS") == ""
 }
 
 func assertExactRCFSequenceTrig(t *testing.T, g *core.GCF, want []int64) {
@@ -129,4 +120,4 @@ func nextRCFWithTimeoutTrig(t *testing.T, g *core.GCF, timeout time.Duration) (c
 	}
 }
 
-// trig/trig_bb_test.go v4
+// trig/trig_bb_test.go v5

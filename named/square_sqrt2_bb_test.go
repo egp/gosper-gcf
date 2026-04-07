@@ -1,9 +1,8 @@
-// named/square_sqrt2_bb_test.go v3
+// named/square_sqrt2_bb_test.go v4
 package named_test
 
 import (
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -11,12 +10,8 @@ import (
 	"github.com/egp/gosper-gcf/named"
 )
 
-const pendingTestNamedSquareSqrt2 = true
-
 func TestBB_SquareOfSqrt2IsExactlyTwo(t *testing.T) {
-	if shouldSkipPendingNamedSquareSqrt2() {
-		t.Skip("pending infinite algebraic square(sqrt2) certification gap; set RUN_PENDING_TESTS=1 to run anyway")
-	}
+	skipIfPending(t, "infinite algebraic square(sqrt2) certification gap")
 
 	g := core.Square(named.Sqrt2())
 
@@ -38,10 +33,6 @@ func TestBB_SquareOfSqrt2IsExactlyTwo(t *testing.T) {
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
-}
-
-func shouldSkipPendingNamedSquareSqrt2() bool {
-	return pendingTestNamedSquareSqrt2 && os.Getenv("RUN_PENDING_TESTS") == ""
 }
 
 func nextRCFWithTimeoutSquareSqrt2(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status, error) {
@@ -69,4 +60,4 @@ func nextRCFWithTimeoutSquareSqrt2(t *testing.T, g *core.GCF, timeout time.Durat
 	}
 }
 
-// named/square_sqrt2_bb_test.go v3
+// named/square_sqrt2_bb_test.go v4
