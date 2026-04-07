@@ -1,7 +1,8 @@
-// trig/tanh_wb_test.go v3
+// trig/tanh_wb_test.go v4
 package trig
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -132,7 +133,10 @@ func assertExactRCFSequenceTanhWB(t *testing.T, g *core.GCF, want []int64) {
 	t.Helper()
 
 	for i, w := range want {
-		term, status := nextRCFWithTimeoutTanhWB(t, g, time.Second)
+		term, status, err := nextRCFWithTimeoutTanhWB(t, g, time.Second)
+		if err != nil {
+			t.Fatalf("term %d NextRCF error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -141,7 +145,10 @@ func assertExactRCFSequenceTanhWB(t *testing.T, g *core.GCF, want []int64) {
 		}
 	}
 
-	_, eofStatus := nextRCFWithTimeoutTanhWB(t, g, time.Second)
+	_, eofStatus, err := nextRCFWithTimeoutTanhWB(t, g, time.Second)
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
@@ -151,7 +158,10 @@ func assertRCFPrefixTanhWB(t *testing.T, g *core.GCF, want []int64) {
 	t.Helper()
 
 	for i, w := range want {
-		term, status := nextRCFWithTimeoutTanhWB(t, g, time.Second)
+		term, status, err := nextRCFWithTimeoutTanhWB(t, g, time.Second)
+		if err != nil {
+			t.Fatalf("term %d NextRCF error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -161,36 +171,41 @@ func assertRCFPrefixTanhWB(t *testing.T, g *core.GCF, want []int64) {
 	}
 }
 
-func nextRCFWithTimeoutTanhWB(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status) {
+func nextRCFWithTimeoutTanhWB(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status, error) {
 	t.Helper()
 
 	type result struct {
 		term   core.RCFTerm
 		status core.Status
+		err    error
 	}
 
 	ch := make(chan result, 1)
+
 	go func() {
-		term, status := g.NextRCF()
-		ch <- result{term: term, status: status}
+		term, status, err := g.NextRCF()
+		ch <- result{term: term, status: status, err: err}
 	}()
 
 	select {
 	case got := <-ch:
-		return got.term, got.status
+		return got.term, got.status, got.err
 	case <-time.After(timeout):
 		t.Fatalf("NextRCF() did not complete within %v", timeout)
-		return core.NewRCFTerm(nil), core.StatusInvalidInput
+		return core.NewRCFTerm(nil), core.StatusInvalidInput, nil
 	}
 }
-func TestWB_DoubleAngleFromHalfQuotient_NilPanics(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Fatal("doubleAngleFromHalfQuotient(nil) did not panic")
-		}
-	}()
 
-	_ = doubleAngleFromHalfQuotient(nil)
+func TestWB_DoubleAngleFromHalfQuotient_NilReturnsError(t *testing.T) {
+	g := doubleAngleFromHalfQuotient(nil)
+	if g == nil {
+		t.Fatal("doubleAngleFromHalfQuotient(nil) returned nil, want non-nil error-producing GCF")
+	}
+
+	_, _, err := nextRCFWithTimeoutTanhWB(t, g, time.Second)
+	if err == nil {
+		t.Fatal("doubleAngleFromHalfQuotient(nil) first NextRCF error = nil, want non-nil error")
+	}
 }
 
 func TestWB_DoubleAngleFromHalfQuotient_ZeroIsExactlyZero(t *testing.T) {
@@ -217,4 +232,49 @@ func TestWB_DoubleAngleFromHalfQuotient_OneIsExactlyOne(t *testing.T) {
 	assertExactRCFSequenceTanhWB(t, g, []int64{1})
 }
 
-// trig/tanh_wb_test.go v3
+// TestWB_Tanh_FirstTermSignForPositiveInputs verifies the property:
+// tanh(x) ∈ (0,1) for x > 0  → first RCF term = 0
+// tanh(-x) ∈ (-1,0) for x > 0 → first RCF term = -1
+func TestWB_Tanh_FirstTermSignForPositiveInputs(t *testing.T) {
+	inputs := []core.Rational{
+		core.NewRational(big.NewInt(1), big.NewInt(4)),
+		core.NewRational(big.NewInt(1), big.NewInt(2)),
+		core.RationalFromInt64(1),
+		core.RationalFromInt64(2),
+		core.RationalFromInt64(3),
+	}
+
+	for _, x := range inputs {
+		name := fmt.Sprintf("%v/%v", x.Num(), x.Den())
+		t.Run(name, func(t *testing.T) {
+			// positive: tanh(x) ∈ (0,1), floor = 0
+			pos := Tanh(core.PQStreamFromRational(x))
+			term, status, err := nextRCFWithTimeoutTanhWB(t, pos, time.Second)
+			if err != nil {
+				t.Fatalf("tanh(%v) NextRCF error = %v", x, err)
+			}
+			if status != core.StatusOK {
+				t.Fatalf("tanh(%v) status = %v, want %v", x, status, core.StatusOK)
+			}
+			if term.A().Sign() != 0 {
+				t.Fatalf("tanh(%v) first term = %v, want 0", x, term.A())
+			}
+
+			// negative: tanh(-x) ∈ (-1,0), floor = -1
+			negX := core.NewRational(new(big.Int).Neg(x.Num()), x.Den())
+			neg := Tanh(core.PQStreamFromRational(negX))
+			term2, status2, err2 := nextRCFWithTimeoutTanhWB(t, neg, time.Second)
+			if err2 != nil {
+				t.Fatalf("tanh(%v) NextRCF error = %v", negX, err2)
+			}
+			if status2 != core.StatusOK {
+				t.Fatalf("tanh(%v) status = %v, want %v", negX, status2, core.StatusOK)
+			}
+			if term2.A().Cmp(big.NewInt(-1)) != 0 {
+				t.Fatalf("tanh(%v) first term = %v, want -1", negX, term2.A())
+			}
+		})
+	}
+}
+
+// trig/tanh_wb_test.go v4

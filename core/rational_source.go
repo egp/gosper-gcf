@@ -1,13 +1,31 @@
-// core/rational_source.go v1
+// core/rational_source.go v2
 package core
 
-import "math/big"
+import (
+	"fmt"
+	"math/big"
+)
 
 func PQStreamFromRational(r Rational) PQStream {
-	terms := finiteRCFTermsFromRational(r)
-	steps := make([]FinitePQStep, len(terms))
-	suffixes := suffixRationalsFromRCFTerms(terms)
+	stream, err := PQStreamFromRationalChecked(r)
+	if err != nil {
+		return newErrorPQStream(err)
+	}
+	return stream
+}
 
+func PQStreamFromRationalChecked(r Rational) (PQStream, error) {
+	terms, err := finiteRCFTermsFromRationalChecked(r)
+	if err != nil {
+		return nil, fmt.Errorf("PQStreamFromRationalChecked: finite terms: %w", err)
+	}
+
+	suffixes, err := suffixRationalsFromRCFTermsChecked(terms)
+	if err != nil {
+		return nil, fmt.Errorf("PQStreamFromRationalChecked: suffix rationals: %w", err)
+	}
+
+	steps := make([]FinitePQStep, len(terms))
 	for i, term := range terms {
 		steps[i] = FinitePQStep{
 			Term: PQTerm{
@@ -20,41 +38,51 @@ func PQStreamFromRational(r Rational) PQStream {
 
 	stream, status := NewFinitePQStream(steps)
 	if status != StatusOK {
-		panic("PQStreamFromRational: failed to construct finite PQ stream")
+		return nil, fmt.Errorf("PQStreamFromRationalChecked: NewFinitePQStream status=%v", status)
 	}
-	return stream
+	return stream, nil
 }
 
-func finiteRCFTermsFromRational(r Rational) []int64 {
+func finiteRCFTermsFromRationalChecked(r Rational) ([]int64, error) {
 	n := r.Num()
 	d := r.Den()
 
 	if d.Sign() == 0 {
-		panic("finiteRCFTermsFromRational: zero denominator")
+		return nil, ErrZeroRationalDenominator
 	}
 
 	out := make([]int64, 0, 8)
 
 	for {
-		q, rem := floorQuoRem(n, d)
+		q, rem, err := floorQuoRemChecked(n, d)
+		if err != nil {
+			return nil, err
+		}
 		if !q.IsInt64() {
-			panic("finiteRCFTermsFromRational: term does not fit int64")
+			return nil, ErrRCFTermDoesNotFitInt64
 		}
 		out = append(out, q.Int64())
 
 		if rem.Sign() == 0 {
-			return out
+			return out, nil
 		}
 
 		n, d = d, rem
 	}
 }
 
-func suffixRationalsFromRCFTerms(terms []int64) []Rational {
+func suffixRationalsFromRCFTermsChecked(terms []int64) ([]Rational, error) {
 	n := len(terms)
+	if n == 0 {
+		return []Rational{}, nil
+	}
+
 	out := make([]Rational, n)
 
-	current := NewRational(big.NewInt(terms[n-1]), big.NewInt(1))
+	current, err := NewRationalChecked(big.NewInt(terms[n-1]), big.NewInt(1))
+	if err != nil {
+		return nil, fmt.Errorf("suffixRationalsFromRCFTermsChecked: seed term: %w", err)
+	}
 	out[n-1] = current
 
 	for i := n - 2; i >= 0; i-- {
@@ -64,11 +92,14 @@ func suffixRationalsFromRCFTerms(terms []int64) []Rational {
 		num.Add(num, current.Den())
 
 		den := current.Num()
-		current = NewRational(num, den)
+		current, err = NewRationalChecked(num, den)
+		if err != nil {
+			return nil, fmt.Errorf("suffixRationalsFromRCFTermsChecked: index %d: %w", i, err)
+		}
 		out[i] = current
 	}
 
-	return out
+	return out, nil
 }
 
-// core/rational_source.go v1
+// core/rational_source.go v2

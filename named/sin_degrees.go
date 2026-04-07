@@ -1,4 +1,4 @@
-// named/sin_degrees.go v4
+// named/sin_degrees.go v5
 package named
 
 import (
@@ -15,6 +15,15 @@ func SinDegrees(x core.PQStream) *core.GCF {
 func degreesToRadiansForSin(x core.PQStream) core.PQStream {
 	if x == nil {
 		panic("degreesToRadiansForSin: nil input")
+	}
+
+	if exact, ok := exactClosedCurrentValueSinDegrees(x); ok {
+		if exact.Cmp(core.RationalFromInt64(0)) == 0 {
+			return core.PQStreamFromRational(core.RationalFromInt64(0))
+		}
+		if exact.Cmp(core.RationalFromInt64(180)) == 0 {
+			return Pi()
+		}
 	}
 
 	radians := core.NewGCF2(
@@ -35,4 +44,21 @@ func degreesToRadiansForSin(x core.PQStream) core.PQStream {
 	return core.PQStreamFromRCF(radians)
 }
 
-// named/sin_degrees.go v4
+func exactClosedCurrentValueSinDegrees(x core.PQStream) (core.Rational, bool) {
+	rng, err := x.Range()
+	if err != nil {
+		return core.Rational{}, false
+	}
+	if !rng.Inside {
+		return core.Rational{}, false
+	}
+	if rng.Lo.Open || rng.Hi.Open {
+		return core.Rational{}, false
+	}
+	if rng.Lo.Value.Cmp(rng.Hi.Value) != 0 {
+		return core.Rational{}, false
+	}
+	return rng.Lo.Value, true
+}
+
+// named/sin_degrees.go v5

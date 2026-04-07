@@ -1,4 +1,4 @@
-// named/constants_range_bb_test.go v5
+// named/constants_range_bb_test.go v6
 package named_test
 
 import (
@@ -10,15 +10,22 @@ import (
 )
 
 func TestBB_Named_E_RangeTracksBestLookaheadInterval50(t *testing.T) {
-
 	terms := eTermsNamedRange(51)
 	var src core.PQStream = named.E()
 
 	for i := 0; i < 50; i++ {
 		wantRange := namedLookaheadRange(terms[i], terms[i+1])
-		assertIntervalRangeEqualsNamed(t, src.Range(), wantRange, i+1)
 
-		got, tail, status := src.NextPQ()
+		gotRange, err := src.Range()
+		if err != nil {
+			t.Fatalf("range before term %d error = %v", i+1, err)
+		}
+		assertIntervalRangeEqualsNamed(t, gotRange, wantRange, i+1)
+
+		got, tail, status, err := src.NextPQ()
+		if err != nil {
+			t.Fatalf("term %d NextPQ error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -28,7 +35,6 @@ func TestBB_Named_E_RangeTracksBestLookaheadInterval50(t *testing.T) {
 		if got.Q.Cmp(big.NewInt(1)) != 0 {
 			t.Fatalf("term %d Q = %v, want 1", i+1, got.Q)
 		}
-
 		src = tail
 	}
 }
@@ -37,10 +43,8 @@ func eTermsNamedRange(n int) []int64 {
 	if n <= 0 {
 		return nil
 	}
-
 	out := make([]int64, 0, n)
 	out = append(out, 2)
-
 	k := int64(1)
 	for len(out) < n {
 		out = append(out, 1)
@@ -54,14 +58,12 @@ func eTermsNamedRange(n int) []int64 {
 		out = append(out, 1)
 		k++
 	}
-
 	return out
 }
 
 func namedLookaheadRange(a, next int64) core.Range {
 	loNum := big.NewInt(a*(next+1) + 1)
 	loDen := big.NewInt(next + 1)
-
 	hiNum := big.NewInt(a*next + 1)
 	hiDen := big.NewInt(next)
 
@@ -93,17 +95,19 @@ func assertIntervalRangeEqualsNamed(t *testing.T, got core.Range, want core.Rang
 	if got.Lo.Value.Cmp(want.Lo.Value) != 0 {
 		t.Fatalf(
 			"range before term %d Lo = %v/%v, want %v/%v",
-			step, got.Lo.Value.Num(), got.Lo.Value.Den(),
+			step,
+			got.Lo.Value.Num(), got.Lo.Value.Den(),
 			want.Lo.Value.Num(), want.Lo.Value.Den(),
 		)
 	}
 	if got.Hi.Value.Cmp(want.Hi.Value) != 0 {
 		t.Fatalf(
 			"range before term %d Hi = %v/%v, want %v/%v",
-			step, got.Hi.Value.Num(), got.Hi.Value.Den(),
+			step,
+			got.Hi.Value.Num(), got.Hi.Value.Den(),
 			want.Hi.Value.Num(), want.Hi.Value.Den(),
 		)
 	}
 }
 
-// named/constants_range_bb_test.go v5
+// named/constants_range_bb_test.go v6

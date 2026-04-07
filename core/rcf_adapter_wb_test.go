@@ -1,31 +1,44 @@
-// core/rcf_adapter_wb_test.go v1
+// core/rcf_adapter_wb_test.go v3
 package core
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 )
 
 type fakeRCFStream struct {
-	terms []RCFTerm
-	rngs  []Range
-	next  int
+	terms    []RCFTerm
+	rngs     []Range
+	next     int
+	nextErr  error
+	rangeErr error
 }
 
-func (s *fakeRCFStream) NextRCF() (RCFTerm, Status) {
+func (s *fakeRCFStream) NextRCF() (RCFTerm, Status, error) {
+	if s.nextErr != nil {
+		return NewRCFTerm(nil), StatusEOF, s.nextErr
+	}
 	if s.next >= len(s.terms) {
-		return NewRCFTerm(nil), StatusEOF
+		return NewRCFTerm(nil), StatusEOF, nil
 	}
 	term := s.terms[s.next]
 	s.next++
-	return term, StatusOK
+	return term, StatusOK, nil
 }
 
-func (s *fakeRCFStream) Range() Range {
-	if s.next >= len(s.rngs) {
-		panic("Range() on exhausted fakeRCFStream")
+func (s *fakeRCFStream) CurrentInterval() (Interval, error) {
+	if s.rangeErr != nil {
+		return Interval{}, s.rangeErr
 	}
-	return s.rngs[s.next]
+	if s.next >= len(s.rngs) {
+		return Interval{}, ErrUndefinedRangeOnEOFStream
+	}
+	return s.rngs[s.next], nil
+}
+
+func (s *fakeRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func TestWB_PQStreamFromRCF_MapsTermsToQEqualsOne(t *testing.T) {
@@ -44,7 +57,10 @@ func TestWB_PQStreamFromRCF_MapsTermsToQEqualsOne(t *testing.T) {
 
 	pq := PQStreamFromRCF(rcf)
 
-	term1, tail1, status1 := pq.NextPQ()
+	term1, tail1, status1, err := pq.NextPQ()
+	if err != nil {
+		t.Fatalf("first NextPQ error = %v", err)
+	}
 	if status1 != StatusOK {
 		t.Fatalf("first status = %v, want %v", status1, StatusOK)
 	}
@@ -52,7 +68,10 @@ func TestWB_PQStreamFromRCF_MapsTermsToQEqualsOne(t *testing.T) {
 		t.Fatalf("first PQ term = (%v,%v), want (3,1)", term1.P, term1.Q)
 	}
 
-	term2, tail2, status2 := tail1.NextPQ()
+	term2, tail2, status2, err := tail1.NextPQ()
+	if err != nil {
+		t.Fatalf("second NextPQ error = %v", err)
+	}
 	if status2 != StatusOK {
 		t.Fatalf("second status = %v, want %v", status2, StatusOK)
 	}
@@ -60,7 +79,10 @@ func TestWB_PQStreamFromRCF_MapsTermsToQEqualsOne(t *testing.T) {
 		t.Fatalf("second PQ term = (%v,%v), want (1,1)", term2.P, term2.Q)
 	}
 
-	term3, _, status3 := tail2.NextPQ()
+	term3, _, status3, err := tail2.NextPQ()
+	if err != nil {
+		t.Fatalf("third NextPQ error = %v", err)
+	}
 	if status3 != StatusOK {
 		t.Fatalf("third status = %v, want %v", status3, StatusOK)
 	}
@@ -83,15 +105,24 @@ func TestWB_PQStreamFromRCF_ForwardsRemainingRange(t *testing.T) {
 
 	pq := PQStreamFromRCF(rcf)
 
-	r0 := pq.Range()
+	r0, err := pq.Range()
+	if err != nil {
+		t.Fatalf("Range error = %v", err)
+	}
 	assertExactRangeWB(t, r0, NewRational(big.NewInt(4), big.NewInt(1)), 0)
 
-	_, tail, status := pq.NextPQ()
+	_, tail, status, err := pq.NextPQ()
+	if err != nil {
+		t.Fatalf("NextPQ error = %v", err)
+	}
 	if status != StatusOK {
 		t.Fatalf("status = %v, want %v", status, StatusOK)
 	}
 
-	r1 := tail.Range()
+	r1, err := tail.Range()
+	if err != nil {
+		t.Fatalf("tail Range error = %v", err)
+	}
 	assertExactRangeWB(t, r1, NewRational(big.NewInt(1), big.NewInt(1)), 1)
 }
 
@@ -103,12 +134,33 @@ func TestWB_PQStreamFromRCF_EOFMapsCleanly(t *testing.T) {
 
 	pq := PQStreamFromRCF(rcf)
 
-	term, _, status := pq.NextPQ()
+	term, _, status, err := pq.NextPQ()
+	if err != nil {
+		t.Fatalf("NextPQ error = %v", err)
+	}
 	if status != StatusEOF {
 		t.Fatalf("status = %v, want %v", status, StatusEOF)
 	}
 	if term.P.Cmp(big.NewInt(0)) != 0 || term.Q.Cmp(big.NewInt(0)) != 0 {
 		t.Fatalf("EOF PQ term = (%v,%v), want (0,0)", term.P, term.Q)
+	}
+}
+
+func TestWB_PQStreamFromRCF_ForwardsSourceErrors(t *testing.T) {
+	wantErr := ErrNilObservedSource
+	pq := PQStreamFromRCF(&fakeRCFStream{
+		nextErr:  wantErr,
+		rangeErr: wantErr,
+	})
+
+	_, _, _, err := pq.NextPQ()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("NextPQ error = %v, want %v", err, wantErr)
+	}
+
+	_, err = pq.Range()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("Range error = %v, want %v", err, wantErr)
 	}
 }
 
@@ -131,7 +183,8 @@ func assertExactRangeWB(t *testing.T, got Range, want Rational, step int) {
 		t.Fatalf("range %d openness wrong, want both closed", step)
 	}
 	if got.Lo.Value.Cmp(want) != 0 || got.Hi.Value.Cmp(want) != 0 {
-		t.Fatalf("range %d = [%v/%v,%v/%v], want exact %v/%v",
+		t.Fatalf(
+			"range %d = [%v/%v,%v/%v], want exact %v/%v",
 			step,
 			got.Lo.Value.Num(), got.Lo.Value.Den(),
 			got.Hi.Value.Num(), got.Hi.Value.Den(),
@@ -140,4 +193,4 @@ func assertExactRangeWB(t *testing.T, got Range, want Rational, step int) {
 	}
 }
 
-// core/rcf_adapter_wb_test.go v1
+// core/rcf_adapter_wb_test.go v3

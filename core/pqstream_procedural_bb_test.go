@@ -1,4 +1,4 @@
-// core/pqstream_procedural_bb_test.go v1
+// core/pqstream_procedural_bb_test.go v2
 package core_test
 
 import (
@@ -32,7 +32,10 @@ func TestBB_GCFStream_ProceduralStreamCanFailLate(t *testing.T) {
 		t.Fatalf("constructor status = %v, want %v", status, core.StatusOK)
 	}
 
-	term1, tail, status1 := stream.NextPQ()
+	term1, tail, status1, err := stream.NextPQ()
+	if err != nil {
+		t.Fatalf("first NextPQ error = %v", err)
+	}
 	if status1 != core.StatusOK {
 		t.Fatalf("first NextPQ status = %v, want %v", status1, core.StatusOK)
 	}
@@ -40,10 +43,13 @@ func TestBB_GCFStream_ProceduralStreamCanFailLate(t *testing.T) {
 		t.Fatalf("first term = (%v,%v), want (1,1)", term1.P, term1.Q)
 	}
 
-	_, _, status2 := tail.NextPQ()
+	_, _, status2, err := tail.NextPQ()
+	if err != nil {
+		t.Fatalf("second NextPQ error = %v", err)
+	}
 	if status2 != core.StatusInvalidInput {
 		t.Fatalf("second NextPQ status = %v, want %v", status2, core.StatusInvalidInput)
 	}
 }
 
-// core/pqstream_procedural_bb_test.go v1
+// core/pqstream_procedural_bb_test.go v2

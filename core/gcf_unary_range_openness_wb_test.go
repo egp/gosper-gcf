@@ -1,7 +1,8 @@
-// core/gcf_unary_range_openness_wb_test.go v3
+// core/gcf_unary_range_openness_wb_test.go v5
 package core
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 )
@@ -10,15 +11,19 @@ type staticRangePQStream struct {
 	rng Range
 }
 
-func (s *staticRangePQStream) NextPQ() (PQTerm, PQStream, Status) {
+func (s *staticRangePQStream) NextPQ() (PQTerm, PQStream, Status, error) {
 	return PQTerm{
 		P: big.NewInt(0),
 		Q: big.NewInt(0),
-	}, s, StatusEOF
+	}, s, StatusEOF, nil
 }
 
-func (s *staticRangePQStream) Range() Range {
-	return s.rng
+func (s *staticRangePQStream) CurrentInterval() (Interval, error) {
+	return s.rng, nil
+}
+
+func (s *staticRangePQStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func TestWB_GCF_UnaryRange_IdentityPreservesEndpointOpenness(t *testing.T) {
@@ -50,8 +55,10 @@ func TestWB_GCF_UnaryRange_IdentityPreservesEndpointOpenness(t *testing.T) {
 		src,
 	)
 
-	got := g.Range()
-
+	got, err := g.Range()
+	if err != nil {
+		t.Fatalf("Range error = %v", err)
+	}
 	if !got.Inside {
 		t.Fatalf("Inside = false, want true")
 	}
@@ -69,7 +76,7 @@ func TestWB_GCF_UnaryRange_IdentityPreservesEndpointOpenness(t *testing.T) {
 	}
 }
 
-func TestWB_GCF_UnaryRange_IdentityPreservesOutsideKindAndEndpoints(t *testing.T) {
+func TestWB_GCF_UnaryRange_Identity_OutsideRangeReturnsUnsupportedError(t *testing.T) {
 	src := &staticRangePQStream{
 		rng: Range{
 			Lo: Endpoint{
@@ -98,26 +105,13 @@ func TestWB_GCF_UnaryRange_IdentityPreservesOutsideKindAndEndpoints(t *testing.T
 		src,
 	)
 
-	got := g.Range()
-
-	if got.Inside {
-		t.Fatalf("Inside = true, want false")
-	}
-	if got.Lo.Open {
-		t.Fatalf("Lo.Open = true, want false")
-	}
-	if !got.Hi.Open {
-		t.Fatalf("Hi.Open = false, want true")
-	}
-	if got.Lo.Value.Cmp(NewRational(big.NewInt(5), big.NewInt(2))) != 0 {
-		t.Fatalf("Lo = %v/%v, want 5/2", got.Lo.Value.Num(), got.Lo.Value.Den())
-	}
-	if got.Hi.Value.Cmp(RationalFromInt64(3)) != 0 {
-		t.Fatalf("Hi = %v/%v, want 3/1", got.Hi.Value.Num(), got.Hi.Value.Den())
+	_, err := g.Range()
+	if !errors.Is(err, ErrUnsupportedRangeCase) {
+		t.Fatalf("Range error = %v, want ErrUnsupportedRangeCase", err)
 	}
 }
 
-func TestWB_GCF_UnaryRange_IdentitySecondRangeCallStillPreservesOutsideKindAndEndpoints(t *testing.T) {
+func TestWB_GCF_UnaryRange_IdentitySecondRangeCall_OutsideRangeStillReturnsUnsupportedError(t *testing.T) {
 	src := &staticRangePQStream{
 		rng: Range{
 			Lo: Endpoint{
@@ -146,24 +140,14 @@ func TestWB_GCF_UnaryRange_IdentitySecondRangeCallStillPreservesOutsideKindAndEn
 		src,
 	)
 
-	_ = g.Range()
-	got := g.Range()
-
-	if got.Inside {
-		t.Fatalf("Inside = true, want false")
+	_, err := g.Range()
+	if !errors.Is(err, ErrUnsupportedRangeCase) {
+		t.Fatalf("first Range error = %v, want ErrUnsupportedRangeCase", err)
 	}
-	if got.Lo.Open {
-		t.Fatalf("Lo.Open = true, want false")
-	}
-	if !got.Hi.Open {
-		t.Fatalf("Hi.Open = false, want true")
-	}
-	if got.Lo.Value.Cmp(NewRational(big.NewInt(5), big.NewInt(2))) != 0 {
-		t.Fatalf("Lo = %v/%v, want 5/2", got.Lo.Value.Num(), got.Lo.Value.Den())
-	}
-	if got.Hi.Value.Cmp(RationalFromInt64(3)) != 0 {
-		t.Fatalf("Hi = %v/%v, want 3/1", got.Hi.Value.Num(), got.Hi.Value.Den())
+	_, err = g.Range()
+	if !errors.Is(err, ErrUnsupportedRangeCase) {
+		t.Fatalf("second Range error = %v, want ErrUnsupportedRangeCase", err)
 	}
 }
 
-// core/gcf_unary_range_openness_wb_test.go v3
+// core/gcf_unary_range_openness_wb_test.go v5

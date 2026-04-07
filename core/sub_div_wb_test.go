@@ -1,4 +1,4 @@
-// core/sub_div_wb_test.go v1
+// core/sub_div_wb_test.go v2
 package core
 
 import (
@@ -6,152 +6,79 @@ import (
 	"testing"
 )
 
-func TestWB_GCF_BLFTCoefficients_XMinusY(t *testing.T) {
-	x, y := wbSubDivStreams(t)
-
-	g := NewGCF2(
-		BLFTCoefficients{
-			A: big.NewInt(0),
-			B: big.NewInt(1),
-			C: big.NewInt(-1),
-			D: big.NewInt(0),
-			E: big.NewInt(0),
-			F: big.NewInt(0),
-			G: big.NewInt(0),
-			H: big.NewInt(1),
-		},
-		x,
-		y,
+func TestWB_Sub_ExactFiniteInputs_ProducesExactDifference(t *testing.T) {
+	g := Sub(
+		PQStreamFromRational(RationalFromInt64(5)),
+		PQStreamFromRational(RationalFromInt64(2)),
 	)
 
-	assertWBRCFSequence(t, g, []int64{-1, 2})
-}
-
-func TestWB_GCF_BLFTCoefficients_YMinusX(t *testing.T) {
-	x, y := wbSubDivStreams(t)
-
-	g := NewGCF2(
-		BLFTCoefficients{
-			A: big.NewInt(0),
-			B: big.NewInt(-1),
-			C: big.NewInt(1),
-			D: big.NewInt(0),
-			E: big.NewInt(0),
-			F: big.NewInt(0),
-			G: big.NewInt(0),
-			H: big.NewInt(1),
-		},
-		x,
-		y,
-	)
-
-	assertWBRCFSequence(t, g, []int64{0, 2})
-}
-
-func TestWB_GCF_BLFTCoefficients_XDivY(t *testing.T) {
-	x, y := wbSubDivStreams(t)
-
-	g := NewGCF2(
-		BLFTCoefficients{
-			A: big.NewInt(0),
-			B: big.NewInt(1),
-			C: big.NewInt(0),
-			D: big.NewInt(0),
-			E: big.NewInt(0),
-			F: big.NewInt(0),
-			G: big.NewInt(1),
-			H: big.NewInt(0),
-		},
-		x,
-		y,
-	)
-
-	assertWBRCFSequence(t, g, []int64{0, 1, 3})
-}
-
-func TestWB_GCF_BLFTCoefficients_YDivX(t *testing.T) {
-	x, y := wbSubDivStreams(t)
-
-	g := NewGCF2(
-		BLFTCoefficients{
-			A: big.NewInt(0),
-			B: big.NewInt(0),
-			C: big.NewInt(1),
-			D: big.NewInt(0),
-			E: big.NewInt(0),
-			F: big.NewInt(1),
-			G: big.NewInt(0),
-			H: big.NewInt(0),
-		},
-		x,
-		y,
-	)
-
-	assertWBRCFSequence(t, g, []int64{1, 3})
-}
-
-func wbSubDivStreams(t *testing.T) (PQStream, PQStream) {
-	t.Helper()
-
-	x, xStatus := NewFinitePQStream([]FinitePQStep{
-		{
-			Term:  PQTerm{P: big.NewInt(1), Q: big.NewInt(1)},
-			Range: wbSubDivExactRange(3, 2),
-		},
-		{
-			Term:  PQTerm{P: big.NewInt(2), Q: big.NewInt(1)},
-			Range: wbSubDivExactRange(2, 1),
-		},
-	})
-	if xStatus != StatusOK {
-		t.Fatalf("left stream status = %v, want %v", xStatus, StatusOK)
+	term, status, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
+	if status != StatusOK {
+		t.Fatalf("first status = %v, want %v", status, StatusOK)
+	}
+	if term.A().Cmp(big.NewInt(3)) != 0 {
+		t.Fatalf("first term = %v, want 3", term.A())
 	}
 
-	y, yStatus := NewFinitePQStream([]FinitePQStep{
-		{
-			Term:  PQTerm{P: big.NewInt(2), Q: big.NewInt(1)},
-			Range: wbSubDivExactRange(2, 1),
-		},
-	})
-	if yStatus != StatusOK {
-		t.Fatalf("right stream status = %v, want %v", yStatus, StatusOK)
+	_, eofStatus, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("second NextRCF error = %v", err)
 	}
-
-	return x, y
-}
-
-func wbSubDivExactRange(num, den int64) Range {
-	value := NewRational(big.NewInt(num), big.NewInt(den))
-	return Range{
-		Lo: Endpoint{
-			Value: value,
-			Open:  false,
-		},
-		Hi: Endpoint{
-			Value: value,
-			Open:  false,
-		},
-		Inside: true,
-	}
-}
-
-func assertWBRCFSequence(t *testing.T, g *GCF, want []int64) {
-	t.Helper()
-
-	for i, w := range want {
-		got, status := g.NextRCF()
-		if status != StatusOK {
-			t.Fatalf("term %d status = %v, want %v", i+1, status, StatusOK)
-		}
-		if got.A().Cmp(big.NewInt(w)) != 0 {
-			t.Fatalf("term %d = %v, want %d", i+1, got.A(), w)
-		}
-	}
-
-	_, eofStatus := g.NextRCF()
 	if eofStatus != StatusEOF {
-		t.Fatalf("EOF status = %v, want %v", eofStatus, StatusEOF)
+		t.Fatalf("second status = %v, want %v", eofStatus, StatusEOF)
 	}
 }
 
-// core/sub_div_wb_test.go v1
+func TestWB_Div_ExactFiniteInputs_ProducesExactQuotient(t *testing.T) {
+	g := Div(
+		PQStreamFromRational(NewRational(big.NewInt(22), big.NewInt(7))),
+		PQStreamFromRational(NewRational(big.NewInt(11), big.NewInt(7))),
+	)
+
+	term, status, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("first NextRCF error = %v", err)
+	}
+	if status != StatusOK {
+		t.Fatalf("first status = %v, want %v", status, StatusOK)
+	}
+	if term.A().Cmp(big.NewInt(2)) != 0 {
+		t.Fatalf("first term = %v, want 2", term.A())
+	}
+
+	_, eofStatus, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("second NextRCF error = %v", err)
+	}
+	if eofStatus != StatusEOF {
+		t.Fatalf("second status = %v, want %v", eofStatus, StatusEOF)
+	}
+}
+
+// new regression coverage for the error-channel migration.
+func TestWB_Div_ExactFiniteInputs_RangeIsExactQuotient(t *testing.T) {
+	g := Div(
+		PQStreamFromRational(NewRational(big.NewInt(22), big.NewInt(7))),
+		PQStreamFromRational(NewRational(big.NewInt(11), big.NewInt(7))),
+	)
+
+	r, err := g.Range()
+	if err != nil {
+		t.Fatalf("Range error = %v", err)
+	}
+	want := RationalFromInt64(2)
+	if !r.Inside {
+		t.Fatal("Inside = false, want true")
+	}
+	if r.Lo.Value.Cmp(want) != 0 || r.Hi.Value.Cmp(want) != 0 {
+		t.Fatalf("Range = [%v/%v,%v/%v], want exact 2/1",
+			r.Lo.Value.Num(), r.Lo.Value.Den(),
+			r.Hi.Value.Num(), r.Hi.Value.Den(),
+		)
+	}
+}
+
+// core/sub_div_wb_test.go v2

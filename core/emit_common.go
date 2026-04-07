@@ -1,4 +1,4 @@
-// core/emit_common.go v1
+// core/emit_common.go v2
 package core
 
 func canEmitRCFTermFromRange(r Range) (RCFTerm, bool) {
@@ -6,8 +6,15 @@ func canEmitRCFTermFromRange(r Range) (RCFTerm, bool) {
 		return NewRCFTerm(nil), false
 	}
 
-	loFloor, _ := floorQuoRem(r.Lo.Value.Num(), r.Lo.Value.Den())
-	hiFloor, _ := floorQuoRem(r.Hi.Value.Num(), r.Hi.Value.Den())
+	loFloor, _, err := floorQuoRemChecked(r.Lo.Value.Num(), r.Lo.Value.Den())
+	if err != nil {
+		return NewRCFTerm(nil), false
+	}
+
+	hiFloor, _, err := floorQuoRemChecked(r.Hi.Value.Num(), r.Hi.Value.Den())
+	if err != nil {
+		return NewRCFTerm(nil), false
+	}
 
 	if loFloor.Cmp(hiFloor) != 0 {
 		return NewRCFTerm(nil), false
@@ -16,4 +23,4 @@ func canEmitRCFTermFromRange(r Range) (RCFTerm, bool) {
 	return NewRCFTerm(loFloor), true
 }
 
-// core/emit_common.go v1
+// core/emit_common.go v2

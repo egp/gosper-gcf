@@ -1,4 +1,4 @@
-// named/e_cycle1_wb_test.go v2
+// named/e_cycle1_wb_test.go v3
 package named
 
 import (
@@ -10,9 +10,11 @@ import (
 
 func TestWB_ETermAt_MatchesKnownPeriodicPattern(t *testing.T) {
 	want := []int64{2, 1, 2, 1, 1, 4, 1, 1, 6, 1, 1, 8}
-
 	for i, w := range want {
-		got := eTermAt(i + 1)
+		got, err := eTermAt(i + 1)
+		if err != nil {
+			t.Fatalf("term %d error = %v", i+1, err)
+		}
 		if got != w {
 			t.Fatalf("term %d = %d, want %d", i+1, got, w)
 		}
@@ -20,7 +22,10 @@ func TestWB_ETermAt_MatchesKnownPeriodicPattern(t *testing.T) {
 }
 
 func TestWB_ELookaheadRange_UsesOpenOpenWindow_ForHead(t *testing.T) {
-	got := eLookaheadRange(2, 1)
+	got, err := eLookaheadRange(2, 1)
+	if err != nil {
+		t.Fatalf("eLookaheadRange error = %v", err)
+	}
 
 	want := core.Range{
 		Lo: core.Endpoint{
@@ -33,12 +38,14 @@ func TestWB_ELookaheadRange_UsesOpenOpenWindow_ForHead(t *testing.T) {
 		},
 		Inside: true,
 	}
-
 	assertEExactInterval(t, got, want)
 }
 
 func TestWB_ELookaheadRange_UsesOpenOpenWindow_ForLargerNext(t *testing.T) {
-	got := eLookaheadRange(1, 8)
+	got, err := eLookaheadRange(1, 8)
+	if err != nil {
+		t.Fatalf("eLookaheadRange error = %v", err)
+	}
 
 	want := core.Range{
 		Lo: core.Endpoint{
@@ -51,7 +58,6 @@ func TestWB_ELookaheadRange_UsesOpenOpenWindow_ForLargerNext(t *testing.T) {
 		},
 		Inside: true,
 	}
-
 	assertEExactInterval(t, got, want)
 }
 
@@ -83,4 +89,4 @@ func assertEExactInterval(t *testing.T, got core.Range, want core.Range) {
 	}
 }
 
-// named/e_cycle1_wb_test.go v2
+// named/e_cycle1_wb_test.go v3

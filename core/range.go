@@ -1,24 +1,42 @@
-// core/range.go v2
+// core/range.go v5
 package core
 
 type RangeKind int
 
 const (
-	InsideInterval RangeKind = iota
-	OutsideInterval
+	RangeArc RangeKind = iota
+	RangeFull
+)
+
+type IntervalKind = RangeKind
+
+const (
+	IntervalArc  IntervalKind = RangeArc
+	IntervalFull IntervalKind = RangeFull
+)
+
+// Transitional compatibility aliases.
+// Under the current projective-arc model, Kind() distinguishes Arc vs Full,
+// while the Inside field distinguishes inside vs outside arcs.
+const (
+	InsideInterval  = RangeArc
+	OutsideInterval = RangeArc
 )
 
 type Range struct {
 	Lo     Endpoint
 	Hi     Endpoint
 	Inside bool
+	Kind_  RangeKind
 }
 
+type Interval = Range
+
 func (r Range) Kind() RangeKind {
-	if r.Inside {
-		return InsideInterval
+	if r.Kind_ == RangeFull {
+		return RangeFull
 	}
-	return OutsideInterval
+	return RangeArc
 }
 
 // Cmp currently has only the final shape.
@@ -27,4 +45,14 @@ func (r Range) Cmp(_ Range) int {
 	return 0
 }
 
-// core/range.go v2
+// core/range.go v5
+
+// --- appended from core/endpoint.go ---
+// core/endpoint.go v2
+
+type Endpoint struct {
+	Value Rational
+	Open  bool
+}
+
+// core/endpoint.go v2

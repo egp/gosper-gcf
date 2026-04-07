@@ -1,4 +1,4 @@
-// named/pi_gauss_bb_test.go v3
+// named/pi_gauss_bb_test.go v4
 package named_test
 
 import (
@@ -12,10 +12,14 @@ import (
 
 func TestBB_Named_Pi_SourcePQPrefix50(t *testing.T) {
 	src := named.Pi()
+
 	for i := 0; i < 50; i++ {
 		wantP, wantQ := expectedPiGaussPQ(i)
 
-		term, tail, status := src.NextPQ()
+		term, tail, status, err := src.NextPQ()
+		if err != nil {
+			t.Fatalf("term %d NextPQ error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -25,20 +29,31 @@ func TestBB_Named_Pi_SourcePQPrefix50(t *testing.T) {
 		if term.Q.Cmp(big.NewInt(wantQ)) != 0 {
 			t.Fatalf("term %d Q = %v, want %d", i+1, term.Q, wantQ)
 		}
+
 		src = tail
 	}
 }
 
 func TestBB_Named_Pi_SourceRangeLookahead50(t *testing.T) {
 	src := named.Pi()
+
 	for i := 0; i < 50; i++ {
 		want := expectedPiGaussRange(i)
-		assertPiRange(t, src.Range(), want, i+1)
 
-		_, tail, status := src.NextPQ()
+		gotRange, err := src.Range()
+		if err != nil {
+			t.Fatalf("range before term %d error = %v", i+1, err)
+		}
+		assertPiRange(t, gotRange, want, i+1)
+
+		_, tail, status, err := src.NextPQ()
+		if err != nil {
+			t.Fatalf("term %d NextPQ error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
+
 		src = tail
 	}
 }
@@ -78,7 +93,6 @@ func TestBB_Named_Pi_RationalMatchesOEISConvergents(t *testing.T) {
 		g := core.NewGCF1(identityUnaryCoeffsPiGauss(), named.Pi())
 		got := g.Rational(depth)
 		want := convergentFromRCFTermsPiBB(terms[:depth])
-
 		if got.Cmp(want) != 0 {
 			t.Fatalf(
 				"Rational(%d) = %v/%v, want %v/%v",
@@ -157,12 +171,9 @@ func suffixRationalsFromRCFTermsPiBB(terms []int64) []core.Rational {
 
 	for i := n - 2; i >= 0; i-- {
 		a := big.NewInt(terms[i])
-
 		num := new(big.Int).Mul(a, current.Num())
 		num.Add(num, current.Den())
-
 		den := new(big.Int).Set(current.Num())
-
 		current = core.NewRational(num, den)
 		out[i] = current
 	}
@@ -179,7 +190,10 @@ func assertRCFPrefixPiGauss(t *testing.T, g *core.GCF, want []int64) {
 	t.Helper()
 
 	for i, w := range want {
-		term, status := nextRCFWithTimeoutPiGauss(t, g, time.Second)
+		term, status, err := nextRCFWithTimeoutPiGauss(t, g, time.Second)
+		if err != nil {
+			t.Fatalf("term %d NextRCF error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -189,26 +203,27 @@ func assertRCFPrefixPiGauss(t *testing.T, g *core.GCF, want []int64) {
 	}
 }
 
-func nextRCFWithTimeoutPiGauss(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status) {
+func nextRCFWithTimeoutPiGauss(t *testing.T, g *core.GCF, timeout time.Duration) (core.RCFTerm, core.Status, error) {
 	t.Helper()
 
 	type result struct {
 		term   core.RCFTerm
 		status core.Status
+		err    error
 	}
 
 	ch := make(chan result, 1)
 	go func() {
-		term, status := g.NextRCF()
-		ch <- result{term: term, status: status}
+		term, status, err := g.NextRCF()
+		ch <- result{term: term, status: status, err: err}
 	}()
 
 	select {
 	case got := <-ch:
-		return got.term, got.status
+		return got.term, got.status, got.err
 	case <-time.After(timeout):
 		t.Fatalf("NextRCF timed out after %v", timeout)
-		return core.NewRCFTerm(nil), core.StatusInvalidInput
+		return core.NewRCFTerm(nil), core.StatusInvalidInput, nil
 	}
 }
 
@@ -227,14 +242,16 @@ func assertPiRange(t *testing.T, got core.Range, want core.Range, step int) {
 	if got.Lo.Value.Cmp(want.Lo.Value) != 0 {
 		t.Fatalf(
 			"step %d Lo = %v/%v, want %v/%v",
-			step, got.Lo.Value.Num(), got.Lo.Value.Den(),
+			step,
+			got.Lo.Value.Num(), got.Lo.Value.Den(),
 			want.Lo.Value.Num(), want.Lo.Value.Den(),
 		)
 	}
 	if got.Hi.Value.Cmp(want.Hi.Value) != 0 {
 		t.Fatalf(
 			"step %d Hi = %v/%v, want %v/%v",
-			step, got.Hi.Value.Num(), got.Hi.Value.Den(),
+			step,
+			got.Hi.Value.Num(), got.Hi.Value.Den(),
 			want.Hi.Value.Num(), want.Hi.Value.Den(),
 		)
 	}
@@ -250,7 +267,10 @@ func assertFinitePiStep(
 ) (core.PQTerm, core.PQStream) {
 	t.Helper()
 
-	gotRange := src.Range()
+	gotRange, err := src.Range()
+	if err != nil {
+		t.Fatalf("step %d Range error = %v", step, err)
+	}
 	if !gotRange.Inside || gotRange.Lo.Open || gotRange.Hi.Open {
 		t.Fatalf("step %d range openness/inside wrong", step)
 	}
@@ -264,7 +284,10 @@ func assertFinitePiStep(
 		)
 	}
 
-	term, tail, status := src.NextPQ()
+	term, tail, status, err := src.NextPQ()
+	if err != nil {
+		t.Fatalf("step %d NextPQ error = %v", step, err)
+	}
 	if status != core.StatusOK {
 		t.Fatalf("step %d status = %v, want %v", step, status, core.StatusOK)
 	}
@@ -281,10 +304,13 @@ func assertFinitePiStep(
 func assertFinitePiEOF(t *testing.T, src core.PQStream, step int) {
 	t.Helper()
 
-	_, _, status := src.NextPQ()
+	_, _, status, err := src.NextPQ()
+	if err != nil {
+		t.Fatalf("step %d EOF NextPQ error = %v", step, err)
+	}
 	if status != core.StatusEOF {
 		t.Fatalf("step %d status = %v, want %v", step, status, core.StatusEOF)
 	}
 }
 
-// named/pi_gauss_bb_test.go v3
+// named/pi_gauss_bb_test.go v4

@@ -1,4 +1,4 @@
-// named/e_cycle2_wb_test.go v3
+// named/e_cycle2_wb_test.go v4
 package named
 
 import (
@@ -17,7 +17,10 @@ func TestWB_E_ReturnsProceduralSource(t *testing.T) {
 func TestWB_EProceduralStream_NextPQ_AdvancesToNextTerm(t *testing.T) {
 	src := &eProceduralStream{index: 1}
 
-	first, tail, status := src.NextPQ()
+	first, tail, status, err := src.NextPQ()
+	if err != nil {
+		t.Fatalf("first NextPQ error = %v", err)
+	}
 	if status != core.StatusOK {
 		t.Fatalf("first status = %v, want %v", status, core.StatusOK)
 	}
@@ -33,7 +36,10 @@ func TestWB_EProceduralStream_NextPQ_AdvancesToNextTerm(t *testing.T) {
 		t.Fatalf("tail type = %T, want *eProceduralStream", tail)
 	}
 
-	second, _, secondStatus := nextSrc.NextPQ()
+	second, _, secondStatus, err := nextSrc.NextPQ()
+	if err != nil {
+		t.Fatalf("second NextPQ error = %v", err)
+	}
 	if secondStatus != core.StatusOK {
 		t.Fatalf("second status = %v, want %v", secondStatus, core.StatusOK)
 	}
@@ -48,28 +54,44 @@ func TestWB_EProceduralStream_NextPQ_AdvancesToNextTerm(t *testing.T) {
 func TestWB_EProceduralStream_Range_UsesInfiniteLookaheadWindow(t *testing.T) {
 	src := &eProceduralStream{index: 1}
 
-	got := src.Range()
-	want := eLookaheadRange(2, 1)
-
+	got, err := src.Range()
+	if err != nil {
+		t.Fatalf("Range error = %v", err)
+	}
+	want, err := eLookaheadRange(2, 1)
+	if err != nil {
+		t.Fatalf("eLookaheadRange error = %v", err)
+	}
 	assertEProceduralRange(t, got, want)
 }
 
 func TestWB_EProceduralStream_Range_BeforeThirdTerm_IsOpenOpenFiveHalvesToThree(t *testing.T) {
 	src := &eProceduralStream{index: 1}
 
-	_, tail1, status1 := src.NextPQ()
+	_, tail1, status1, err := src.NextPQ()
+	if err != nil {
+		t.Fatalf("first NextPQ error = %v", err)
+	}
 	if status1 != core.StatusOK {
 		t.Fatalf("first status = %v, want %v", status1, core.StatusOK)
 	}
 
-	_, tail2, status2 := tail1.NextPQ()
+	_, tail2, status2, err := tail1.NextPQ()
+	if err != nil {
+		t.Fatalf("second NextPQ error = %v", err)
+	}
 	if status2 != core.StatusOK {
 		t.Fatalf("second status = %v, want %v", status2, core.StatusOK)
 	}
 
-	got := tail2.Range()
-	want := eLookaheadRange(2, 1)
-
+	got, err := tail2.Range()
+	if err != nil {
+		t.Fatalf("tail Range error = %v", err)
+	}
+	want, err := eLookaheadRange(2, 1)
+	if err != nil {
+		t.Fatalf("eLookaheadRange error = %v", err)
+	}
 	assertEProceduralRange(t, got, want)
 }
 
@@ -101,4 +123,4 @@ func assertEProceduralRange(t *testing.T, got core.Range, want core.Range) {
 	}
 }
 
-// named/e_cycle2_wb_test.go v3
+// named/e_cycle2_wb_test.go v4

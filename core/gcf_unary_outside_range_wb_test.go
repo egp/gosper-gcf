@@ -1,12 +1,36 @@
-// core/gcf_unary_outside_range_wb_test.go v1
+// core/gcf_unary_outside_range_wb_test.go v3
 package core
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 )
 
-func TestWB_BLFT_UnaryRange_Identity_PreservesOutsideRange(t *testing.T) {
+type staticOutsideRCFStream struct {
+	terms []RCFTerm
+	rng   Range
+	index int
+}
+
+func (s *staticOutsideRCFStream) NextRCF() (RCFTerm, Status, error) {
+	if s.index >= len(s.terms) {
+		return NewRCFTerm(nil), StatusEOF, nil
+	}
+	term := s.terms[s.index]
+	s.index++
+	return term, StatusOK, nil
+}
+
+func (s *staticOutsideRCFStream) CurrentInterval() (Interval, error) {
+	return s.rng, nil
+}
+
+func (s *staticOutsideRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
+}
+
+func TestWB_BLFT_UnaryRange_Identity_OutsideRangeReturnsUnsupportedError(t *testing.T) {
 	s := newBLFTState(BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(1),
@@ -19,31 +43,18 @@ func TestWB_BLFT_UnaryRange_Identity_PreservesOutsideRange(t *testing.T) {
 	})
 
 	xr := Range{
-		Lo:     Endpoint{Value: RationalFromInt64(3), Open: false},
-		Hi:     Endpoint{Value: RationalFromInt64(4), Open: true},
+		Lo:     Endpoint{Value: RationalFromInt64(4), Open: true},
+		Hi:     Endpoint{Value: RationalFromInt64(3), Open: false},
 		Inside: false,
 	}
 
-	got := s.UnaryRange(xr)
-
-	if got.Inside {
-		t.Fatal("Inside = true, want false")
-	}
-	if got.Lo.Open {
-		t.Fatal("Lo.Open = true, want false")
-	}
-	if !got.Hi.Open {
-		t.Fatal("Hi.Open = false, want true")
-	}
-	if got.Lo.Value.Cmp(RationalFromInt64(3)) != 0 {
-		t.Fatalf("Lo = %v/%v, want 3/1", got.Lo.Value.Num(), got.Lo.Value.Den())
-	}
-	if got.Hi.Value.Cmp(RationalFromInt64(4)) != 0 {
-		t.Fatalf("Hi = %v/%v, want 4/1", got.Hi.Value.Num(), got.Hi.Value.Den())
+	_, err := s.UnaryRange(xr)
+	if !errors.Is(err, ErrUnsupportedRangeCase) {
+		t.Fatalf("UnaryRange error = %v, want ErrUnsupportedRangeCase", err)
 	}
 }
 
-func TestWB_BLFT_UnaryRange_ScaleHalf_PreservesOutsideRangeAndOpenness(t *testing.T) {
+func TestWB_BLFT_UnaryRange_ScaleHalf_OutsideRangeReturnsUnsupportedError(t *testing.T) {
 	s := newBLFTState(BLFTCoefficients{
 		A: big.NewInt(0),
 		B: big.NewInt(1),
@@ -56,30 +67,14 @@ func TestWB_BLFT_UnaryRange_ScaleHalf_PreservesOutsideRangeAndOpenness(t *testin
 	})
 
 	xr := Range{
-		Lo:     Endpoint{Value: RationalFromInt64(3), Open: false},
-		Hi:     Endpoint{Value: RationalFromInt64(4), Open: true},
+		Lo:     Endpoint{Value: RationalFromInt64(4), Open: true},
+		Hi:     Endpoint{Value: RationalFromInt64(3), Open: false},
 		Inside: false,
 	}
 
-	got := s.UnaryRange(xr)
-
-	wantLo := NewRational(big.NewInt(3), big.NewInt(2))
-	wantHi := RationalFromInt64(2)
-
-	if got.Inside {
-		t.Fatal("Inside = true, want false")
-	}
-	if got.Lo.Open {
-		t.Fatal("Lo.Open = true, want false")
-	}
-	if !got.Hi.Open {
-		t.Fatal("Hi.Open = false, want true")
-	}
-	if got.Lo.Value.Cmp(wantLo) != 0 {
-		t.Fatalf("Lo = %v/%v, want 3/2", got.Lo.Value.Num(), got.Lo.Value.Den())
-	}
-	if got.Hi.Value.Cmp(wantHi) != 0 {
-		t.Fatalf("Hi = %v/%v, want 2/1", got.Hi.Value.Num(), got.Hi.Value.Den())
+	_, err := s.UnaryRange(xr)
+	if !errors.Is(err, ErrUnsupportedRangeCase) {
+		t.Fatalf("UnaryRange error = %v, want ErrUnsupportedRangeCase", err)
 	}
 }
 
@@ -96,13 +91,15 @@ func TestWB_BLFT_UnaryRange_Constant_IgnoresOutsideInputAndReturnsExact(t *testi
 	})
 
 	xr := Range{
-		Lo:     Endpoint{Value: RationalFromInt64(3), Open: false},
-		Hi:     Endpoint{Value: RationalFromInt64(4), Open: true},
+		Lo:     Endpoint{Value: RationalFromInt64(4), Open: true},
+		Hi:     Endpoint{Value: RationalFromInt64(3), Open: false},
 		Inside: false,
 	}
 
-	got := s.UnaryRange(xr)
-
+	got, err := s.UnaryRange(xr)
+	if err != nil {
+		t.Fatalf("UnaryRange error = %v", err)
+	}
 	if !got.Inside {
 		t.Fatal("Inside = false, want true")
 	}
@@ -120,15 +117,15 @@ func TestWB_BLFT_UnaryRange_Constant_IgnoresOutsideInputAndReturnsExact(t *testi
 	}
 }
 
-func TestWB_GCF_Range_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRange_PreservesRange(t *testing.T) {
+func TestWB_GCF_Range_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRangeReturnsError(t *testing.T) {
 	src := &staticOutsideRCFStream{
 		terms: []RCFTerm{
 			NewRCFTerm(big.NewInt(3)),
 			NewRCFTerm(big.NewInt(7)),
 		},
 		rng: Range{
-			Lo:     Endpoint{Value: RationalFromInt64(3), Open: false},
-			Hi:     Endpoint{Value: RationalFromInt64(4), Open: true},
+			Lo:     Endpoint{Value: RationalFromInt64(4), Open: true},
+			Hi:     Endpoint{Value: RationalFromInt64(3), Open: false},
 			Inside: false,
 		},
 	}
@@ -147,23 +144,10 @@ func TestWB_GCF_Range_UnaryIdentity_OverPQStreamFromRCF_WithOutsideRange_Preserv
 		PQStreamFromRCF(src),
 	)
 
-	got := g.Range()
-
-	if got.Inside {
-		t.Fatal("Inside = true, want false")
-	}
-	if got.Lo.Open {
-		t.Fatal("Lo.Open = true, want false")
-	}
-	if !got.Hi.Open {
-		t.Fatal("Hi.Open = false, want true")
-	}
-	if got.Lo.Value.Cmp(RationalFromInt64(3)) != 0 {
-		t.Fatalf("Lo = %v/%v, want 3/1", got.Lo.Value.Num(), got.Lo.Value.Den())
-	}
-	if got.Hi.Value.Cmp(RationalFromInt64(4)) != 0 {
-		t.Fatalf("Hi = %v/%v, want 4/1", got.Hi.Value.Num(), got.Hi.Value.Den())
+	_, err := g.Range()
+	if !errors.Is(err, ErrUnsupportedRangeCase) {
+		t.Fatalf("Range error = %v, want ErrUnsupportedRangeCase", err)
 	}
 }
 
-// core/gcf_unary_outside_range_wb_test.go v1
+// core/gcf_unary_outside_range_wb_test.go v3

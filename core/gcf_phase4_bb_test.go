@@ -1,4 +1,4 @@
-// core/gcf_phase4_bb_test.go v1
+// core/gcf_phase4_bb_test.go v2
 package core_test
 
 import (
@@ -28,7 +28,6 @@ func TestBB_BLFT_UnaryIdentityPassesThroughRegularInput(t *testing.T) {
 	}
 
 	g := core.NewGCF1(phase4IdentityUnaryX(), stream)
-
 	phase4AssertRCFSequence(t, g, []int64{3, 1, 4})
 }
 
@@ -48,7 +47,6 @@ func TestBB_BLFT_GeneralizedInputHandlesQNotOne(t *testing.T) {
 	}
 
 	g := core.NewGCF1(phase4IdentityUnaryX(), stream)
-
 	phase4AssertRCFSequence(t, g, []int64{1, 1, 2})
 }
 
@@ -68,7 +66,6 @@ func TestBB_BLFT_CollapseContinuesAfterEOF(t *testing.T) {
 	}
 
 	g := core.NewGCF1(phase4IdentityUnaryX(), stream)
-
 	phase4AssertRCFSequence(t, g, []int64{2})
 }
 
@@ -76,7 +73,10 @@ func phase4AssertRCFSequence(t *testing.T, g *core.GCF, want []int64) {
 	t.Helper()
 
 	for i, w := range want {
-		got, status := g.NextRCF()
+		got, status, err := g.NextRCF()
+		if err != nil {
+			t.Fatalf("term %d NextRCF error = %v", i+1, err)
+		}
 		if status != core.StatusOK {
 			t.Fatalf("term %d status = %v, want %v", i+1, status, core.StatusOK)
 		}
@@ -85,7 +85,10 @@ func phase4AssertRCFSequence(t *testing.T, g *core.GCF, want []int64) {
 		}
 	}
 
-	_, eofStatus := g.NextRCF()
+	_, eofStatus, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("EOF NextRCF error = %v", err)
+	}
 	if eofStatus != core.StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, core.StatusEOF)
 	}
@@ -118,4 +121,4 @@ func phase4InsideRange(lo, hi int64) core.Range {
 	}
 }
 
-// core/gcf_phase4_bb_test.go v1
+// core/gcf_phase4_bb_test.go v2

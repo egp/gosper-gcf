@@ -1,7 +1,8 @@
-// core/pqstream_wb_test.go v1
+// core/pqstream_wb_test.go v2
 package core
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 )
@@ -16,7 +17,6 @@ func TestWB_GCFStream_FirstTermMayBeNegative(t *testing.T) {
 			Range: testInsideRange(0, 1),
 		},
 	})
-
 	if status != StatusOK {
 		t.Fatalf("NewFinitePQStream status = %v, want %v", status, StatusOK)
 	}
@@ -24,7 +24,10 @@ func TestWB_GCFStream_FirstTermMayBeNegative(t *testing.T) {
 		t.Fatal("stream is nil")
 	}
 
-	term, _, nextStatus := stream.NextPQ()
+	term, _, nextStatus, err := stream.NextPQ()
+	if err != nil {
+		t.Fatalf("NextPQ error = %v", err)
+	}
 	if nextStatus != StatusOK {
 		t.Fatalf("NextPQ status = %v, want %v", nextStatus, StatusOK)
 	}
@@ -47,7 +50,6 @@ func TestWB_GCFStream_LaterNegativePRejected(t *testing.T) {
 			Range: testInsideRange(1, 2),
 		},
 	})
-
 	if status != StatusInvalidInput {
 		t.Fatalf("status = %v, want %v", status, StatusInvalidInput)
 	}
@@ -67,7 +69,6 @@ func TestWB_GCFStream_LaterNegativeQRejected(t *testing.T) {
 			Range: testInsideRange(1, 2),
 		},
 	})
-
 	if status != StatusInvalidInput {
 		t.Fatalf("status = %v, want %v", status, StatusInvalidInput)
 	}
@@ -83,7 +84,6 @@ func TestWB_GCFStream_ZeroQRejected(t *testing.T) {
 			Range: testInsideRange(1, 2),
 		},
 	})
-
 	if status != StatusInvalidInput {
 		t.Fatalf("status = %v, want %v", status, StatusInvalidInput)
 	}
@@ -98,7 +98,10 @@ func TestWB_GCFStream_EOFReturnsStatusEOF(t *testing.T) {
 		t.Fatalf("constructor status = %v, want %v", status, StatusOK)
 	}
 
-	_, tail, nextStatus := stream.NextPQ()
+	_, tail, nextStatus, err := stream.NextPQ()
+	if err != nil {
+		t.Fatalf("NextPQ error = %v", err)
+	}
 	if nextStatus != StatusEOF {
 		t.Fatalf("NextPQ status = %v, want %v", nextStatus, StatusEOF)
 	}
@@ -122,11 +125,18 @@ func TestWB_GCFStream_TailAdvancesCorrectly(t *testing.T) {
 		t.Fatalf("constructor status = %v, want %v", status, StatusOK)
 	}
 
-	first, tail, firstStatus := stream.NextPQ()
+	first, tail, firstStatus, err := stream.NextPQ()
+	if err != nil {
+		t.Fatalf("first NextPQ error = %v", err)
+	}
 	if firstStatus != StatusOK {
 		t.Fatalf("first NextPQ status = %v, want %v", firstStatus, StatusOK)
 	}
-	second, tail2, secondStatus := tail.NextPQ()
+
+	second, tail2, secondStatus, err := tail.NextPQ()
+	if err != nil {
+		t.Fatalf("second NextPQ error = %v", err)
+	}
 	if secondStatus != StatusOK {
 		t.Fatalf("second NextPQ status = %v, want %v", secondStatus, StatusOK)
 	}
@@ -138,7 +148,10 @@ func TestWB_GCFStream_TailAdvancesCorrectly(t *testing.T) {
 		t.Fatalf("second term = (%v,%v), want (2,1)", second.P, second.Q)
 	}
 
-	_, _, eofStatus := tail2.NextPQ()
+	_, _, eofStatus, err := tail2.NextPQ()
+	if err != nil {
+		t.Fatalf("EOF NextPQ error = %v", err)
+	}
 	if eofStatus != StatusEOF {
 		t.Fatalf("EOF status = %v, want %v", eofStatus, StatusEOF)
 	}
@@ -155,7 +168,10 @@ func TestWB_GCFStream_RangeAvailableOnLiveStream(t *testing.T) {
 		t.Fatalf("constructor status = %v, want %v", status, StatusOK)
 	}
 
-	r := stream.Range()
+	r, err := stream.Range()
+	if err != nil {
+		t.Fatalf("Range error = %v", err)
+	}
 	if !r.Inside {
 		t.Fatal("Range.Inside = false, want true")
 	}
@@ -164,6 +180,18 @@ func TestWB_GCFStream_RangeAvailableOnLiveStream(t *testing.T) {
 	}
 	if r.Hi.Value.Cmp(RationalFromInt64(5)) != 0 {
 		t.Fatalf("Hi = %v/%v, want 5/1", r.Hi.Value.Num(), r.Hi.Value.Den())
+	}
+}
+
+func TestWB_GCFStream_EOFRangeReturnsTypedError(t *testing.T) {
+	stream, status := NewFinitePQStream(nil)
+	if status != StatusOK {
+		t.Fatalf("constructor status = %v, want %v", status, StatusOK)
+	}
+
+	_, err := stream.Range()
+	if !errors.Is(err, ErrUndefinedRangeOnEOFStream) {
+		t.Fatalf("Range error = %v, want ErrUndefinedRangeOnEOFStream", err)
 	}
 }
 
@@ -181,4 +209,4 @@ func testInsideRange(lo, hi int64) Range {
 	}
 }
 
-// core/pqstream_wb_test.go v1
+// core/pqstream_wb_test.go v2

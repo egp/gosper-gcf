@@ -1,7 +1,8 @@
-// named/pi.go v7
+// named/pi.go v9
 package named
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/egp/gosper-gcf/core"
@@ -15,30 +16,27 @@ func Pi() core.PQStream {
 	return &piGaussStream{index: 0}
 }
 
-func piGaussTermAt(index int) core.PQTerm {
+func piGaussTermAt(index int) (core.PQTerm, error) {
 	if index < 0 {
-		panic("piGaussTermAt: negative index")
+		return core.PQTerm{}, fmt.Errorf("piGaussTermAt: negative index %d", index)
 	}
-
 	if index == 0 {
 		return core.PQTerm{
 			P: big.NewInt(0),
 			Q: big.NewInt(4),
-		}
+		}, nil
 	}
-
 	n := int64(index)
 	return core.PQTerm{
 		P: big.NewInt(2*n - 1),
 		Q: big.NewInt(n * n),
-	}
+	}, nil
 }
 
-func piGaussLookaheadRange(index int) core.Range {
+func piGaussLookaheadRange(index int) (core.Range, error) {
 	if index < 0 {
-		panic("piGaussLookaheadRange: negative index")
+		return core.Range{}, fmt.Errorf("piGaussLookaheadRange: negative index %d", index)
 	}
-
 	if index == 0 {
 		return core.Range{
 			Lo: core.Endpoint{
@@ -50,7 +48,7 @@ func piGaussLookaheadRange(index int) core.Range {
 				Open:  true,
 			},
 			Inside: true,
-		}
+		}, nil
 	}
 
 	n := int64(index)
@@ -71,23 +69,29 @@ func piGaussLookaheadRange(index int) core.Range {
 			Open: true,
 		},
 		Inside: true,
-	}
+	}, nil
 }
 
-func (s *piGaussStream) NextPQ() (core.PQTerm, core.PQStream, core.Status) {
+func (s *piGaussStream) NextPQ() (core.PQTerm, core.PQStream, core.Status, error) {
 	if s == nil {
-		panic("piGaussStream.NextPQ: nil receiver")
+		return core.PQTerm{}, s, core.StatusEOF, fmt.Errorf("piGaussStream.NextPQ: %w", core.ErrNilReceiver)
 	}
-
-	return piGaussTermAt(s.index), &piGaussStream{index: s.index + 1}, core.StatusOK
+	term, err := piGaussTermAt(s.index)
+	if err != nil {
+		return core.PQTerm{}, s, core.StatusEOF, err
+	}
+	return term, &piGaussStream{index: s.index + 1}, core.StatusOK, nil
 }
 
-func (s *piGaussStream) Range() core.Range {
+func (s *piGaussStream) CurrentInterval() (core.Interval, error) {
 	if s == nil {
-		panic("piGaussStream.Range: nil receiver")
+		return core.Interval{}, fmt.Errorf("piGaussStream.CurrentInterval: %w", core.ErrNilReceiver)
 	}
-
 	return piGaussLookaheadRange(s.index)
 }
 
-// named/pi.go v7
+func (s *piGaussStream) Range() (core.Range, error) {
+	return s.CurrentInterval()
+}
+
+// named/pi.go v9

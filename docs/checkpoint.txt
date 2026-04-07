@@ -1,24 +1,19 @@
-checkpoint.txt
-
-Project: gosper-gcf
-Repo state: main is clean and green for normal suite; obsolete branches were deleted.
-Current main commit is the merged diagnose work that stabilized pending SinDegrees panic handling in core range/chooser.
-What works:
-- go test -count=1 ./core ./named ./trig is green on main
-- cleanup is done: main only, no active diagnose/WIP branches
-- core pending SinDegrees panic front was eliminated on the merged branch
-What is still broken (PENDING only):
-- RUN_PENDING_TESTS=1 go test -count=1 ./core ./named ./trig is red
-- core: TestBB_GCF_SqrtOfTwoMatchesKnownPrefix still fails (term 5 status = 1, want 0)
-- core: TestBB_SquareOfSqrt2IsExactlyTwo times out
-- named: TestBB_Named_SinDegrees_ThirtyIsExactlyOneHalf gives term 2 = 1, want 2
-- named: TestBB_Named_SinDegrees_NinetyIsExactlyOne times out
-- named: TestBB_Named_SinDegrees_MinusThirtyIsExactlyMinusOneHalf times out
-- named: TestBB_Named_SinDegrees_SixtyNineMatchesKnownPrefix times out
-Most recent validated interpretation:
-- remaining SinDegrees failures are no longer core-panic issues; they are now semantic/progress issues
-- likely next work is in trig layer (Lambert/replay/progress), not more broad core surgery
-Immediate next step:
-- create a fresh feature branch from main for SinDegrees semantic fixes
-- rerun full pending suite frequently, not just isolated named tests
-- tackle SinDegrees first; keep sqrt/square(sqrt2) parked until SinDegrees is stable
+Project: gosper-gcf, a Go library for Gosper/HAKMEM-style continued-fraction arithmetic using internal GCF (p,q) streams plus interval/range reasoning, with companion packages named and trig; north star is docs/gosper_cf_requirements_spec.md.
+Current milestone: Phase 1.5 complete enough to commit; tree is green after CurrentInterval surface migration and stabilization.
+Working components: ./tools/check.sh passes; go test ./core ./named ./trig passes; CurrentInterval() exists across stream interfaces and implementations; core/named/trig compile and test green.
+Working behavior: independent-of-X/Y collapse remaps are stabilized to preserve existing BB behavior; projectX/projectY BB tests are green again.
+Working behavior: direct unary outside-range Range() errors remain explicit; transitional PQStreamFromRCF adapter may advance past an unsupported current interval if later tail interval becomes usable.
+Working behavior: sqrt production code is consolidated into core/sqrt.go; core/sqrt_controller.go, core/sqrt_cycle4.go, and core/sqrt_cycle5.go are obsolete placeholders and can be deleted if still empty in repo.
+Known divergence from spec: newGCF2WithResolvedConfig still performs constructor-time shortcutting for independent-of-X/Y cases; collapse is not yet fully lazy per spec.
+Known divergence from spec: internal RCF replay/adapters still exist in places, especially outside core’s ideal internal (p,q)/interval-only design.
+Known divergence from spec: checked-constructor migration is incomplete; NewRational compatibility seam still exists.
+Known future work: add at least one testify-based test, but only after module metadata / go.sum issues are intentionally handled.
+Next immediate task: commit all Phase 1.5 work with a broad commit message, then start next phase focused on spec alignment rather than more interface churn.
+Next phase target: remove remaining trig-specific design leakage from core and/or make constructor collapse fully lazy, but discuss any spec deviations explicitly before changing behavior.
+Constraint: treat docs/gosper_cf_requirements_spec.md as authoritative north star; discuss any intentional divergence.
+Constraint: prioritize core first, then named, then trig.
+Constraint: no production panics; prefer explicit errors.
+Constraint: internal representation should stay in (p,q) / interval space as much as possible; only client-facing boundary should emit RCF.
+Constraint: do not remove helpers unless there is an explicit unused-helper error from the user/tooling.
+Constraint: new tests added from now on should use testify unless there is a compelling reason not to.
+Constraint: bump version comments on any file you replace.

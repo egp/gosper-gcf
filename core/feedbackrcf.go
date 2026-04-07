@@ -1,5 +1,7 @@
-// core/feedbackrcf.go v1
+// core/feedbackrcf.go v3
 package core
+
+import "fmt"
 
 // feedbackRCFBuffer is an internal growable replay buffer for emitted regular-CF
 // terms. The owner supplies an ensure callback that appends more produced prefix
@@ -10,7 +12,6 @@ package core
 // cursors over the same emitted prefix.
 type feedbackRCFBuffer struct {
 	ensure func(target int)
-
 	terms  []RCFTerm
 	ranges []Range
 	eof    bool
@@ -23,7 +24,7 @@ type feedbackRCFCursor struct {
 
 func newFeedbackRCFBuffer(ensure func(target int)) *feedbackRCFBuffer {
 	if ensure == nil {
-		panic("newFeedbackRCFBuffer: nil ensure callback")
+		return nil
 	}
 	return &feedbackRCFBuffer{
 		ensure: ensure,
@@ -32,7 +33,7 @@ func newFeedbackRCFBuffer(ensure func(target int)) *feedbackRCFBuffer {
 
 func (b *feedbackRCFBuffer) Cursor() RCFStream {
 	if b == nil {
-		panic("feedbackRCFBuffer.Cursor: nil receiver")
+		return newErrorRCFStream(fmt.Errorf("feedbackRCFBuffer.Cursor: %w", ErrNilReceiver))
 	}
 	return &feedbackRCFCursor{
 		owner: b,
@@ -40,81 +41,88 @@ func (b *feedbackRCFBuffer) Cursor() RCFStream {
 	}
 }
 
-func (b *feedbackRCFBuffer) Append(term RCFTerm, rng Range) {
+func (b *feedbackRCFBuffer) Append(term RCFTerm, rng Range) error {
 	if b == nil {
-		panic("feedbackRCFBuffer.Append: nil receiver")
+		return fmt.Errorf("feedbackRCFBuffer.Append: %w", ErrNilReceiver)
 	}
 	if b.eof {
-		panic("feedbackRCFBuffer.Append: buffer already closed")
+		return fmt.Errorf("feedbackRCFBuffer.Append: %w", ErrAppendAfterClose)
 	}
-
 	b.terms = append(b.terms, NewRCFTerm(term.A()))
 	b.ranges = append(b.ranges, cloneRange(rng))
+	return nil
 }
 
-func (b *feedbackRCFBuffer) Close() {
+func (b *feedbackRCFBuffer) Close() error {
 	if b == nil {
-		panic("feedbackRCFBuffer.Close: nil receiver")
+		return fmt.Errorf("feedbackRCFBuffer.Close: %w", ErrNilReceiver)
 	}
 	b.eof = true
+	return nil
 }
 
-func (b *feedbackRCFBuffer) ensureRange(index int) {
+func (b *feedbackRCFBuffer) ensureRange(index int) error {
+	if b == nil {
+		return fmt.Errorf("feedbackRCFBuffer.ensureRange: %w", ErrNilReceiver)
+	}
 	for len(b.ranges) <= index && !b.eof {
 		beforeTerms := len(b.terms)
 		beforeRanges := len(b.ranges)
 		wasEOF := b.eof
-
 		b.ensure(index)
-
 		if len(b.terms) == beforeTerms && len(b.ranges) == beforeRanges && b.eof == wasEOF {
-			panic("feedbackRCFBuffer.ensureRange: ensure callback made no progress")
+			return fmt.Errorf("feedbackRCFBuffer.ensureRange: %w", ErrUnsupportedRangeCase)
 		}
 	}
+	return nil
 }
 
-func (b *feedbackRCFBuffer) ensureTerm(index int) {
+func (b *feedbackRCFBuffer) ensureTerm(index int) error {
+	if b == nil {
+		return fmt.Errorf("feedbackRCFBuffer.ensureTerm: %w", ErrNilReceiver)
+	}
 	for len(b.terms) <= index && !b.eof {
 		beforeTerms := len(b.terms)
 		beforeRanges := len(b.ranges)
 		wasEOF := b.eof
-
 		b.ensure(index)
-
 		if len(b.terms) == beforeTerms && len(b.ranges) == beforeRanges && b.eof == wasEOF {
-			panic("feedbackRCFBuffer.ensureTerm: ensure callback made no progress")
+			return fmt.Errorf("feedbackRCFBuffer.ensureTerm: %w", ErrUnsupportedRangeCase)
 		}
 	}
+	return nil
 }
 
-func (c *feedbackRCFCursor) NextRCF() (RCFTerm, Status) {
+func (c *feedbackRCFCursor) NextRCF() (RCFTerm, Status, error) {
 	if c == nil || c.owner == nil {
-		panic("feedbackRCFCursor.NextRCF: nil cursor")
+		return NewRCFTerm(nil), StatusEOF, fmt.Errorf("feedbackRCFCursor.NextRCF: %w", ErrNilReceiver)
 	}
-
-	c.owner.ensureTerm(c.next)
-
+	if err := c.owner.ensureTerm(c.next); err != nil {
+		return NewRCFTerm(nil), StatusEOF, err
+	}
 	if c.next >= len(c.owner.terms) {
-		return NewRCFTerm(nil), StatusEOF
+		return NewRCFTerm(nil), StatusEOF, nil
 	}
-
 	term := c.owner.terms[c.next]
 	c.next++
-	return NewRCFTerm(term.A()), StatusOK
+	return NewRCFTerm(term.A()), StatusOK, nil
 }
 
-func (c *feedbackRCFCursor) Range() Range {
+func (c *feedbackRCFCursor) CurrentInterval() (Interval, error) {
 	if c == nil || c.owner == nil {
-		panic("feedbackRCFCursor.Range: nil cursor")
+		return Interval{}, fmt.Errorf("feedbackRCFCursor.CurrentInterval: %w", ErrNilReceiver)
 	}
-
-	c.owner.ensureRange(c.next)
-
+	if err := c.owner.ensureRange(c.next); err != nil {
+		return Interval{}, err
+	}
 	if c.next >= len(c.owner.ranges) {
-		panic("Range() is undefined on EOF RCF stream")
+		return Interval{}, fmt.Errorf("feedbackRCFCursor.CurrentInterval: %w", ErrUndefinedRangeOnEOFStream)
 	}
-
-	return cloneRange(c.owner.ranges[c.next])
+	return cloneRange(c.owner.ranges[c.next]), nil
 }
 
-// core/feedbackrcf.go v1
+func (c *feedbackRCFCursor) Range() (Range, error) {
+	return c.CurrentInterval()
+}
+
+// core/feedbackrcf.go v3

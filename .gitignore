@@ -57,3 +57,6 @@ crashers/
 # - vendor/   (unless you intentionally decide to stop vendoring)
 
 # .gitignore v1
+# Claude workspace
+.claude/
+**/.claude/

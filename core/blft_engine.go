@@ -1,18 +1,18 @@
-// core/blft_engine.go v1
+// core/blft_engine.go v2
 package core
 
 func newBLFTState(coeffs BLFTCoefficients) blftState {
 	return blftState(cloneBLFTCoefficients(coeffs))
 }
 
-func (s blftState) UnaryRange(xRange Range) Range {
+func (s blftState) UnaryRange(xRange Range) (Range, error) {
 	return s.CornerRange(
 		xRange,
 		exactRangeFromRational(RationalFromInt64(0)),
 	)
 }
 
-func (s blftState) BinaryRange(xRange, yRange Range) Range {
+func (s blftState) BinaryRange(xRange, yRange Range) (Range, error) {
 	return s.CornerRange(xRange, yRange)
 }
 
@@ -60,4 +60,4 @@ func (s blftState) IndependentOfY() bool {
 	return isIndependentOfY(s)
 }
 
-// core/blft_engine.go v1
+// core/blft_engine.go v2

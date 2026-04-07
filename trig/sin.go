@@ -1,8 +1,8 @@
-// trig/sin.go v4
-
+// trig/sin.go v5
 package trig
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/egp/gosper-gcf/core"
@@ -14,7 +14,7 @@ func sinRadians(x core.PQStream) *core.GCF {
 
 func halfInputForSin(x core.PQStream) core.PQStream {
 	if x == nil {
-		panic("halfInputForSin: nil input")
+		return &errorPQReplay{err: fmt.Errorf("halfInputForSin: nil input")}
 	}
 
 	half := core.NewGCF1(
@@ -36,19 +36,17 @@ func halfInputForSin(x core.PQStream) core.PQStream {
 
 func sinFromTanHalf(t core.RCFStream) *core.GCF {
 	if t == nil {
-		panic("sinFromTanHalf: nil input")
+		return errorGCF(fmt.Errorf("sinFromTanHalf: nil input"))
 	}
-
 	return doubleAngleFromHalfQuotient(t)
 }
 
 func doubleAngleFromHalfQuotient(t core.RCFStream) *core.GCF {
 	if t == nil {
-		panic("doubleAngleFromHalfQuotient: nil input")
+		return errorGCF(fmt.Errorf("doubleAngleFromHalfQuotient: nil input"))
 	}
 
 	left, right := newPQPairFromRCFReplay(t)
-
 	return core.NewGCF2(
 		core.BLFTCoefficients{
 			A: big.NewInt(0),
@@ -67,12 +65,24 @@ func doubleAngleFromHalfQuotient(t core.RCFStream) *core.GCF {
 
 func newPQPairFromRCFReplay(src core.RCFStream) (core.PQStream, core.PQStream) {
 	if src == nil {
-		panic("newPQPairFromRCFReplay: nil source")
+		err := fmt.Errorf("newPQPairFromRCFReplay: nil source")
+		return &errorPQReplay{err: err}, &errorPQReplay{err: err}
 	}
-
 	root := newReplayRCF(src)
-
 	return &pqFromRCFReplay{fork: root.Fork()}, &pqFromRCFReplay{fork: root.Fork()}
 }
 
-// trig/sin.go v4
+// trig/sin.go v5
+
+// --- appended from trig/api.go ---
+// trig/api.go v4
+
+func Sin(x core.PQStream) *core.GCF {
+	return sinRadians(x)
+}
+
+func Tanh(x core.PQStream) *core.GCF {
+	return tanhRadians(x)
+}
+
+// trig/api.go v4

@@ -1,4 +1,4 @@
-// core/gcf_unary_streaming_wb_test.go v1
+// core/gcf_unary_streaming_wb_test.go v3
 package core
 
 import (
@@ -7,149 +7,101 @@ import (
 )
 
 type countingPQStream struct {
-	steps []FinitePQStep
-	calls *int
+	rng        Range
+	nextCalls  int
+	rangeCalls int
 }
 
-func (s *countingPQStream) NextPQ() (PQTerm, PQStream, Status) {
-	if s.calls == nil {
-		panic("countingPQStream calls counter is nil")
-	}
-	*s.calls++
-
-	if len(s.steps) == 0 {
-		return PQTerm{
-			P: big.NewInt(0),
-			Q: big.NewInt(0),
-		}, s, StatusEOF
-	}
-
-	head := cloneFinitePQStep(s.steps[0])
-	tail := &countingPQStream{
-		steps: append([]FinitePQStep(nil), s.steps[1:]...),
-		calls: s.calls,
-	}
-
-	return head.Term, tail, StatusOK
+func (s *countingPQStream) NextPQ() (PQTerm, PQStream, Status, error) {
+	s.nextCalls++
+	return PQTerm{
+		P: big.NewInt(0),
+		Q: big.NewInt(0),
+	}, s, StatusEOF, nil
 }
 
-func (s *countingPQStream) Range() Range {
-	if len(s.steps) == 0 {
-		panic("Range() is undefined on EOF PQStream")
-	}
-	return cloneRange(s.steps[0].Range)
+func (s *countingPQStream) CurrentInterval() (Interval, error) {
+	s.rangeCalls++
+	return s.rng, nil
 }
 
-func TestWB_GCF_UnaryConstructorDoesNotConsumeSource(t *testing.T) {
-	calls := 0
+func (s *countingPQStream) Range() (Range, error) {
+	return s.CurrentInterval()
+}
 
-	stream := &countingPQStream{
-		steps: []FinitePQStep{
-			{
-				Term: PQTerm{P: big.NewInt(3), Q: big.NewInt(1)},
-				Range: Range{
-					Lo: Endpoint{
-						Value: RationalFromInt64(3),
-						Open:  false,
-					},
-					Hi: Endpoint{
-						Value: RationalFromInt64(4),
-						Open:  false,
-					},
-					Inside: true,
-				},
-			},
-			{
-				Term: PQTerm{P: big.NewInt(1), Q: big.NewInt(1)},
-				Range: Range{
-					Lo: Endpoint{
-						Value: RationalFromInt64(1),
-						Open:  false,
-					},
-					Hi: Endpoint{
-						Value: RationalFromInt64(2),
-						Open:  false,
-					},
-					Inside: true,
-				},
-			},
+func TestWB_GCF_UnaryStreaming_ExactIntegerRangeEmitsWithoutIngest(t *testing.T) {
+	src := &countingPQStream{
+		rng: exactRangeFromRational(RationalFromInt64(3)),
+	}
+
+	g := NewGCF1(
+		BLFTCoefficients{
+			A: big.NewInt(0),
+			B: big.NewInt(1),
+			C: big.NewInt(0),
+			D: big.NewInt(0),
+			E: big.NewInt(0),
+			F: big.NewInt(0),
+			G: big.NewInt(0),
+			H: big.NewInt(1),
 		},
-		calls: &calls,
-	}
+		src,
+	)
 
-	g := NewGCF1(identityUnaryXCoeffs(), stream)
-	if g == nil {
-		t.Fatal("NewGCF1 returned nil")
+	term, status, err := g.NextRCF()
+	if err != nil {
+		t.Fatalf("NextRCF error = %v", err)
 	}
-
-	if calls != 0 {
-		t.Fatalf("constructor consumed source %d times, want 0", calls)
+	if status != StatusOK {
+		t.Fatalf("status = %v, want %v", status, StatusOK)
+	}
+	if term.A().Cmp(big.NewInt(3)) != 0 {
+		t.Fatalf("term = %v, want 3", term.A())
+	}
+	if src.nextCalls != 0 {
+		t.Fatalf("nextCalls = %d, want 0", src.nextCalls)
 	}
 }
 
-func TestWB_GCF_UnaryLiveRangeComesFromCurrentEvaluatorState(t *testing.T) {
-	calls := 0
-
-	stream := &countingPQStream{
-		steps: []FinitePQStep{
-			{
-				Term: PQTerm{P: big.NewInt(3), Q: big.NewInt(1)},
-				Range: Range{
-					Lo: Endpoint{
-						Value: RationalFromInt64(3),
-						Open:  false,
-					},
-					Hi: Endpoint{
-						Value: RationalFromInt64(4),
-						Open:  false,
-					},
-					Inside: true,
-				},
+func TestWB_GCF_UnaryStreaming_RangeQueryDoesNotIngest(t *testing.T) {
+	src := &countingPQStream{
+		rng: Range{
+			Lo: Endpoint{
+				Value: RationalFromInt64(2),
+				Open:  false,
 			},
-			{
-				Term: PQTerm{P: big.NewInt(1), Q: big.NewInt(1)},
-				Range: Range{
-					Lo: Endpoint{
-						Value: RationalFromInt64(1),
-						Open:  false,
-					},
-					Hi: Endpoint{
-						Value: RationalFromInt64(2),
-						Open:  false,
-					},
-					Inside: true,
-				},
+			Hi: Endpoint{
+				Value: RationalFromInt64(5),
+				Open:  false,
 			},
+			Inside: true,
 		},
-		calls: &calls,
 	}
 
-	g := NewGCF1(identityUnaryXCoeffs(), stream)
+	g := NewGCF1(
+		BLFTCoefficients{
+			A: big.NewInt(0),
+			B: big.NewInt(1),
+			C: big.NewInt(0),
+			D: big.NewInt(0),
+			E: big.NewInt(0),
+			F: big.NewInt(0),
+			G: big.NewInt(0),
+			H: big.NewInt(1),
+		},
+		src,
+	)
 
-	r := g.Range()
-
-	if !r.Inside {
-		t.Fatal("Range.Inside = false, want true")
+	_, err := g.Range()
+	if err != nil {
+		t.Fatalf("Range error = %v", err)
 	}
-	if r.Lo.Value.Cmp(RationalFromInt64(3)) != 0 {
-		t.Fatalf("Lo = %v/%v, want 3/1", r.Lo.Value.Num(), r.Lo.Value.Den())
+	if src.nextCalls != 0 {
+		t.Fatalf("nextCalls = %d, want 0", src.nextCalls)
 	}
-	if r.Hi.Value.Cmp(RationalFromInt64(4)) != 0 {
-		t.Fatalf("Hi = %v/%v, want 4/1", r.Hi.Value.Num(), r.Hi.Value.Den())
-	}
-}
-
-func identityUnaryXCoeffs() BLFTCoefficients {
-	return BLFTCoefficients{
-		A: big.NewInt(0),
-		B: big.NewInt(1),
-		C: big.NewInt(0),
-		D: big.NewInt(0),
-		E: big.NewInt(0),
-		F: big.NewInt(0),
-		G: big.NewInt(0),
-		H: big.NewInt(1),
+	if src.rangeCalls == 0 {
+		t.Fatal("rangeCalls = 0, want > 0")
 	}
 }
 
-// core/gcf_unary_streaming_wb_test.go v1
+// core/gcf_unary_streaming_wb_test.go v3

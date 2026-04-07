@@ -1,7 +1,10 @@
-// core/feedback_rcf_stream.go v2
+// core/feedback_rcf_stream.go v4
 package core
 
-import "math/big"
+import (
+	"fmt"
+	"math/big"
+)
 
 type feedbackRCFStream struct {
 	terms  []RCFTerm
@@ -17,52 +20,53 @@ func newFeedbackRCFStream() *feedbackRCFStream {
 	}
 }
 
-func (s *feedbackRCFStream) Append(term RCFTerm, rng Range) {
+func (s *feedbackRCFStream) Append(term RCFTerm, rng Range) error {
 	if s == nil {
-		panic("feedbackRCFStream.Append: nil receiver")
+		return fmt.Errorf("feedbackRCFStream.Append: %w", ErrNilReceiver)
 	}
 	if s.closed {
-		panic("feedbackRCFStream.Append: append after Close")
+		return fmt.Errorf("feedbackRCFStream.Append: %w", ErrAppendAfterClose)
 	}
-
 	s.terms = append(s.terms, cloneFeedbackRCFTerm(term))
 	s.ranges = append(s.ranges, cloneFeedbackRCFRange(rng))
+	return nil
 }
 
-func (s *feedbackRCFStream) Close() {
+func (s *feedbackRCFStream) Close() error {
 	if s == nil {
-		panic("feedbackRCFStream.Close: nil receiver")
+		return fmt.Errorf("feedbackRCFStream.Close: %w", ErrNilReceiver)
 	}
 	s.closed = true
+	return nil
 }
 
-func (s *feedbackRCFStream) NextRCF() (RCFTerm, Status) {
+func (s *feedbackRCFStream) NextRCF() (RCFTerm, Status, error) {
 	if s == nil {
-		panic("feedbackRCFStream.NextRCF: nil receiver")
+		return NewRCFTerm(nil), StatusEOF, fmt.Errorf("feedbackRCFStream.NextRCF: %w", ErrNilReceiver)
 	}
-
 	if s.next < len(s.terms) {
 		term := cloneFeedbackRCFTerm(s.terms[s.next])
 		s.next++
-		return term, StatusOK
+		return term, StatusOK, nil
 	}
-
 	if s.closed {
-		return NewRCFTerm(big.NewInt(0)), StatusEOF
+		return NewRCFTerm(big.NewInt(0)), StatusEOF, nil
 	}
-
-	panic("feedbackRCFStream.NextRCF: no term available before Close")
+	return NewRCFTerm(nil), StatusEOF, fmt.Errorf("feedbackRCFStream.NextRCF: %w", ErrNoTermAvailableBeforeClose)
 }
 
-func (s *feedbackRCFStream) Range() Range {
+func (s *feedbackRCFStream) CurrentInterval() (Interval, error) {
 	if s == nil {
-		panic("feedbackRCFStream.Range: nil receiver")
+		return Interval{}, fmt.Errorf("feedbackRCFStream.CurrentInterval: %w", ErrNilReceiver)
 	}
 	if s.next >= len(s.ranges) {
-		panic("feedbackRCFStream.Range: no remaining suffix range")
+		return Interval{}, fmt.Errorf("feedbackRCFStream.CurrentInterval: %w", ErrNoRemainingSuffixRange)
 	}
+	return cloneFeedbackRCFRange(s.ranges[s.next]), nil
+}
 
-	return cloneFeedbackRCFRange(s.ranges[s.next])
+func (s *feedbackRCFStream) Range() (Range, error) {
+	return s.CurrentInterval()
 }
 
 func cloneFeedbackRCFTerm(term RCFTerm) RCFTerm {
@@ -74,6 +78,7 @@ func cloneFeedbackRCFRange(r Range) Range {
 		Lo:     cloneFeedbackRCFEndpoint(r.Lo),
 		Hi:     cloneFeedbackRCFEndpoint(r.Hi),
 		Inside: r.Inside,
+		Kind_:  r.Kind_,
 	}
 }
 
@@ -88,4 +93,4 @@ func cloneFeedbackRCFRational(r Rational) Rational {
 	return NewRational(r.Num(), r.Den())
 }
 
-// core/feedback_rcf_stream.go v2
+// core/feedback_rcf_stream.go v4

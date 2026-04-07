@@ -1,7 +1,10 @@
-// core/dlft.go v4
+// core/dlft.go v6
 package core
 
-import "math/big"
+import (
+	"fmt"
+	"math/big"
+)
 
 type dlftState DLFTCoefficients
 
@@ -12,10 +15,8 @@ func newDLFTState(coeffs DLFTCoefficients) dlftState {
 func (s dlftState) IngestX(term PQTerm) dlftState {
 	p := term.P
 	q := term.Q
-
 	pp := mul(p, p)
 	qq := mul(q, q)
-
 	twoAP := mul(big.NewInt(2), mul(s.A, p))
 	twoDP := mul(big.NewInt(2), mul(s.D, p))
 
@@ -31,7 +32,6 @@ func (s dlftState) IngestX(term PQTerm) dlftState {
 
 func (s dlftState) Emit(term RCFTerm) dlftState {
 	n := term.A()
-
 	return dlftState{
 		A: cloneBigIntOrZero(s.D),
 		B: cloneBigIntOrZero(s.E),
@@ -42,9 +42,13 @@ func (s dlftState) Emit(term RCFTerm) dlftState {
 	}
 }
 
-func (s dlftState) CandidateRange(xRange Range) Range {
+func (s dlftState) CandidateRange(xRange Range) (Range, error) {
 	if !xRange.Inside {
-		panic("CandidateRange currently supports only inside ranges")
+		return Range{}, fmt.Errorf(
+			"dlftState.CandidateRange: %w: xRange=%s",
+			ErrUnsupportedRangeCase,
+			formatRangeDebug(xRange),
+		)
 	}
 
 	points := []Rational{
@@ -52,15 +56,17 @@ func (s dlftState) CandidateRange(xRange Range) Range {
 		xRange.Hi.Value,
 	}
 
-	// Add rational denominator roots, if any.
-	points = append(points, rationalRootsQuadratic(
+	denRoots, err := rationalRootsQuadraticChecked(
 		cloneBigIntOrZero(s.D),
 		cloneBigIntOrZero(s.E),
 		cloneBigIntOrZero(s.F),
 		xRange,
-	)...)
+	)
+	if err != nil {
+		return Range{}, fmt.Errorf("dlftState.CandidateRange: denominator roots: %w", err)
+	}
+	points = append(points, denRoots...)
 
-	// Add rational critical points, if any.
 	critA := new(big.Int).Sub(
 		mul(s.A, s.E),
 		mul(s.B, s.D),
@@ -77,12 +83,16 @@ func (s dlftState) CandidateRange(xRange Range) Range {
 		mul(s.C, s.E),
 	)
 
-	points = append(points, rationalRootsQuadratic(
+	critRoots, err := rationalRootsQuadraticChecked(
 		critA,
 		critB,
 		critC,
 		xRange,
-	)...)
+	)
+	if err != nil {
+		return Range{}, fmt.Errorf("dlftState.CandidateRange: critical roots: %w", err)
+	}
+	points = append(points, critRoots...)
 
 	values := make([]Rational, 0, len(points))
 	sawZeroDen := false
@@ -91,7 +101,6 @@ func (s dlftState) CandidateRange(xRange Range) Range {
 
 	for _, x := range dedupeRationals(points) {
 		num, den := evalDLFTNumDenAtPoint(s, x)
-
 		switch den.Sign() {
 		case 0:
 			sawZeroDen = true
@@ -102,20 +111,22 @@ func (s dlftState) CandidateRange(xRange Range) Range {
 			sawNegDen = true
 		}
 
-		values = append(values, NewRational(num, den))
+		value, err := NewRationalChecked(num, den)
+		if err != nil {
+			return Range{}, fmt.Errorf("dlftState.CandidateRange: image value: %w", err)
+		}
+		values = append(values, value)
 	}
 
 	if sawZeroDen || (sawPosDen && sawNegDen) {
-		return outsideRangeFromValues(values)
+		return outsideRangeFromValues(values), nil
 	}
-
 	if len(values) == 0 {
-		return outsideRangeFromValues(nil)
+		return outsideRangeFromValues(nil), nil
 	}
 
 	lo := values[0]
 	hi := values[0]
-
 	for _, v := range values[1:] {
 		if v.Cmp(lo) < 0 {
 			lo = v
@@ -135,7 +146,7 @@ func (s dlftState) CandidateRange(xRange Range) Range {
 			Open:  false,
 		},
 		Inside: true,
-	}
+	}, nil
 }
 
 func (s dlftState) CollapseToRational() Rational {
@@ -149,7 +160,7 @@ func (s dlftState) CollapseToRational() Rational {
 	}
 }
 
-func (s dlftState) UnaryRange(xRange Range) Range {
+func (s dlftState) UnaryRange(xRange Range) (Range, error) {
 	return s.CandidateRange(xRange)
 }
 
@@ -185,7 +196,6 @@ func add3(x, y, z *big.Int) *big.Int {
 func evalDLFTNumDenAtPoint(s dlftState, x Rational) (*big.Int, *big.Int) {
 	xn := x.Num()
 	xd := x.Den()
-
 	xn2 := mul(xn, xn)
 	xd2 := mul(xd, xd)
 
@@ -223,30 +233,35 @@ func scaledDLFTConstant(coeff, xden2 *big.Int) *big.Int {
 	return new(big.Int).Mul(coeff, xden2)
 }
 
-func rationalRootsQuadratic(a, b, c *big.Int, xRange Range) []Rational {
+func rationalRootsQuadraticChecked(a, b, c *big.Int, xRange Range) ([]Rational, error) {
 	if a.Sign() == 0 {
-		return rationalRootsLinear(b, c, xRange)
+		return rationalRootsLinearChecked(b, c, xRange)
 	}
 
-	// discriminant = b^2 - 4ac
 	disc := new(big.Int).Sub(
 		mul(b, b),
 		mul(big.NewInt(4), mul(a, c)),
 	)
 	if disc.Sign() < 0 {
-		return nil
+		return nil, nil
 	}
 
 	sqrtDisc, ok := perfectSquareRoot(disc)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	twoA := mul(big.NewInt(2), a)
 	negB := new(big.Int).Neg(cloneBigIntOrZero(b))
 
-	r1 := NewRational(new(big.Int).Sub(cloneBigIntOrZero(negB), sqrtDisc), twoA)
-	r2 := NewRational(new(big.Int).Add(cloneBigIntOrZero(negB), sqrtDisc), twoA)
+	r1, err := NewRationalChecked(new(big.Int).Sub(cloneBigIntOrZero(negB), sqrtDisc), twoA)
+	if err != nil {
+		return nil, err
+	}
+	r2, err := NewRationalChecked(new(big.Int).Add(cloneBigIntOrZero(negB), sqrtDisc), twoA)
+	if err != nil {
+		return nil, err
+	}
 
 	out := make([]Rational, 0, 2)
 	if rationalInClosedInsideRange(r1, xRange) {
@@ -255,19 +270,22 @@ func rationalRootsQuadratic(a, b, c *big.Int, xRange Range) []Rational {
 	if r2.Cmp(r1) != 0 && rationalInClosedInsideRange(r2, xRange) {
 		out = append(out, r2)
 	}
-	return out
+	return out, nil
 }
 
-func rationalRootsLinear(a, b *big.Int, xRange Range) []Rational {
+func rationalRootsLinearChecked(a, b *big.Int, xRange Range) ([]Rational, error) {
 	if a.Sign() == 0 {
-		return nil
+		return nil, nil
 	}
 
-	root := NewRational(new(big.Int).Neg(cloneBigIntOrZero(b)), a)
-	if rationalInClosedInsideRange(root, xRange) {
-		return []Rational{root}
+	root, err := NewRationalChecked(new(big.Int).Neg(cloneBigIntOrZero(b)), a)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	if rationalInClosedInsideRange(root, xRange) {
+		return []Rational{root}, nil
+	}
+	return nil, nil
 }
 
 func rationalInClosedInsideRange(x Rational, r Range) bool {
@@ -304,7 +322,6 @@ func perfectSquareRoot(n *big.Int) (*big.Int, bool) {
 
 	one := big.NewInt(1)
 	two := big.NewInt(2)
-
 	lo := big.NewInt(0)
 	hi := cloneBigIntOrZero(n)
 
@@ -328,4 +345,4 @@ func perfectSquareRoot(n *big.Int) (*big.Int, bool) {
 	return nil, false
 }
 
-// core/dlft.go v4
+// core/dlft.go v6

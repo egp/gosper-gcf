@@ -1,4 +1,4 @@
-// core/pqstream_procedural_wb_test.go v1
+// core/pqstream_procedural_wb_test.go v2
 package core
 
 import (
@@ -30,7 +30,10 @@ func TestWB_GCFStream_IncrementalValidationTriggersAtBadTerm(t *testing.T) {
 		t.Fatalf("constructor status = %v, want %v", status, StatusOK)
 	}
 
-	term1, tail, status1 := stream.NextPQ()
+	term1, tail, status1, err := stream.NextPQ()
+	if err != nil {
+		t.Fatalf("first NextPQ error = %v", err)
+	}
 	if status1 != StatusOK {
 		t.Fatalf("first NextPQ status = %v, want %v", status1, StatusOK)
 	}
@@ -38,10 +41,13 @@ func TestWB_GCFStream_IncrementalValidationTriggersAtBadTerm(t *testing.T) {
 		t.Fatalf("first term = (%v,%v), want (1,1)", term1.P, term1.Q)
 	}
 
-	_, _, status2 := tail.NextPQ()
+	_, _, status2, err := tail.NextPQ()
+	if err != nil {
+		t.Fatalf("second NextPQ error = %v", err)
+	}
 	if status2 != StatusInvalidInput {
 		t.Fatalf("second NextPQ status = %v, want %v", status2, StatusInvalidInput)
 	}
 }
 
-// core/pqstream_procedural_wb_test.go v1
+// core/pqstream_procedural_wb_test.go v2

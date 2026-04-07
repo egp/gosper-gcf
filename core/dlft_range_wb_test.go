@@ -1,4 +1,4 @@
-// core/dlft_range_wb_test.go v1
+// core/dlft_range_wb_test.go v2
 package core
 
 import (
@@ -28,11 +28,12 @@ func TestWB_DLFT_CandidateRange_ExactMonotoneEndpoints(t *testing.T) {
 		Inside: true,
 	}
 
-	got := s.CandidateRange(xRange)
-
+	got, err := s.CandidateRange(xRange)
+	if err != nil {
+		t.Fatalf("CandidateRange error = %v", err)
+	}
 	wantLo := RationalFromInt64(4)
 	wantHi := RationalFromInt64(25)
-
 	if !got.Inside {
 		t.Fatal("CandidateRange().Inside = false, want true")
 	}
@@ -66,11 +67,12 @@ func TestWB_DLFT_CandidateRange_DetectsInteriorPoleAsOutside(t *testing.T) {
 		Inside: true,
 	}
 
-	got := s.CandidateRange(xRange)
-
+	got, err := s.CandidateRange(xRange)
+	if err != nil {
+		t.Fatalf("CandidateRange error = %v", err)
+	}
 	wantLo := RationalFromInt64(-1)
 	wantHi := NewRational(big.NewInt(1), big.NewInt(2))
-
 	if got.Inside {
 		t.Fatal("CandidateRange().Inside = true, want false because denominator has an interior root")
 	}
@@ -104,11 +106,12 @@ func TestWB_DLFT_CandidateRange_UsesInteriorCriticalPoint(t *testing.T) {
 		Inside: true,
 	}
 
-	got := s.CandidateRange(xRange)
-
+	got, err := s.CandidateRange(xRange)
+	if err != nil {
+		t.Fatalf("CandidateRange error = %v", err)
+	}
 	wantLo := RationalFromInt64(0)
 	wantHi := RationalFromInt64(1)
-
 	if !got.Inside {
 		t.Fatal("CandidateRange().Inside = false, want true")
 	}
@@ -120,4 +123,4 @@ func TestWB_DLFT_CandidateRange_UsesInteriorCriticalPoint(t *testing.T) {
 	}
 }
 
-// core/dlft_range_wb_test.go v1
+// core/dlft_range_wb_test.go v2

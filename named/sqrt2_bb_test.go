@@ -1,3 +1,4 @@
+// named/sqrt2_bb_test.go v2
 package named_test
 
 import (
@@ -14,21 +15,22 @@ func TestBB_Sqrt2_FirstTermHasExpectedPrefix(t *testing.T) {
 		t.Fatal("Sqrt2() returned nil")
 	}
 
-	term, tail, status := s.NextPQ()
-
+	term, tail, status, err := s.NextPQ()
+	if err != nil {
+		t.Fatalf("NextPQ() error = %v", err)
+	}
 	if status != core.StatusOK {
 		t.Fatalf("NextPQ() status = %v, want %v", status, core.StatusOK)
 	}
-
 	if tail == nil {
 		t.Fatal("NextPQ() tail is nil, want non-nil tail stream")
 	}
-
 	if term.P == nil || term.Q == nil {
 		t.Fatal("NextPQ() returned nil big.Int field")
 	}
-
 	if term.P.Cmp(big.NewInt(1)) != 0 || term.Q.Cmp(big.NewInt(1)) != 0 {
 		t.Fatalf("first sqrt2 term = (%v,%v), want (1,1)", term.P, term.Q)
 	}
 }
+
+// named/sqrt2_bb_test.go v2
