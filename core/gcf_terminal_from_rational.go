@@ -3,6 +3,12 @@ package core
 
 import "fmt"
 
+// NewExactTerminalGCFFromRational builds an exact finite GCF whose RCF
+// emission is exactly the canonical continued-fraction expansion of r.
+func NewExactTerminalGCFFromRational(r Rational) *GCF {
+	return newExactTerminalGCFFromRational(r)
+}
+
 func newExactTerminalGCFFromRational(r Rational) *GCF {
 	terms, err := rcfTermsFromRationalChecked(r)
 	if err != nil {

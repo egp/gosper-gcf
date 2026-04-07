@@ -16,22 +16,16 @@ func TestBB_Named_SinDegrees_ZeroIsExactlyZero(t *testing.T) {
 }
 
 func TestBB_Named_SinDegrees_ThirtyIsExactlyOneHalf(t *testing.T) {
-	skipIfPending(t, "named.SinDegrees")
-
 	g := named.SinDegrees(core.PQStreamFromRational(core.RationalFromInt64(30)))
 	assertExactRCFSequenceSinDegrees(t, g, []int64{0, 2})
 }
 
 func TestBB_Named_SinDegrees_NinetyIsExactlyOne(t *testing.T) {
-	skipIfPending(t, "named.SinDegrees")
-
 	g := named.SinDegrees(core.PQStreamFromRational(core.RationalFromInt64(90)))
 	assertExactRCFSequenceSinDegrees(t, g, []int64{1})
 }
 
 func TestBB_Named_SinDegrees_MinusThirtyIsExactlyMinusOneHalf(t *testing.T) {
-	skipIfPending(t, "named.SinDegrees")
-
 	g := named.SinDegrees(core.PQStreamFromRational(core.RationalFromInt64(-30)))
 	assertExactRCFSequenceSinDegrees(t, g, []int64{-1, 2})
 }

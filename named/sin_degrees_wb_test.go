@@ -129,9 +129,6 @@ func TestWB_SinDegrees_RationalValuedAngles(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(fmt.Sprintf("%d°", tc.degrees), func(t *testing.T) {
-			if tc.degrees != 0 {
-				skipIfPending(t, "SinDegrees rational-valued angles")
-			}
 			g := SinDegrees(core.PQStreamFromRational(core.RationalFromInt64(tc.degrees)))
 			assertExactRCFSequenceSinDegreesWB(t, g, tc.want)
 		})

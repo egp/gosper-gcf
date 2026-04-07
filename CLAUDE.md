@@ -33,7 +33,8 @@ Never push while normal tests are red (OK for `PENDING` to be red).
 
 ## Requirements Specification
 
-See `docs/STATUS.md` for specs, stage plan, and current PENDING inventory.
+- `docs/gosper_cf_requirements_spec.md` — authoritative spec (Gosper fidelity labels, requirements, architecture)
+- `docs/STATUS.md` — stage plan, PENDING inventory, R/G cycle log
 
 
 ## Architecture
