@@ -8,7 +8,13 @@ func (s blftState) CornerRange(xr, yr Range) (Range, error) {
 		return special, nil
 	}
 
-	if !xr.Inside || !yr.Inside {
+	if !xr.Inside && yr.Inside {
+		return s.cornerRangeOutsideXInsideY(xr, yr)
+	}
+	if xr.Inside && !yr.Inside {
+		return s.cornerRangeInsideXOutsideY(xr, yr)
+	}
+	if !xr.Inside && !yr.Inside {
 		return Range{}, fmt.Errorf(
 			"CornerRange: %w\nBLFT=%s\nxRange=%s\nyRange=%s",
 			ErrUnsupportedRangeCase,

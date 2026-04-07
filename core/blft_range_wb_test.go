@@ -220,4 +220,48 @@ func TestWB_BLFT_TieBreakGoesToYWhenYNarrower(t *testing.T) {
 	}
 }
 
-// core/blft_range_wb_test.go v3
+// TestWB_BLFT_CornerRange_OutsideX_InsideY_ForSinNinety_DoesNotError exercises
+// the outside/inside case that surfaces during sin(90°) computation.
+// BLFT and ranges are taken verbatim from the error logged by that path.
+func TestWB_BLFT_CornerRange_OutsideX_InsideY_ForSinNinety_DoesNotError(t *testing.T) {
+	// From: nextBinaryRCF: binary range: CornerRange: unsupported projective range case
+	//   BLFT=(A=0 B=2 C=0 D=2 E=1 F=1 G=1 H=0)
+	//   xRange={Inside=false Lo=-1/1 Hi=540/301}
+	//   yRange={Inside=true  Lo=0/1(open) Hi=841/540(open)}
+	s := blftState{
+		A: big.NewInt(0), B: big.NewInt(2), C: big.NewInt(0), D: big.NewInt(2),
+		E: big.NewInt(1), F: big.NewInt(1), G: big.NewInt(1), H: big.NewInt(0),
+	}
+	xr := Range{
+		Lo:     Endpoint{Value: RationalFromInt64(-1), Open: false},
+		Hi:     Endpoint{Value: NewRational(big.NewInt(540), big.NewInt(301)), Open: false},
+		Inside: false,
+	}
+	yr := Range{
+		Lo:     Endpoint{Value: RationalFromInt64(0), Open: true},
+		Hi:     Endpoint{Value: NewRational(big.NewInt(841), big.NewInt(540)), Open: true},
+		Inside: true,
+	}
+
+	got, err := s.CornerRange(xr, yr)
+	if err != nil {
+		t.Fatalf("CornerRange error = %v", err)
+	}
+	if !got.Inside {
+		t.Fatalf("Inside = false, want true")
+	}
+	// f(-1, y) = 0 for any y; f(540/301, y→0+) → 841/270 ≈ 3.115 (open)
+	wantLo := RationalFromInt64(0)
+	wantHi := NewRational(big.NewInt(841), big.NewInt(270))
+	if got.Lo.Value.Cmp(wantLo) != 0 {
+		t.Errorf("Lo = %v/%v, want 0/1", got.Lo.Value.Num(), got.Lo.Value.Den())
+	}
+	if got.Hi.Value.Cmp(wantHi) != 0 {
+		t.Errorf("Hi = %v/%v, want 841/270", got.Hi.Value.Num(), got.Hi.Value.Den())
+	}
+	if !got.Hi.Open {
+		t.Errorf("Hi.Open = false, want true (Hi is a limit, never reached)")
+	}
+}
+
+// core/blft_range_wb_test.go v4
