@@ -21,6 +21,16 @@ Create user API_doc.txt with separate sections for ./core and ./named and ./trig
 
 Maybe add some example code and associated documentation.
 
+Numerical comparison of continue fractions is slightly harder than in decimal,
+but much easier than with rationals -- just invert the decision as to which is larger
+whenever the first discrepant terms are even-numbered.
 
+CFs favor reciprocation. To reciprocate a regular continued fraction,
+add (or if possible, delete) and initial 0 term. To negate, negate all the terms,
+optionally observing that (-a, -b, -c, -d)  == (-a-1, 1, b-1, c, d)
+
+z can produce its value as decimal digits by multiplying by 10 instead of reciprocating, after outputting t = [z]:
+
+z'(x,y) = (10(a-te) 10(b-tf) 10(c-tg) 10(d-th)) / (e  f  g  h)
 
 

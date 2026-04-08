@@ -27,7 +27,7 @@ go vet ./core ./named ./trig
 staticcheck ./core ./named ./trig
 ```
 
-The "all green" bar includes `RUN_PENDING_TESTS=1` on `./core ./named`.
+The "all green" bar includes `RUN_PENDING_TESTS=1` on `./core ./named ./trig`.
 
 Never push while normal tests are red (OK for `PENDING` to be red).
 
@@ -91,11 +91,13 @@ All procedural named sources expose an exact `Range()` at every step. BB tests f
 
 ### Pending tests
 
-Tests guarded by `RUN_PENDING_TESTS=1` are intentionally red and represent the current TODO surface:
+Tests guarded by `RUN_PENDING_TESTS=1` are intentionally red. See `docs/STATUS.md` for the full inventory and `docs/api_limitations.md` for the corresponding public API limitations.
 
-- `TestBB_GCF_SqrtOfTwoMatchesKnownPrefix` — parked sqrt(2) signoff; keep red until addressed
-- `TestBB_SquareOfSqrt2IsExactlyTwo` — deferred; blocked by DLFT infinite algebraic-source limitation
-- `TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_OfDegreesScaleOutsideCase_DoesNotPanic` — deferred; unary BLFT outside-range (projective wrap-around) case; needed for full SinDegrees signoff
+Key pending areas:
+- `trig.Sin` — broken for irrational-result inputs (wrong terms, not just timeout); requires outside/outside BLFT range fix
+- `named.SinDegrees(69°)` — same root cause; deferred until pre-Stage 5
+- sqrt and DLFT — Stage 2 pending
+- HAKMEM 101C utility — Stage 1.5 pending
 
 ### Feature-start workflow
 
@@ -107,6 +109,8 @@ Tests guarded by `RUN_PENDING_TESTS=1` are intentionally red and represent the c
 
 ### Current priorities (as of 2026-04)
 
-1. Finish remaining pending `SinDegrees` non-inside binary-range panic (non-inside BLFT path in `core`)
-2. Keep parked `sqrt(2)` pending red explicit
-3. Defer full general outside/outside BLFT range solver until after SinDegrees signoff
+1. Stage 1.5: implement HAKMEM 101C `SmallestRationalInInterval` (2 cycles; prerequisite for Stage 4)
+2. Stage 2: Sqrt signoff — sqrt(2) 50-term OEIS validation
+3. Stage 3: Tanh signoff — tanh(sqrt(5)) prefix
+4. Fix `trig.Sin` irrational-result inputs (outside/outside BLFT range) — required before Stage 5
+5. Keep parked sqrt(2) and trig.Sin tests pending red until their stages are addressed

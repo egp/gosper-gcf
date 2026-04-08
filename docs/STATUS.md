@@ -15,14 +15,16 @@ Full bar (`RUN_PENDING_TESTS=1 go test -count=1 ./core ./named`) — **red on PE
 ## PENDING Test Inventory
 
 Tests guarded by `RUN_PENDING_TESTS=1`; intentionally red. Use `grep skipIfPending` to list all.
+See `docs/api_limitations.md` for the corresponding public API limitations.
 
 | Test | Package | Reason |
 |---|---|---|
-| `TestBB_Named_SinDegrees_SixtyNineMatchesKnownPrefix` | `named` | outside/outside BLFT range case (deferred until Stage 1 complete) |
+| `TestBB_Named_SinDegrees_SixtyNineMatchesKnownPrefix` | `named` | trig.Sin broken for irrational results; deferred pre-Stage 5 |
+| `TestBB_Trig_Sin_OneHalfMatchesKnownPrefix` | `trig` | trig.Sin broken for irrational results; deferred pre-Stage 5 |
+| `TestBB_Trig_Sin_SixtyNineRadiansMatchesKnownPrefix` | `trig` | trig.Sin broken for irrational results (wrong terms for large integer input); deferred pre-Stage 5 |
 | `TestBB_GCF_SqrtOfTwoMatchesKnownPrefix` | `named` | sqrt(2) parked; keep red until Stage 2 |
-| `TestBB_SquareOfSqrt2IsExactlyTwo` | `named` | DLFT infinite algebraic-source limitation |
-| `TestBB_Trig_Sin_OneHalfMatchesKnownPrefix` | `trig` | binary BLFT non-inside range path (same family as 69°) |
-| `TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_OfDegreesScaleOutsideCase_DoesNotPanic` | `core` | unary BLFT outside-range (projective wrap-around) case |
+| `TestBB_SquareOfSqrt2IsExactlyTwo` | `named` | DLFT infinite algebraic-source limitation; Stage 2 |
+| `TestWB_GCF_UnaryIdentity_OverPQStreamFromRCF_OfDegreesScaleOutsideCase_DoesNotPanic` | `core` | unary BLFT F=0 + outside-range; different root cause from sin tests; TBD |
 
 ---
 
@@ -46,10 +48,9 @@ Target expression: `sqrt(3/pi² + e) / (tanh(sqrt(5)) − sin(69°))`
 |---|---|---|
 | 1 | binary BLFT outside/inside CornerRange | ✓ GREEN — new `blft_range_outside.go`; updated stale guard tests |
 | 2 | exact-sin shortcut for rational-valued angles (30°, 90°, −30°, and all multiples of 30°) | ✓ GREEN — `exactSinDegreesShortcut` in `named/sin_degrees.go`; exported `NewExactTerminalGCFFromRational`; activated 3 BB tests + all WB subtests |
+| 3 | Stage 1 close: document trig.Sin limitations; add sin(69 radians) pending test | ✓ GREEN — `docs/api_limitations.md` created; `TestBB_Trig_Sin_SixtyNineRadiansMatchesKnownPrefix` confirmed failing then guarded; `CLAUDE.md` priorities updated. trig.Sin irrational-result fix deferred pre-Stage 5 |
 
-**Remaining in Stage 1 (Cycle 3+):**
-- 69°: outside/outside BLFT range (deferred; needs full projective outside/outside case in `core`)
-- Unary BLFT outside-range (projective wrap-around) — also required for full Stage 1 signoff
+**Stage 1 closed.** trig.Sin broken for irrational results (wrong terms, not just hang); outside/outside BLFT fix required before Stage 5 assembly.
 
 ---
 

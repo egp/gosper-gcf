@@ -24,6 +24,13 @@ func TestBB_Trig_Sin_OneHalfMatchesKnownPrefix(t *testing.T) {
 	assertRCFPrefixTrig(t, g, []int64{0, 2, 11, 1, 1, 1, 6, 2})
 }
 
+func TestBB_Trig_Sin_SixtyNineRadiansMatchesKnownPrefix(t *testing.T) {
+	skipIfPending(t, "trig.Sin")
+
+	g := trig.Sin(core.PQStreamFromRational(core.RationalFromInt64(69)))
+	assertRCFPrefixTrig(t, g, []int64{-1, 1, 7, 1, 2, 2, 8, 3})
+}
+
 func TestBB_Trig_Tanh_ZeroIsExactlyZero(t *testing.T) {
 	g := trig.Tanh(core.PQStreamFromRational(core.RationalFromInt64(0)))
 	assertExactRCFSequenceTrig(t, g, []int64{0})
