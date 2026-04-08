@@ -1,6 +1,6 @@
 # GoGCF Project Status
 
-_Last updated: 2026-04-07_
+_Last updated: 2026-04-08_
 
 ---
 
@@ -35,7 +35,7 @@ Target expression: `sqrt(3/pi² + e) / (tanh(sqrt(5)) − sin(69°))`
 | Stage | Focus | ~R/G cycles | Status |
 |---|---|---|---|
 | 1 | SinDegrees full signoff — binary non-inside BLFT path | 7 | **in progress** |
-| 1.5 | HAKMEM 101C utility (`SmallestRationalInInterval`) | 2 | pending (prerequisite for Stage 4) |
+| 1.5 | HAKMEM 101C utility (`SmallestRationalInInterval`) | 2 | **complete** |
 | 2 | Sqrt signoff — sqrt(2) prefix, 50-term OEIS validation | 7 | pending |
 | 3 | Tanh signoff — tanh(sqrt(5)) prefix, full BB suite | 7 | pending |
 | 4 | Named compositions: `sqrt(5)`, `3/pi²`, `3/pi² + e` | 7 | pending (requires 101C) |
@@ -51,6 +51,17 @@ Target expression: `sqrt(3/pi² + e) / (tanh(sqrt(5)) − sin(69°))`
 | 3 | Stage 1 close: document trig.Sin limitations; add sin(69 radians) pending test | ✓ GREEN — `docs/api_limitations.md` created; `TestBB_Trig_Sin_SixtyNineRadiansMatchesKnownPrefix` confirmed failing then guarded; `CLAUDE.md` priorities updated. trig.Sin irrational-result fix deferred pre-Stage 5 |
 
 **Stage 1 closed.** trig.Sin broken for irrational results (wrong terms, not just hang); outside/outside BLFT fix required before Stage 5 assembly.
+
+---
+
+### Stage 1.5 R/G cycle log
+
+| Cycle | Target | Result |
+|---|---|---|
+| 1 | BB tests: 10 cases covering symmetric/open/closed/negative/integer/single-point/error paths | ✓ GREEN — `rational_in_interval_bb_test.go`; fixed test #3 (1/2 < 1/3 in denom order for [1/3,1/2]) |
+| 2 | WB tests: helper unit tests + OpenLoInteger and FareyAdjacent edge cases | ✓ GREEN — `rational_in_interval_wb_test.go`; all 15 subtests pass |
+
+**Stage 1.5 closed.** `SmallestRationalInInterval` (HAKMEM 101C) implemented in `core/rational_in_interval.go`; inside ranges fully supported; outside ranges return `ErrOutsideIntervalNotYetSupported` (not required for Stage 4).
 
 ---
 
