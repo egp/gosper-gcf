@@ -1,0 +1,79 @@
+sqrt_requirements_leaves.txt
+
+10.1.1.1 Sqrt shall use exact arithmetic only and shall not use floating-point seeding or refinement.
+10.1.2.1 Sqrt shall consume radicand terms on demand rather than prereading the input.
+10.1.3.1 Client-visible sqrt output shall consist only of certified RCF terms.
+10.1.4.1 The inner feedback loop shall be named ourorobos and shall be white-box visible.
+
+10.2.1.1 The emerging output prefix shall serve as the live approximation stream fed back into refinement.
+10.2.2.1 The sqrt controller shall not duplicate-consume a live stream to simulate BLFT composition.
+
+10.3.1.1 The Y approximation stream shall be ingested into the DLFT as the live variable stream.
+10.3.2.1 The radicand X shall contribute through coefficient selection or update rather than as a second live DLFT stream.
+
+10.4.1.1 The controller shall implement Y_{n+1} = (Y_n + X/Y_n) / 2.
+10.4.2.1 For rational X = n/d, the controller shall encode refinement as the DLFT (dY^2 + n) / (2dY).
+10.4.3.1 The DLFT coefficients for rational X shall be initialized as (A=d, B=0, C=n, D=0, E=2d, F=0).
+
+10.5.1.1 BLFT-only composition shall not be accepted as an equivalent implementation of the Newton kernel.
+10.5.2.1 The 1/2 factor of Newton refinement shall be represented in DLFT state rather than by a separate required half stream.
+
+10.6.1.1 Sqrt shall not determine finiteness by exhausting X up front.
+10.6.2.1 EOF, if reached, shall be handled through ordinary core collapse semantics.
+
+10.7.1.1 Sqrt shall not special-case named sources as a substitute for the general feedback design.
+10.7.2.1 Any exact rational shortcut retained shall remain explicit and bounded by documented requirements.
+
+10.8.1.1 If X exhausts before sqrt resolution completes, standard core tail-to-infinity collapse shall apply.
+10.8.2.1 EOF handling shall not discard accrued sqrt-controller progress.
+
+11.1.1.1 A nil input stream shall produce an error.
+11.1.2.1 A current range that proves X < 0 shall produce an error.
+11.1.3.1 A current range that allows non-negative values shall permit evaluation to proceed.
+11.1.4.1 An exact X = 0 input shall emit 0 and terminate.
+11.1.5.1 Any PQ term with P < 0 or Q < 0 shall produce an error.
+11.1.6.1 The exact error surface shall be consistent with the rest of the core API.
+
+11.2.1.1 The initial seed shall be a strictly positive exact rational.
+11.2.2.1 Seed selection shall not require lookahead beyond currently available X information.
+11.2.3.1 Allowed seed strategies include a value derived from the current X interval or the exact rational value 1.
+11.2.4.1 The selected seed shall be compatible with Newton convergence.
+
+11.3.1.1 Each emitted term shall be fed back immediately after certification.
+11.3.2.1 The ourorobos shall accumulate the certified term and the range certified at that point.
+11.3.3.1 No uncertified term shall be appended to the ourorobos.
+
+11.4.1.1 Before the first emitted term, the active Y approximation shall be the seed.
+11.4.2.1 After feedback begins, Y terms shall come from PQStreamFromRCF(ourorobos).
+
+11.5.1.1 The implementation shall maintain a split representation or exact equivalent separating n,d dependence from Y-derived factors.
+11.5.2.1 When X is refined from n/d to n'/d', the controller shall update the X-dependent part of DLFT state without reinitializing the full DLFT.
+11.5.3.1 Refining X shall not discard already ingested Y-term progress.
+
+11.6.1.1 A term shall be emitted only when the rectifier proves a single integer floor over the full admissible image.
+11.6.2.1 Certification attempts shall be observable in white-box tests.
+
+11.7.1.1 The controller shall first attempt certification from the current DLFT-plus-rectifier state.
+11.7.2.1 If certification fails, the controller shall ingest the next Y term from the ourorobos or seed path.
+11.7.3.1 If Y is exhausted and certification still fails, the controller shall ingest one more X term, refine the X estimate, and update DLFT state.
+11.7.4.1 If the ingest budget is exceeded before certifying the next term, the controller shall return an explicit error.
+
+11.8.1.1 SmallestRationalInInterval shall be used for nontrivial intervals.
+11.8.2.1 Any selected n/d used for sqrt coefficient state shall satisfy n/d > 0.
+
+11.9.1.1 sqrtController.ourorobos shall be directly observable in white-box tests.
+11.9.2.1 sqrtController.hasOurorobosFeedback shall be directly observable in white-box tests.
+11.9.3.1 The DLFT state or coefficients after each Newton step shall be directly observable in white-box tests.
+11.9.4.1 The seed approximation before feedback begins shall be directly observable in white-box tests.
+11.9.5.1 Whether certification was attempted with the current state shall be directly observable in white-box tests.
+
+11.10.1.1 sqrt(0) shall produce exact 0.
+11.10.2.1 sqrt(1) shall produce exact 1.
+11.10.3.1 sqrt(4) shall produce exact 2.
+11.10.4.1 sqrt(1/4) shall produce exact 1/2.
+11.10.5.1 Negative exact input shall produce an error.
+11.10.6.1 sqrt(2) for 50 terms shall match OEIS A040000, beginning [1, 2, 2, 2, 2, ...].
+11.10.7.1 The live-feedback path for sqrt(2) shall be confirmed by white-box tests rather than by shortcut behavior.
+
+12.1.1.1 Where sqrt-specific docs conflict with older project notes, the Gosper-centered governing specs shall win.
+12.1.2.1 Superseded design notes shall not override current approved requirements.

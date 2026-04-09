@@ -1,0 +1,165 @@
+requirements_leaves.txt
+
+1.1.1.1 Internal source interfaces shall expose values as generalized PQ streams.
+1.1.2.1 Internal transform kernels shall consume and produce exact state over generalized PQ semantics.
+1.1.3.1 Internal composition shall preserve generalized-stream semantics until final client emission.
+
+1.2.1.1 Any RCF-compatible source shall be representable as a PQ stream with q=1.
+1.2.2.1 RCF adapters shall not introduce alternate arithmetic semantics distinct from PQ semantics.
+
+1.3.1.1 Internal components shall not expose speculative client-visible RCF digits directly.
+1.3.2.1 Any internal RCF-like prefixes used for feedback or adaptation shall remain non-client-facing until certified.
+
+1.4.1.1 Built-in named sources shall enter the system through generalized-stream-compatible adapters.
+1.4.2.1 Unary, binary, and diagonal kernels shall interoperate through exact stream/state contracts.
+
+2.1.1.1 Each emitted client term shall be an exact integer RCF term.
+2.1.2.1 Client-visible emission shall occur only at the certified-output boundary.
+
+2.2.1.1 A term shall not be exposed to the client merely because it appears likely.
+2.2.2.1 Internal narrowing without proof shall not justify client-visible output.
+
+2.3.1.1 Once emitted, a client-visible term shall remain valid under all later refinement.
+2.3.2.1 Later source ingestion shall not invalidate earlier client-visible terms.
+
+2.4.1.1 Certification shall consider the full current admissible image, not a sample point.
+2.4.2.1 Equality of floor across the admissible image shall be sufficient for emission.
+2.4.3.1 Failure to prove floor stability shall prevent emission.
+
+3.1.1.1 BLFT coefficients shall be maintained using exact integer arithmetic only.
+3.1.2.1 BLFT state transitions shall preserve exactness under ingest and emission steps.
+
+3.2.1.1 Binary operators shall be representable through BLFT state over two inputs.
+3.2.2.1 Unary operators that are linear-fractional shall be representable as BLFT specializations.
+
+3.3.1.1 DLFT coefficients shall be maintained using exact integer arithmetic only.
+3.3.2.1 DLFT state transitions shall preserve exactness under Y-term ingestion and coefficient update.
+
+3.4.1.1 The Newton refinement map for sqrt shall be encoded as a DLFT.
+3.4.2.1 The square-related unary path may use DLFT-compatible machinery where required.
+
+3.5.1.1 The rectifier shall observe the current admissible image before emission.
+3.5.2.1 The rectifier shall block output when certification conditions are not met.
+
+3.6.1.1 Internal progress may continue without client-visible emission.
+3.6.2.1 Rectification shall preserve exactness and non-retractability guarantees.
+
+3.7.1.1 Normalization shall not change the mathematical transform represented by the kernel.
+3.7.2.1 Normalization shall not introduce division by non-common factors.
+
+4.1.1.1 No source shall be preread solely to simplify implementation.
+4.1.2.1 Source consumption shall be justified by a current certification or refinement need.
+
+4.2.1.1 A certified term shall not be withheld once the next-output condition is met.
+4.2.2.1 Emission readiness shall be reevaluated after each state-changing step.
+
+4.3.1.1 Constructing an operator pipeline shall not require exhausting its inputs.
+4.3.2.1 Lazy behavior shall hold for finite, rational, and streaming irrational inputs.
+
+4.4.1.1 When multiple ingests are possible, the chosen ingest shall be justified by exact range information.
+4.4.2.1 Any equivalent ingest policy shall preserve correctness and certified-output semantics.
+
+4.5.1.1 Repeated runs from the same state shall make the same ingest choice.
+4.5.2.1 Determinism shall hold absent external randomness or non-deterministic resource failure.
+
+5.1.1.1 Public observation of current range shall not require future source consumption.
+5.1.2.1 Reported current range shall reflect the exact current admissible set.
+
+5.2.1.1 Endpoint values shall be represented without floating-point approximation.
+5.2.2.1 Endpoint comparison shall use exact rational ordering.
+
+5.3.1.1 Each endpoint shall carry open/closed status explicitly.
+5.3.2.1 Openness shall participate in normalization and equality rules.
+
+5.4.1.1 Outside ranges shall be first-class values, not approximated as large finite intervals.
+5.4.2.1 Projective-line semantics shall remain consistent through transform propagation.
+
+5.5.1.1 Corner images shall be computed exactly from admissible endpoint data.
+5.5.2.1 When the image is disjoint, exact union semantics shall be preserved.
+
+5.6.1.1 Denominator zeros within the admissible domain shall be detected exactly.
+5.6.2.1 Crossing-induced outside-range results shall be represented explicitly.
+
+5.7.1.1 Normalization shall not collapse outside-ranges into lossy finite surrogates.
+5.7.2.1 Certification logic shall account for outside-range structure when computing floors.
+
+6.1.1.1 EOF collapse shall use the appropriate projective tail interpretation for the exhausted side.
+6.1.2.1 EOF collapse shall preserve exactness of the remaining live transform.
+
+6.2.1.1 Unary/binary collapse shall remain expressed through the existing kernel state when feasible.
+6.2.2.1 Exhaustion handling shall not introduce ad hoc non-kernel semantics.
+
+6.3.1.1 When the admissible set is a single exact rational, rational-collapse entry conditions shall hold.
+6.3.2.1 Rational collapse shall not begin before exact singleton isolation is proven.
+
+6.4.1.1 The emitted finite sequence shall equal the exact RCF of the isolated rational.
+6.4.2.1 After the final term, the stream shall terminate cleanly.
+
+6.5.1.1 Lack of immediate progress alone shall not justify silent looping.
+6.5.2.1 Resource-limit failure shall be explicit and observable to the caller.
+
+7.1.1.1 Pi generation shall use an exact continued-fraction-compatible construction.
+7.1.2.1 E generation shall use an exact continued-fraction-compatible construction.
+
+7.2.1.1 PQStreamFromRCF shall convert an exact RCF prefix or stream into PQ terms.
+7.2.2.1 Exact rational values shall be injectable through dedicated rational-source adapters.
+
+7.3.1.1 Reciprocal shall preserve exactness and certified emission semantics.
+7.3.2.1 Square shall preserve exactness and integrate with interval-based certification.
+
+7.4.1.1 Sine-in-radians support shall remain exact and lazily composable.
+7.4.2.1 Tanh support shall remain exact and lazily composable.
+
+7.5.1.1 Core shall not encode source-specific hacks for named constants.
+7.5.2.1 Core shall not encode trig-specific heuristics or identities.
+
+7.6.1.1 Degree inputs shall be converted exactly to radians before sine evaluation.
+7.6.2.1 The degrees wrapper shall not alter the underlying certified-output contract.
+
+7.7.1.1 Shortcut paths shall not violate laziness where laziness is required by contract.
+7.7.2.1 Shortcut paths shall not bypass certification guarantees.
+
+8.1.1.1 The procedure shall operate using exact arithmetic only.
+8.1.2.1 The procedure shall return a rational witness admissible under the exact interval contract.
+
+8.2.1.1 Open and closed endpoints shall be respected exactly.
+8.2.2.1 Outside-range or projective cases shall be handled when valid under the interval model.
+
+8.3.1.1 Rational-collapse logic may use the 101C utility to identify canonical witnesses.
+8.3.2.1 Use of the 101C utility shall preserve exact termination behavior.
+
+8.4.1.1 White-box and black-box tests may use 101C witnesses for exact expectations.
+8.4.2.1 Diagnostic output may report 101C-selected witnesses when helpful.
+
+9.1.1.1 The caller shall be able to bound evaluation effort.
+9.1.2.1 Guard configuration shall not weaken correctness guarantees.
+
+9.2.1.1 Kernel or state growth may be bounded explicitly by configuration.
+9.2.2.1 Growth-limit handling shall fail explicitly rather than silently truncating exact state.
+
+9.3.1.1 Term-count limits, if provided, shall be enforced without violating emitted-term correctness.
+9.3.2.1 Term-count exhaustion shall surface as an explicit stop or error condition.
+
+9.4.1.1 Exhaustion errors shall be distinguishable from ordinary EOF termination.
+9.4.2.1 Exhaustion errors shall not expose uncertified partial output as certified.
+
+9.5.1.1 Failure shall not retroactively invalidate previously emitted certified terms.
+9.5.2.1 Failure handling shall not substitute approximate results for exact ones.
+
+12.2.1.1 Deferred decimal support shall not distort the exact-RCF-first architecture.
+12.2.2.1 Decimal-oriented work may be postponed without weakening current exactness requirements.
+
+12.3.1.1 Future Hurwitz-related work shall remain subordinate to current correctness requirements.
+12.3.2.1 Future Hurwitz-related work shall not require architectural reversal of the current exact-kernel design.
+
+12.4.1.1 Diagnostics should help explain current kernel coefficients and admissible ranges.
+12.4.2.1 Diagnostics should help explain why an ingest or emission decision was taken.
+
+12.5.1.1 Future sharing or memoization shall not require weakening the no-duplicate-consumption invariant.
+12.5.2.1 Future sharing or memoization shall remain compatible with exact lazy evaluation.
+
+12.6.1.1 Demonstration of HAKMEM 101A-style best-approximation properties shall not require speculative client-visible output.
+12.6.2.1 Documentation of HAKMEM 101A-style best-approximation properties shall remain consistent with certified-emission semantics.
+
+12.7.1.1 The target expression shall be supported through the exact lazy operator stack rather than by a one-off shortcut.
+12.7.2.1 Success on the target expression shall remain downstream of the foundational signoff requirements above.
